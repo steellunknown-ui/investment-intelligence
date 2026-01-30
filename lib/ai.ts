@@ -47,9 +47,9 @@ export async function callOpenRouter(
 ): Promise<AIResponse> {
     try {
         const genAI = getGoogleAI();
-        // Use gemini-1.5-flash for speed and reliability (or gemini-2.0-flash-exp if available)
+        // Use gemini-pro for reliability (stable model)
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-pro",
             generationConfig: {
                 responseMimeType: "application/json",
             }
