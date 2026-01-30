@@ -34,9 +34,9 @@ export async function callOpenRouter(
     systemPromptOverride?: string
 ): Promise<AIResponse> {
     try {
-        const apiKey = process.env.MOONSHOT_API_KEY;
+        const apiKey = process.env.OPENROUTER_API_KEY;
         if (!apiKey) {
-            throw new Error('MOONSHOT_API_KEY not configured');
+            throw new Error('OPENROUTER_API_KEY not configured');
         }
 
         const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
