@@ -70,7 +70,7 @@ export default function SignupPage() {
             const supabase = createSupabaseBrowserClient();
             const origin = window.location.origin;
             const isLocal = origin.includes('localhost');
-            const redirectBase = isLocal ? origin : 'https://investment-intelligence.vercel.app';
+            const redirectBase = isLocal ? origin : 'https://investment-intellegince.vercel.app';
 
             await supabase.auth.signInWithOAuth({
                 provider: "google",
