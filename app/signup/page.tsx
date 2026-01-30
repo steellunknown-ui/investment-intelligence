@@ -68,10 +68,14 @@ export default function SignupPage() {
     const handleGoogleLogin = async () => {
         try {
             const supabase = createSupabaseBrowserClient();
+            const origin = window.location.origin;
+            const isLocal = origin.includes('localhost');
+            const redirectBase = isLocal ? origin : 'https://investment-intelligence.vercel.app';
+
             await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo: `${redirectBase}/auth/callback`,
                 },
             });
         } catch (error) {

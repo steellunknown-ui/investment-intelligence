@@ -7,9 +7,9 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const code = searchParams.get("code");
         const next = searchParams.get("next") ?? "/dashboard";
-        
-        // Use the correct site URL
-        const siteUrl = "https://investment-intelligence.vercel.app";
+
+        // Use environment variable for site URL (must match Google OAuth & Supabase)
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://investment-intelligence.vercel.app";
 
         if (!code) {
             console.error('No auth code provided');
@@ -72,9 +72,10 @@ export async function GET(request: Request) {
 
         console.error('No user data after successful auth');
         return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
-        
+
     } catch (error) {
         console.error('Auth callback error:', error);
-        return NextResponse.redirect(`https://investment-intelligence.vercel.app/login?error=callback_failed`);
+        const fallbackUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://investment-intelligence.vercel.app";
+        return NextResponse.redirect(`${fallbackUrl}/login?error=callback_failed`);
     }
 }
