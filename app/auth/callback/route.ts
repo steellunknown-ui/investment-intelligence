@@ -3,15 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url);
+    const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
-    // if "next" is in param, use it as the redirect URL
     const next = searchParams.get("next") ?? "/dashboard";
 
-    // Use NEXT_PUBLIC_SITE_URL in production, origin in development
-    const redirectOrigin = process.env.NODE_ENV === 'production' 
-        ? process.env.NEXT_PUBLIC_SITE_URL 
-        : origin;
+    // Use the correct site URL
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app';
 
     if (code) {
         const cookieStore = cookies();
@@ -36,11 +33,9 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
-            // Get user session to extract metadata
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
-                // Upsert profile with Google data
                 const { full_name, avatar_url, email } = user.user_metadata;
 
                 await supabase
@@ -49,15 +44,14 @@ export async function GET(request: Request) {
                         id: user.id,
                         full_name: full_name,
                         avatar_url: avatar_url,
-                        email: email, // Optional, but good to have if schema allows
+                        email: email,
                         updated_at: new Date().toISOString(),
                     }, { onConflict: "id" });
             }
 
-            return NextResponse.redirect(`${redirectOrigin}${next}`);
+            return NextResponse.redirect(`${siteUrl}${next}`);
         }
     }
 
-    // return the user to an error page with instructions
-    return NextResponse.redirect(`${redirectOrigin}/auth/auth-code-error`);
+    return NextResponse.redirect(`${siteUrl}/login?error=auth_failed`);
 }
