@@ -1,6 +1,6 @@
 /**
- * AI Assistant - OpenRouter Integration
- * Uses OpenRouter API with Gemma 3 12B model
+ * AI Assistant - Moonshot AI Integration
+ * Uses OpenRouter API with Moonshot AI models
  */
 
 import { z } from 'zod';
@@ -26,59 +26,56 @@ export type AIInsight = z.infer<typeof AIInsightSchema>;
 export type AIResponse = z.infer<typeof AIResponseSchema>;
 
 /**
- * Call OpenRouter API with Gemma 3 12B model
+ * Call Moonshot AI via OpenRouter
  */
 export async function callOpenRouter(
     userMessage: string,
     context: Record<string, any>,
     systemPromptOverride?: string
 ): Promise<AIResponse> {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-        throw new Error('OPENROUTER_API_KEY not configured');
-    }
-
-    const model = process.env.AI_MODEL || 'google/gemma-3-12b-it:free';
-    const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
-
     try {
+        const apiKey = process.env.MOONSHOT_API_KEY;
+        if (!apiKey) {
+            throw new Error('MOONSHOT_API_KEY not configured');
+        }
+
+        const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
+        
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app',
-                'X-Title': 'Investment Intelligence',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence.vercel.app',
+                'X-Title': 'Investment Intelligence'
             },
             body: JSON.stringify({
-                model: model,
+                model: 'moonshotai/kimi-k2:free',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
                 ],
                 response_format: { type: 'json_object' },
                 temperature: 0.7,
-                max_tokens: 1024,
-            }),
+                max_tokens: 1000
+            })
         });
 
         if (!response.ok) {
-            const errorData = await response.text();
-            console.error('OpenRouter API Error:', response.status, errorData);
-            throw new Error(`OpenRouter API Error: ${response.status} - ${errorData}`);
+            throw new Error(`API request failed: ${response.status}`);
         }
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
-
+        
         if (!content) {
-            throw new Error('No content in OpenRouter response');
+            throw new Error('No content in API response');
         }
 
         return parseAIResponse(content);
 
     } catch (error) {
-        console.error('OpenRouter API Error:', error);
+        console.error('Moonshot AI Error:', error);
         throw new Error(`AI Service Failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
@@ -89,7 +86,6 @@ export async function callOpenRouter(
 function parseAIResponse(content: string): AIResponse {
     try {
         let cleanContent = content.trim();
-        // Remove markdown code blocks if present
         cleanContent = cleanContent.replace(/^```json\n|\n```$/g, "").replace(/^```\n|\n```$/g, "");
 
         const parsed = JSON.parse(cleanContent);
@@ -120,6 +116,7 @@ INSTRUCTIONS:
 3. Be concise and direct.
 4. Focus on the most important 1-3 insights.
 5. ALWAYS use Indian Rupees (₹) for all monetary values (e.g., ₹1,50,000).
+6. Respond with valid JSON only.
 
 RESPONSE FORMAT (Strict JSON):
 {
