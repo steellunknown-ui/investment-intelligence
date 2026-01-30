@@ -1,10 +1,9 @@
 /**
- * AI Assistant - Google Gemini Integration
- * Uses official @google/generative-ai SDK
+ * AI Assistant - OpenRouter Integration
+ * Uses OpenRouter API with Gemma 3 12B model
  */
 
 import { z } from 'zod';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Zod schema for AI response validation
 const AIInsightSchema = z.object({
@@ -27,53 +26,67 @@ export type AIInsight = z.infer<typeof AIInsightSchema>;
 export type AIResponse = z.infer<typeof AIResponseSchema>;
 
 /**
- * Initialize Google AI Client
- */
-function getGoogleAI() {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-        throw new Error('GOOGLE_API_KEY not configured');
-    }
-    return new GoogleGenerativeAI(apiKey);
-}
-
-/**
- * Call Google Gemini with JSON mode
+ * Call OpenRouter API with Gemma 3 12B model
  */
 export async function callOpenRouter(
     userMessage: string,
     context: Record<string, any>,
     systemPromptOverride?: string
 ): Promise<AIResponse> {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+        throw new Error('OPENROUTER_API_KEY not configured');
+    }
+
+    const model = process.env.AI_MODEL || 'google/gemma-3-12b-it:free';
+    const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
+
     try {
-        const genAI = getGoogleAI();
-        // Use gemini-1.5-flash-latest for availability
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash-latest",
-            generationConfig: {
-                responseMimeType: "application/json",
-            }
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app',
+                'X-Title': 'Investment Intelligence',
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.7,
+                max_tokens: 1024,
+            }),
         });
 
-        const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
-        const prompt = `${systemPrompt}\n\nUSER MESSAGE: ${userMessage}`;
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('OpenRouter API Error:', response.status, errorData);
+            throw new Error(`OpenRouter API Error: ${response.status} - ${errorData}`);
+        }
 
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
 
-        return parseGeminiResponse(text);
+        if (!content) {
+            throw new Error('No content in OpenRouter response');
+        }
+
+        return parseAIResponse(content);
 
     } catch (error) {
-        console.error('Gemini API Error:', error);
+        console.error('OpenRouter API Error:', error);
         throw new Error(`AI Service Failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
 /**
- * Parse and validate Gemini JSON response
+ * Parse and validate AI JSON response
  */
-function parseGeminiResponse(content: string): AIResponse {
+function parseAIResponse(content: string): AIResponse {
     try {
         let cleanContent = content.trim();
         // Remove markdown code blocks if present
