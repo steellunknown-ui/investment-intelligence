@@ -26,7 +26,8 @@ import {
   Gem,
   ArrowRightLeft,
   Briefcase,
-  Download
+  Download,
+  Gauge
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   const [onboardingStatus, setOnboardingStatus] = useState<any>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [creditScore, setCreditScore] = useState<number | null>(null);
 
   const fetchNetWorth = useCallback(async () => {
     try {
@@ -82,6 +84,12 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setNetWorth(data);
+      }
+      // Also fetch credit score
+      const scoreRes = await fetch("/api/credit-score/calculate");
+      if (scoreRes.ok) {
+        const scoreData = await scoreRes.json();
+        setCreditScore(scoreData.score?.score || null);
       }
     } catch (err) {
       console.error("Fetch net worth error:", err);
@@ -252,6 +260,15 @@ export default function DashboardPage() {
               loading={loading}
               onClick={() => router.push('/liabilities')}
               delay={0.3}
+            />
+            <QuickStatCard
+              icon={Gauge}
+              label="Credit Score"
+              value={creditScore ? String(creditScore) : '—'}
+              color="text-emerald-600"
+              loading={loading}
+              onClick={() => router.push('/credit-score')}
+              delay={0.35}
             />
           </div>
         </div>
