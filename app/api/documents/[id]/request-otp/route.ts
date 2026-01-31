@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/src/lib/supabase/supabase-server";
-import { generateOTP, hashOTP, sendOTPEmail } from "@/lib/otp";
 import { updateLastActivity } from "@/src/lib/activity";
 
 export async function POST(
@@ -44,40 +43,42 @@ export async function POST(
       return NextResponse.json({ error: "Too many OTP requests. Please wait." }, { status: 429 });
     }
 
-    // Generate OTP
-    const otp = generateOTP();
-    const otpHash = hashOTP(otp);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
-
-    // Store OTP
+    // Store document info for audit trail
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const { error: insertError } = await supabase
       .from("document_view_otps")
       .insert({
         user_id: user.id,
         document_id: documentId,
-        otp_hash: otpHash,
+        otp_hash: "supabase_otp", // Marker to indicate Supabase OTP was used
         expires_at: expiresAt,
       });
 
     if (insertError) {
-      console.error("Failed to store OTP:", insertError);
-      return NextResponse.json({ error: "Failed to generate OTP" }, { status: 500 });
+      console.error("Failed to log OTP request:", insertError);
+      // Continue anyway - this is just for audit
     }
 
-    // Send OTP email
-    const emailSent = await sendOTPEmail(
-      user.email!,
-      otp,
-      document.title || document.file_name
-    );
+    // Use Supabase's built-in OTP email system
+    // This uses Supabase's email infrastructure which works for ALL email addresses
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: user.email!,
+      options: {
+        shouldCreateUser: false, // Don't create new user, just send OTP to existing user
+      }
+    });
 
-    if (!emailSent) {
-      return NextResponse.json({ error: "Failed to send OTP email" }, { status: 500 });
+    if (otpError) {
+      console.error("Supabase OTP error:", otpError);
+      return NextResponse.json({
+        error: "Failed to send OTP. Please try again."
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      message: "OTP sent to your email"
+      message: "OTP sent to your email",
+      documentId: documentId // Return for verification step
     });
 
   } catch (error) {
