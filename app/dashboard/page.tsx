@@ -12,6 +12,7 @@ import { AIInsightsCard } from "@/components/dashboard/AIInsightsCard";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { Card } from "@/components/ui/Card";
 import { MotionCard } from "@/components/ui/MotionCard";
+import { NetWorthMiniChart } from "@/components/dashboard/NetWorthMiniChart";
 import {
   Activity,
   TrendingUp,
@@ -181,8 +182,8 @@ export default function DashboardPage() {
 
         {/* SECTION 1: NET WORTH OVERVIEW */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Big Net Worth Card */}
-          <div className="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between min-h-[180px]">
+          {/* Big Net Worth Card with Chart */}
+          <div className="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between min-h-[220px]">
             <div>
               <h2 className="text-emerald-100 font-medium text-sm uppercase tracking-wider mb-2">Total Net Worth</h2>
               {loading ? (
@@ -191,7 +192,11 @@ export default function DashboardPage() {
                 <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(netWorth?.netWorth || 0)}</h1>
               )}
             </div>
-            <div className="mt-4 pt-4 border-t border-emerald-500/30 flex justify-between items-end">
+
+            {/* Net Worth History Chart */}
+            <NetWorthMiniChart className="my-3" />
+
+            <div className="pt-3 border-t border-emerald-500/30 flex justify-between items-end">
               <div className="text-sm text-emerald-100">
                 Updated {formatLastActivity(netWorth?.updatedAt || null)}
               </div>

@@ -18,7 +18,8 @@ import {
   Gem,
   FileText,
   Sparkles,
-  Home
+  Home,
+  TrendingUp
 } from "lucide-react";
 import {
   Sheet,
@@ -31,6 +32,7 @@ const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "AI Assistant", href: "/assistant", icon: Sparkles },
+  { name: "Credit Score", href: "/credit-score", icon: TrendingUp },
   { name: "Holdings", href: "/holdings", icon: Briefcase },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
