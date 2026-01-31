@@ -17,8 +17,8 @@ export async function POST(
     updateLastActivity(supabase, user.id);
 
     const { otp } = await request.json();
-    if (!otp || otp.length !== 6) {
-      return NextResponse.json({ error: "Invalid OTP format" }, { status: 400 });
+    if (!otp || otp.length < 6 || otp.length > 8) {
+      return NextResponse.json({ error: "Invalid verification code format" }, { status: 400 });
     }
 
     const documentId = params.id;

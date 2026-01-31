@@ -203,7 +203,7 @@ export default function DocumentsPage() {
         if (doc.is_locked) {
             return; // Do nothing if locked
         }
-        
+
         try {
             const res = await fetch(`/api/documents/${doc.id}/download`);
             if (res.ok) {
@@ -280,14 +280,14 @@ export default function DocumentsPage() {
         setSelectedDocForOTP(doc);
         setOtpError("");
         setOtpLoading(true);
-        
+
         try {
             const res = await fetch(`/api/documents/${doc.id}/request-otp`, {
                 method: "POST"
             });
-            
+
             const data = await res.json();
-            
+
             if (res.ok) {
                 setIsOTPModalOpen(true);
             } else {
@@ -303,19 +303,19 @@ export default function DocumentsPage() {
     const handleVerifyOTP = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedDocForOTP || !otp) return;
-        
+
         setOtpLoading(true);
         setOtpError("");
-        
+
         try {
             const res = await fetch(`/api/documents/${selectedDocForOTP.id}/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ otp })
             });
-            
+
             const data = await res.json();
-            
+
             if (res.ok) {
                 setIsOTPModalOpen(false);
                 setOtp("");
@@ -460,9 +460,9 @@ export default function DocumentsPage() {
                                             </div>
                                             {doc.is_locked && (
                                                 <div className="mt-2">
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="outline" 
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
                                                         className="text-xs h-6"
                                                         onClick={(e) => { e.stopPropagation(); handleRequestOTP(doc); }}
                                                         disabled={otpLoading}
@@ -691,15 +691,15 @@ export default function DocumentsPage() {
                         </DialogHeader>
                         <form onSubmit={handleVerifyOTP} className="space-y-4">
                             <div>
-                                <Label htmlFor="otp">6-Digit OTP</Label>
+                                <Label htmlFor="otp">Verification Code</Label>
                                 <Input
                                     id="otp"
                                     type="text"
-                                    placeholder="123456"
+                                    placeholder="Enter code from email"
                                     value={otp}
-                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    onChange={(e) => setOtp(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8))}
                                     className="text-center text-lg tracking-widest font-mono"
-                                    maxLength={6}
+                                    maxLength={8}
                                     required
                                 />
                                 <p className="text-xs text-slate-500 mt-1">
@@ -710,9 +710,9 @@ export default function DocumentsPage() {
                                 )}
                             </div>
                             <DialogFooter>
-                                <Button 
-                                    type="button" 
-                                    variant="ghost" 
+                                <Button
+                                    type="button"
+                                    variant="ghost"
                                     onClick={() => {
                                         setIsOTPModalOpen(false);
                                         setOtp("");
@@ -721,7 +721,7 @@ export default function DocumentsPage() {
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={otpLoading || otp.length !== 6}>
+                                <Button type="submit" disabled={otpLoading || otp.length < 6}>
                                     {otpLoading ? "Verifying..." : "Verify & Unlock"}
                                 </Button>
                             </DialogFooter>
