@@ -39,23 +39,25 @@ export async function callOpenRouter(
             throw new Error('OPENROUTER_API_KEY not configured');
         }
 
+        const model = process.env.AI_MODEL || 'google/gemma-3-12b-it:free';
         const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
-        
+
+        // Combine system and user message for models that don't support system role
+        const combinedMessage = `${systemPrompt}\n\n---\n\nUSER MESSAGE: ${userMessage}`;
+
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence.vercel.app',
+                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app',
                 'X-Title': 'Investment Intelligence'
             },
             body: JSON.stringify({
-                model: 'moonshotai/kimi-k2:free',
+                model: model,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userMessage }
+                    { role: 'user', content: combinedMessage }
                 ],
-                response_format: { type: 'json_object' },
                 temperature: 0.7,
                 max_tokens: 1000
             })
@@ -67,7 +69,7 @@ export async function callOpenRouter(
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
-        
+
         if (!content) {
             throw new Error('No content in API response');
         }
