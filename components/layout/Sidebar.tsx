@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import {
   LayoutDashboard,
   Briefcase,
@@ -28,19 +29,22 @@ import {
   SheetTitle,
 } from "@/components/ui/Sheet";
 
+// Navigation order as requested:
+// Home, Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings, 
+// Holdings, Credit Score, Documents, AI Assistant, Nominee, Activity & Alerts, Settings
 const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "AI Assistant", href: "/assistant", icon: Sparkles },
-  { name: "Credit Score", href: "/credit-score", icon: TrendingUp },
-  { name: "Holdings", href: "/holdings", icon: Briefcase },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
   { name: "Assets", href: "/assets", icon: Building2 },
   { name: "Liabilities", href: "/liabilities", icon: Wallet },
   { name: "Receivables", href: "/receivables", icon: Coins },
   { name: "Belongings", href: "/belongings", icon: Gem },
+  { name: "Holdings", href: "/holdings", icon: Briefcase },
+  { name: "Credit Score", href: "/credit-score", icon: TrendingUp },
   { name: "Documents", href: "/documents", icon: FileText },
+  { name: "AI Assistant", href: "/assistant", icon: Sparkles },
   { name: "Nominee", href: "/nominee", icon: Users },
   { name: "Activity & Alerts", href: "/activity", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -96,8 +100,35 @@ function NavigationContent({ expanded, onClose }: { expanded?: boolean; onClose?
   );
 }
 
-// Sidebar footer content
+// Sidebar footer content with auth-aware portfolio status
 function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsConnected(!!user);
+      } catch (error) {
+        setIsConnected(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const supabase = createSupabaseBrowserClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsConnected(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   if (collapsed) return null;
 
   return (
@@ -107,8 +138,22 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
           Portfolio Status
         </p>
         <div className="mt-2 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500" />
-          <span className="text-sm text-slate-700 dark:text-slate-300">Not connected</span>
+          {isLoading ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500 animate-pulse" />
+              <span className="text-sm text-slate-700 dark:text-slate-300">Checking...</span>
+            </>
+          ) : isConnected ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+              <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Connected</span>
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500" />
+              <span className="text-sm text-slate-700 dark:text-slate-300">Not connected</span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -188,3 +233,4 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     </>
   );
 }
+
