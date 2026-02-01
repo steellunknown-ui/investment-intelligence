@@ -97,9 +97,15 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-slate-400">
-            © 2024 Investment Intelligence. All rights reserved.
-          </p>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-slate-400">
+              © 2024 Investment Intelligence. All rights reserved.
+            </p>
+            <div className="flex flex-col gap-1">
+              <img src="/infinx-logo.png" alt="Infinx" className="h-8 w-auto object-contain -ml-1" />
+              <span className="text-xs text-slate-500 font-medium tracking-wide">Infinx Technology Pvt. Ltd.</span>
+            </div>
+          </div>
           <div className="flex items-center gap-6 mt-4 sm:mt-0">
             <span className="text-xs text-slate-500">
               Bank-grade security • 256-bit encryption
