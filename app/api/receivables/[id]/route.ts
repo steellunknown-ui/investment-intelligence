@@ -24,11 +24,10 @@ export async function PATCH(
 
         const body = await request.json()
 
-        // Sanitize empty date strings to null
-        const dateFields = ['expected_return_date', 'actual_return_date', 'interest_start_date', 'interest_end_date', 'due_date']
-        for (const field of dateFields) {
-            if (body[field] === '' || body[field] === undefined) {
-                body[field] = null
+        // Sanitize empty strings to null (only for fields that exist in body)
+        for (const key of Object.keys(body)) {
+            if (body[key] === '') {
+                body[key] = null
             }
         }
 
