@@ -13,6 +13,7 @@ import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { Card } from "@/components/ui/Card";
 import { MotionCard } from "@/components/ui/MotionCard";
 import { NetWorthMiniChart } from "@/components/dashboard/NetWorthMiniChart";
+import { NetWorthTrendChart } from "@/components/dashboard/NetWorthTrendChart";
 import {
   Activity,
   TrendingUp,
@@ -272,6 +273,9 @@ export default function DashboardPage() {
             />
           </div>
         </div>
+
+        {/* SECTION 1.5: NET WORTH TREND CHART */}
+        <NetWorthTrendChart />
 
         {/* SECTION 2: WELCOME / ONBOARDING */}
         {!loading && !hasData && (

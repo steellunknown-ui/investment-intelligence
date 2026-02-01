@@ -20,7 +20,7 @@ export async function GET() {
 
         const { data: snapshots, error } = await supabase
             .from("net_worth_snapshots")
-            .select("snapshot_date, net_worth")
+            .select("snapshot_date, net_worth, bank_balance, assets_value, belongings_value, receivables_value, liabilities_value")
             .eq("user_id", user.id)
             .gte("snapshot_date", thirtyDaysAgo.toISOString().split("T")[0])
             .order("snapshot_date", { ascending: true })
@@ -30,8 +30,17 @@ export async function GET() {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
+        // Transform data to include total_assets and total_liabilities for chart
+        const transformedSnapshots = (snapshots || []).map(s => ({
+            snapshot_date: s.snapshot_date,
+            net_worth: s.net_worth,
+            total_assets: (Number(s.bank_balance) || 0) + (Number(s.assets_value) || 0) +
+                (Number(s.belongings_value) || 0) + (Number(s.receivables_value) || 0),
+            total_liabilities: Number(s.liabilities_value) || 0
+        }))
+
         return NextResponse.json({
-            snapshots: snapshots || [],
+            snapshots: transformedSnapshots,
             period: "30d"
         })
     } catch (err) {
