@@ -102,8 +102,7 @@ export function Footer() {
           </p>
 
           <div className="flex flex-col items-center gap-1 my-4 sm:my-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
-            <img src="/infinx-logo.png" alt="Infinx" className="h-8 w-auto object-contain" />
-            <span className="text-xs text-slate-500 font-medium tracking-wide">Infinx Technology Pvt. Ltd.</span>
+            <span className="text-sm text-slate-400 font-medium tracking-wide">Powered By Infinix Technology Solutions Pvt Ltd</span>
           </div>
 
           <div className="flex items-center gap-6">
