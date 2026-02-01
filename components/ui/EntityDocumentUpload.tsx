@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Upload, X, FileText, Image, Loader2, Paperclip } from "lucide-react";
+import { Upload, X, FileText, Image, Loader2, Paperclip, Eye, Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface UploadedDoc {
@@ -9,6 +9,7 @@ interface UploadedDoc {
     file_name: string;
     mime_type: string;
     file_path: string;
+    linkId?: string;
 }
 
 interface EntityDocumentUploadProps {
@@ -144,6 +145,42 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
         }
     };
 
+    const handleView = async (docId: string) => {
+        try {
+            const res = await fetch(`/api/documents/${docId}/download`);
+            if (res.ok) {
+                const data = await res.json();
+                window.open(data.url, '_blank');
+            } else {
+                setError('Failed to load document');
+            }
+        } catch (err) {
+            console.error('Failed to view document:', err);
+            setError('Failed to load document');
+        }
+    };
+
+    const handleDownload = async (docId: string, fileName: string) => {
+        try {
+            const res = await fetch(`/api/documents/${docId}/download`);
+            if (res.ok) {
+                const data = await res.json();
+                // Create a temporary link to trigger download
+                const a = document.createElement('a');
+                a.href = data.url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                setError('Failed to download document');
+            }
+        } catch (err) {
+            console.error('Failed to download document:', err);
+            setError('Failed to download document');
+        }
+    };
+
     const getFileIcon = (mimeType: string) => {
         if (mimeType?.startsWith('image/')) {
             return <Image className="h-5 w-5 text-emerald-500" />;
@@ -163,20 +200,42 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
 
             {/* Existing Documents */}
             {linkedDocs.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="space-y-2 mb-3">
                     {linkedDocs.map((doc: any) => (
                         <div
                             key={doc.id}
-                            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2"
+                            className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2"
                         >
-                            {getFileIcon(doc.mime_type)}
-                            <span className="text-xs truncate max-w-[120px]">{doc.file_name}</span>
-                            <button
-                                onClick={() => handleRemove(doc.linkId)}
-                                className="text-slate-400 hover:text-red-500 transition-colors"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {getFileIcon(doc.mime_type)}
+                                <span className="text-xs truncate" title={doc.file_name}>{doc.file_name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 ml-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleView(doc.id)}
+                                    className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                    title="View"
+                                >
+                                    <Eye className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDownload(doc.id, doc.file_name)}
+                                    className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
+                                    title="Download"
+                                >
+                                    <Download className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemove(doc.linkId)}
+                                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                                    title="Remove"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
