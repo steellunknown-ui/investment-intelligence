@@ -330,7 +330,7 @@ export default function DashboardPage() {
               totalValue={netWorth?.assetsTotalValue || 0}
               totalPnL={0}
             />
-            <AssetAllocationCard hasData={!!hasData} />
+            <AssetAllocationCard hasData={!!hasData} netWorth={netWorth} />
             <AIInsightsCard />
           </div>
         </div>
