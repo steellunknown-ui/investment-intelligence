@@ -37,6 +37,7 @@ import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { liabilityTypes, lenderTypes, liabilityStatus } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 
 // Constants
 const LOAN_TYPES = [
@@ -410,9 +411,15 @@ export default function LiabilitiesPage() {
                                     </CardContent>
                                     <CardFooter className="pt-0 space-y-2">
                                         <div className="flex justify-between gap-2">
-                                            <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => openPayments(liability)}>
-                                                <Wallet className="h-3 w-3 mr-1" /> Payments
-                                            </Button>
+                                            <div className="flex gap-2 flex-1">
+                                                <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => openPayments(liability)}>
+                                                    <Wallet className="h-3 w-3 mr-1" /> Payments
+                                                </Button>
+                                                <EntityDocumentsBadge
+                                                    entityType="liability"
+                                                    entityId={liability.id}
+                                                />
+                                            </div>
                                             <div className="flex gap-1">
                                                 <Button
                                                     variant="ghost"

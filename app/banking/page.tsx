@@ -38,6 +38,7 @@ import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { bankNames } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 
 // Constants
 const ACCOUNT_TYPES = [
@@ -369,23 +370,29 @@ export default function BankingPage() {
                                     )}
                                 </CardContent>
                                 <CardFooter className="pt-0 space-y-2">
-                                    <div className="flex gap-2 justify-end">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEdit(account)}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            <Edit2 className="h-4 w-4 text-slate-500" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(account.id)}
-                                            className="h-8 w-8 p-0 hover:text-red-600"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                    <div className="flex gap-2 justify-between">
+                                        <EntityDocumentsBadge
+                                            entityType="bank_account"
+                                            entityId={account.id}
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleEdit(account)}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Edit2 className="h-4 w-4 text-slate-500" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDelete(account.id)}
+                                                className="h-8 w-8 p-0 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                                         <span>{formatUpdatedLabel(account.updated_at || account.created_at)}</span>

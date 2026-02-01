@@ -47,6 +47,7 @@ import { openWhatsApp, openSMS, copyReminder, getReminderModes, type ReminderMod
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -555,6 +556,10 @@ export default function ReceivablesPage() {
                                                         <ArrowDownLeft className="h-3 w-3 mr-1" /> Receive
                                                     </Button>
                                                 )}
+                                                <EntityDocumentsBadge
+                                                    entityType="receivable"
+                                                    entityId={rec.id}
+                                                />
                                             </div>
                                             <div className="flex gap-1">
                                                 <Button variant="ghost" size="sm" onClick={() => handleEdit(rec)} className="h-8 w-8 p-0">

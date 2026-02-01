@@ -40,6 +40,7 @@ import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { belongingCategories, belongingStatus, storageLocations } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 
 // Constants
 const CATEGORIES = [
@@ -449,13 +450,19 @@ export default function BelongingsPage() {
                                         </div>
                                     </CardContent>
                                     <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex justify-end gap-1">
-                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="h-8 w-8 p-0">
-                                                <Edit2 className="h-4 w-4 text-slate-500" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="h-8 w-8 p-0 hover:text-red-600">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                        <div className="flex justify-between gap-1">
+                                            <EntityDocumentsBadge
+                                                entityType="belonging"
+                                                entityId={item.id}
+                                            />
+                                            <div className="flex gap-1">
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="h-8 w-8 p-0">
+                                                    <Edit2 className="h-4 w-4 text-slate-500" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="h-8 w-8 p-0 hover:text-red-600">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                         <div className="text-xs text-muted-foreground">
                                             {formatUpdatedAt(item.updated_at || item.created_at)}

@@ -35,6 +35,7 @@ import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { insuranceProviders } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 
 // Constants
 const POLICY_TYPES = [
@@ -341,14 +342,20 @@ export default function InsurancePage() {
                                     </CardContent>
                                     <CardFooter className="pt-0 space-y-2">
                                         <div className="flex gap-2 justify-between">
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                onClick={() => handleOpenPayments(policy)}
-                                                className="h-8 gap-2 text-xs flex-1"
-                                            >
-                                                <History className="h-3 w-3" /> Payments
-                                            </Button>
+                                            <div className="flex gap-2 flex-1">
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => handleOpenPayments(policy)}
+                                                    className="h-8 gap-2 text-xs"
+                                                >
+                                                    <History className="h-3 w-3" /> Payments
+                                                </Button>
+                                                <EntityDocumentsBadge
+                                                    entityType="insurance_policy"
+                                                    entityId={policy.id}
+                                                />
+                                            </div>
                                             <div className="flex gap-1">
                                                 <Button
                                                     variant="ghost"
