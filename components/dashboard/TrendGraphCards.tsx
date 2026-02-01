@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-    AreaChart,
-    Area,
     BarChart,
     Bar,
     PieChart,
@@ -11,6 +9,7 @@ import {
     Cell,
     ResponsiveContainer,
     Tooltip,
+    XAxis,
 } from "recharts";
 import { MotionCard } from "@/components/ui/MotionCard";
 
@@ -33,81 +32,98 @@ function formatCompact(value: number): string {
     return `₹${value.toFixed(0)}`;
 }
 
+const ASSET_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
+const LIABILITY_COLORS = ["#f59e0b", "#fbbf24", "#fcd34d", "#fde68a"];
 const PIE_COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
 
 export function AssetsTrendCard() {
-    const [data, setData] = useState<ChartDataPoint[]>([]);
+    const [pieData, setPieData] = useState<{ name: string; value: number }[]>([]);
+    const [total, setTotal] = useState(0);
 
     useEffect(() => {
         async function fetchData() {
             try {
-                const res = await fetch("/api/dashboard/net-worth-history");
+                const res = await fetch("/api/dashboard/net-worth");
                 if (res.ok) {
                     const result = await res.json();
-                    const snapshots: SnapshotData[] = result.snapshots || [];
-                    const chartData = snapshots.slice(-6).map((s) => ({
-                        label: new Date(s.snapshot_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-                        value: Number(s.total_assets) || 0,
-                    }));
-                    setData(chartData.length > 0 ? chartData : [
-                        { label: "Jan", value: 120000 },
-                        { label: "Feb", value: 135000 },
-                        { label: "Mar", value: 145000 },
-                        { label: "Apr", value: 160000 },
-                        { label: "May", value: 175000 },
-                        { label: "Jun", value: 190000 },
+                    const data = [
+                        { name: "Real Assets", value: Number(result.assetsTotalValue) || 0 },
+                        { name: "Belongings", value: Number(result.belongingsTotalValue) || 0 },
+                        { name: "Receivables", value: Number(result.receivablesOutstandingTotal) || 0 },
+                        { name: "Bank", value: Number(result.bankBalanceTotal) || 0 },
+                    ].filter(d => d.value > 0);
+
+                    setPieData(data.length > 0 ? data : [
+                        { name: "Assets", value: 120000 },
+                        { name: "Belongings", value: 30000 },
                     ]);
+                    setTotal(data.reduce((sum, d) => sum + d.value, 0));
                 }
             } catch {
-                setData([
-                    { label: "Jan", value: 120000 },
-                    { label: "Feb", value: 135000 },
-                    { label: "Mar", value: 145000 },
-                    { label: "Apr", value: 160000 },
-                    { label: "May", value: 175000 },
-                    { label: "Jun", value: 190000 },
+                setPieData([
+                    { name: "Assets", value: 120000 },
+                    { name: "Belongings", value: 30000 },
                 ]);
+                setTotal(150000);
             }
         }
         fetchData();
     }, []);
 
-    const CustomDot = (props: any) => {
-        const { cx, cy, payload } = props;
-        return (
-            <g>
-                <circle cx={cx} cy={cy} r={4} fill="#10b981" stroke="#fff" strokeWidth={2} />
-                <text x={cx} y={cy - 10} textAnchor="middle" fill="#10b981" fontSize={9} fontWeight={600}>
-                    {formatCompact(payload.value)}
-                </text>
-            </g>
-        );
-    };
-
     return (
         <MotionCard className="vault-card p-4" delay={0.1}>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Assets Trend
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Assets Breakdown
             </p>
-            <div className="h-[140px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
-                        <defs>
-                            <linearGradient id="assetsFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                                <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#10b981"
-                            strokeWidth={2}
-                            fill="url(#assetsFill)"
-                            dot={<CustomDot />}
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
+            <div className="h-[140px] w-full flex items-center">
+                <div className="w-1/2 h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={30}
+                                outerRadius={50}
+                                paddingAngle={2}
+                                dataKey="value"
+                            >
+                                {pieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value) => formatCompact(Number(value))}
+                                contentStyle={{
+                                    backgroundColor: "#fff",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "8px",
+                                    fontSize: "11px",
+                                    color: "#1e293b",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                                }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="w-1/2 pl-2">
+                    {pieData.map((entry, index) => (
+                        <div key={entry.name} className="flex items-center gap-2 mb-1">
+                            <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: ASSET_COLORS[index % ASSET_COLORS.length] }}
+                            />
+                            <span className="text-[10px] text-muted-foreground truncate">{entry.name}</span>
+                            <span className="text-[10px] font-medium ml-auto">{formatCompact(entry.value)}</span>
+                        </div>
+                    ))}
+                    <div className="border-t border-slate-200 dark:border-slate-700 mt-2 pt-1">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-muted-foreground">Total</span>
+                            <span className="text-xs font-semibold text-emerald-600">{formatCompact(total)}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </MotionCard>
     );
@@ -115,6 +131,7 @@ export function AssetsTrendCard() {
 
 export function LiabilitiesTrendCard() {
     const [data, setData] = useState<ChartDataPoint[]>([]);
+    const [latestValue, setLatestValue] = useState(0);
 
     useEffect(() => {
         async function fetchData() {
@@ -127,52 +144,78 @@ export function LiabilitiesTrendCard() {
                         label: new Date(s.snapshot_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
                         value: Number(s.total_liabilities) || 0,
                     }));
-                    setData(chartData.length > 0 ? chartData : [
+                    const finalData = chartData.length > 0 ? chartData : [
                         { label: "Jan", value: 85000 },
                         { label: "Feb", value: 80000 },
                         { label: "Mar", value: 75000 },
                         { label: "Apr", value: 70000 },
                         { label: "May", value: 65000 },
                         { label: "Jun", value: 60000 },
-                    ]);
+                    ];
+                    setData(finalData);
+                    setLatestValue(finalData[finalData.length - 1]?.value || 0);
                 }
             } catch {
-                setData([
+                const fallback = [
                     { label: "Jan", value: 85000 },
                     { label: "Feb", value: 80000 },
                     { label: "Mar", value: 75000 },
                     { label: "Apr", value: 70000 },
                     { label: "May", value: 65000 },
                     { label: "Jun", value: 60000 },
-                ]);
+                ];
+                setData(fallback);
+                setLatestValue(60000);
             }
         }
         fetchData();
     }, []);
 
+    const trend = data.length >= 2 ?
+        ((data[data.length - 1].value - data[0].value) / data[0].value * 100).toFixed(1) : "0";
+
     return (
         <MotionCard className="vault-card p-4" delay={0.15}>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Liabilities Trend
-            </p>
-            <div className="h-[140px] w-full">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Liabilities Trend
+                </p>
+                <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}>
+                    {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                </div>
+            </div>
+            <div className="flex items-center gap-3 mb-2">
+                <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
+                <span className="text-[10px] text-muted-foreground">current</span>
+            </div>
+            <div className="h-[90px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
-                        <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]}>
+                    <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                        <XAxis
+                            dataKey="label"
+                            tick={{ fontSize: 9, fill: "#94a3b8" }}
+                            tickLine={false}
+                            axisLine={false}
+                        />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                             {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill="#f59e0b" />
+                                <Cell key={`cell-${index}`} fill={LIABILITY_COLORS[index % LIABILITY_COLORS.length]} />
                             ))}
                         </Bar>
                         <Tooltip
                             formatter={(value) => [formatCompact(Number(value)), "Liabilities"]}
                             contentStyle={{
-                                backgroundColor: "#1e293b",
-                                border: "none",
+                                backgroundColor: "#fff",
+                                border: "1px solid #e2e8f0",
                                 borderRadius: "8px",
                                 fontSize: "11px",
-                                color: "#fff"
+                                color: "#1e293b",
+                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                             }}
-                            labelStyle={{ color: "#94a3b8" }}
+                            labelStyle={{ color: "#64748b", fontWeight: 500 }}
                         />
                     </BarChart>
                 </ResponsiveContainer>
@@ -241,11 +284,12 @@ export function NetWorthTrendCard() {
                             <Tooltip
                                 formatter={(value) => formatCompact(Number(value))}
                                 contentStyle={{
-                                    backgroundColor: "#1e293b",
-                                    border: "none",
+                                    backgroundColor: "#fff",
+                                    border: "1px solid #e2e8f0",
                                     borderRadius: "8px",
                                     fontSize: "11px",
-                                    color: "#fff"
+                                    color: "#1e293b",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
                                 }}
                             />
                         </PieChart>
