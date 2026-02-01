@@ -429,23 +429,29 @@ export default function AssetsPage() {
                                         </div>
                                     </CardContent>
                                     <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex gap-2 justify-end">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleEdit(asset)}
-                                                className="h-8 w-8 p-0"
-                                            >
-                                                <Edit2 className="h-4 w-4 text-slate-500" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDelete(asset.id)}
-                                                className="h-8 w-8 p-0 hover:text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                        <div className="flex gap-2 justify-between">
+                                            <EntityDocumentsBadge
+                                                entityType="asset"
+                                                entityId={asset.id}
+                                            />
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleEdit(asset)}
+                                                    className="h-8 w-8 p-0"
+                                                >
+                                                    <Edit2 className="h-4 w-4 text-slate-500" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(asset.id)}
+                                                    className="h-8 w-8 p-0 hover:text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                         <div className="text-xs text-muted-foreground">
                                             {formatUpdatedAt(asset.updated_at || asset.created_at)}
