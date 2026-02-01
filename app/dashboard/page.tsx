@@ -13,7 +13,10 @@ import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { Card } from "@/components/ui/Card";
 import { MotionCard } from "@/components/ui/MotionCard";
 import { NetWorthMiniChart } from "@/components/dashboard/NetWorthMiniChart";
-import { AssetsTrendCard, LiabilitiesTrendCard, NetWorthTrendCard } from "@/components/dashboard/TrendGraphCards";
+import { AssetsSpiderChart } from "@/components/dashboard/AssetsSpiderChart";
+import { LiabilitiesTrendCard, NetWorthTrendCard } from "@/components/dashboard/TrendGraphCards";
+
+
 import {
   Activity,
   TrendingUp,
@@ -275,6 +278,13 @@ export default function DashboardPage() {
         </div>
 
 
+
+        {/* SECTION 1.5: TREND GRAPH CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <AssetsSpiderChart />
+          <LiabilitiesTrendCard />
+          <NetWorthTrendCard />
+        </div>
 
         {/* SECTION 2: WELCOME / ONBOARDING */}
         {!loading && !hasData && (
