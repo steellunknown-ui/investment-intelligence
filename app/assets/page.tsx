@@ -35,6 +35,7 @@ import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { assetCategories, assetTypes, ownershipTypes, assetStatus } from "@/src/lib/presets";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 
 // Constants
 const ASSET_CATEGORIES = [
@@ -733,7 +734,7 @@ export default function AssetsPage() {
                                             const typeItem = assetTypes.find(type => type.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
                                             const ownershipItem = ownershipTypes.find(type => type.toLowerCase() === value);
                                             const statusItem = assetStatus.find(status => status.toLowerCase() === value);
-                                            
+
                                             if (categoryItem) {
                                                 setFormData(p => ({ ...p, asset_category: value }));
                                             } else if (typeItem) {
@@ -748,6 +749,13 @@ export default function AssetsPage() {
                                 </div>
                             </div>
 
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="asset"
+                                    entityId={editingId}
+                                />
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>

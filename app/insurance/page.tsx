@@ -34,6 +34,7 @@ import { PaymentsDialog } from "@/components/insurance/PaymentsDialog";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { insuranceProviders } from "@/src/lib/presets";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 
 // Constants
 const POLICY_TYPES = [
@@ -520,6 +521,14 @@ export default function InsurancePage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="insurance_policy"
+                                    entityId={editingId}
+                                />
+                            )}
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel

@@ -39,6 +39,7 @@ import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { belongingCategories, belongingStatus, storageLocations } from "@/src/lib/presets";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 
 // Constants
 const CATEGORIES = [
@@ -749,7 +750,7 @@ export default function BelongingsPage() {
                                             const categoryItem = belongingCategories.find(cat => cat.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
                                             const statusItem = belongingStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
                                             const storageItem = storageLocations.find(loc => loc === value);
-                                            
+
                                             if (categoryItem) {
                                                 setFormData(p => ({ ...p, category: value }));
                                             } else if (statusItem) {
@@ -761,6 +762,14 @@ export default function BelongingsPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="belonging"
+                                    entityId={editingId}
+                                />
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>

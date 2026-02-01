@@ -2,6 +2,44 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 
+export async function GET(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const supabase = createSupabaseServerClient()
+        const { id } = params
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
+
+        const { data: document, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('id', id)
+            .eq('user_id', user.id)
+            .single()
+
+        if (error || !document) {
+            return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+        }
+
+        return NextResponse.json({ document })
+    } catch (error) {
+        console.error('Document GET error:', error)
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+    }
+}
+
 export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }

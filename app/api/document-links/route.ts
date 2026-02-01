@@ -18,6 +18,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const document_id = searchParams.get('document_id')
         const entity_id = searchParams.get('entity_id')
+        const entity_type = searchParams.get('entity_type')
 
         let query = supabase
             .from('document_links')
@@ -29,6 +30,9 @@ export async function GET(request: Request) {
         }
         if (entity_id) {
             query = query.eq('entity_id', entity_id)
+        }
+        if (entity_type) {
+            query = query.eq('entity_type', entity_type)
         }
 
         const { data: links, error } = await query

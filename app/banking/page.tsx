@@ -37,6 +37,7 @@ import { formatUpdatedLabel, formatDateTime } from "@/src/lib/time";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { bankNames } from "@/src/lib/presets";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 
 // Constants
 const ACCOUNT_TYPES = [
@@ -566,6 +567,14 @@ export default function BankingPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="bank_account"
+                                    entityId={editingId}
+                                />
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>

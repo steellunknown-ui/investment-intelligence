@@ -46,6 +46,7 @@ import { getInterestPreview } from "@/lib/interest";
 import { openWhatsApp, openSMS, copyReminder, getReminderModes, type ReminderMode } from "@/lib/reminders";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { toast } from "sonner";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -140,7 +141,7 @@ export default function ReceivablesPage() {
     // Calculate interest preview when relevant fields change
     useEffect(() => {
         const { principal_amount, interest_rate, interest_type, interest_start_date, interest_end_date } = formData;
-        
+
         if (principal_amount && interest_rate && Number(interest_rate) > 0) {
             const startDate = interest_start_date || formData.given_date;
             const preview = getInterestPreview(
@@ -231,7 +232,7 @@ export default function ReceivablesPage() {
 
             const principal = Number(formData.principal_amount);
             const rate = formData.interest_rate ? Number(formData.interest_rate) : null;
-            
+
             // Use preview total if available, otherwise use form total or principal
             let total = principal;
             if (interestPreview) {
@@ -505,7 +506,7 @@ export default function ReceivablesPage() {
                                                 <p className="text-sm font-medium text-slate-900 dark:text-white">{formatCurrency(rec.total_receivable)}</p>
                                             </div>
                                         )}
-                                        
+
                                         <div>
                                             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                                                 <div
@@ -585,7 +586,7 @@ export default function ReceivablesPage() {
                                                                 <p>Send WhatsApp Reminder</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                        
+
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <Button
@@ -601,7 +602,7 @@ export default function ReceivablesPage() {
                                                                 <p>Send SMS Reminder</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                        
+
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <Button
@@ -618,7 +619,7 @@ export default function ReceivablesPage() {
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </div>
-                                                    
+
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500">
@@ -773,7 +774,7 @@ export default function ReceivablesPage() {
                                                 />
                                             )}
                                         </div>
-                                        
+
                                         {/* Interest Preview */}
                                         {interestPreview && (
                                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
@@ -795,7 +796,7 @@ export default function ReceivablesPage() {
                                                         <span className="ml-2 font-semibold text-lg">{formatCurrency(interestPreview.total)}</span>
                                                     </div>
                                                     <div className="col-span-2 text-xs text-slate-500">
-                                                        {formData.interest_type === 'compound' 
+                                                        {formData.interest_type === 'compound'
                                                             ? `Calculated over ${interestPreview.months} months (compound monthly)`
                                                             : `Calculated over ${interestPreview.days} days (simple daily)`
                                                         }
@@ -803,7 +804,7 @@ export default function ReceivablesPage() {
                                                 </div>
                                             </div>
                                         )}
-                                        
+
                                         {/* Manual Total Override */}
                                         <Input
                                             label="Total Expected Return (Override)"
@@ -915,7 +916,7 @@ export default function ReceivablesPage() {
                                             const purposeItem = receivablePurposes.find(purpose => purpose === value);
                                             const statusItem = receivableStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
                                             const interestItem = interestTypes.find(type => type.toLowerCase() === value);
-                                            
+
                                             if (relationshipItem) {
                                                 setFormData(p => ({ ...p, relationship: value }));
                                             } else if (purposeItem) {
@@ -929,6 +930,14 @@ export default function ReceivablesPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="receivable"
+                                    entityId={editingId}
+                                />
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>

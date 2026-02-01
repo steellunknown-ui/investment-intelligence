@@ -36,6 +36,7 @@ import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { liabilityTypes, lenderTypes, liabilityStatus } from "@/src/lib/presets";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 
 // Constants
 const LOAN_TYPES = [
@@ -615,7 +616,7 @@ export default function LiabilitiesPage() {
                                             const loanType = liabilityTypes.find(type => type.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
                                             const lenderType = lenderTypes.find(type => type.toLowerCase() === value);
                                             const statusType = liabilityStatus.find(status => status.toLowerCase() === value);
-                                            
+
                                             if (loanType) {
                                                 setFormData(p => ({ ...p, loan_type: value }));
                                             } else if (statusType) {
@@ -625,6 +626,14 @@ export default function LiabilitiesPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Document Upload - only when editing */}
+                            {editingId && (
+                                <EntityDocumentUpload
+                                    entityType="liability"
+                                    entityId={editingId}
+                                />
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
