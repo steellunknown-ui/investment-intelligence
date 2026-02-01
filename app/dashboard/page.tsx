@@ -274,12 +274,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* SECTION 1.5: TREND GRAPH CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <AssetsTrendCard />
-          <LiabilitiesTrendCard />
-          <NetWorthTrendCard />
-        </div>
+
 
         {/* SECTION 2: WELCOME / ONBOARDING */}
         {!loading && !hasData && (
