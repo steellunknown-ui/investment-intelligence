@@ -23,14 +23,23 @@ export async function PATCH(
 
         const body = await request.json()
 
+        // Sanitize empty date strings to null
+        const sanitizedBody = { ...body }
+        const dateFields = ['purchase_date', 'warranty_expiry', 'last_service_date']
+        for (const field of dateFields) {
+            if (sanitizedBody[field] === '' || sanitizedBody[field] === undefined) {
+                sanitizedBody[field] = null
+            }
+        }
+
         // Basic Validation
-        if (body.quantity !== undefined && Number(body.quantity) < 0) {
+        if (sanitizedBody.quantity !== undefined && Number(sanitizedBody.quantity) < 0) {
             return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
         }
 
         const { data: belonging, error } = await supabase
             .from('belongings')
-            .update(body)
+            .update(sanitizedBody)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()

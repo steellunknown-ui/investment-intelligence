@@ -24,6 +24,14 @@ export async function PATCH(
 
         const body = await request.json()
 
+        // Sanitize empty date strings to null
+        const dateFields = ['expected_return_date', 'actual_return_date', 'interest_start_date', 'interest_end_date', 'due_date']
+        for (const field of dateFields) {
+            if (body[field] === '' || body[field] === undefined) {
+                body[field] = null
+            }
+        }
+
         // Fetch current state to validate logic
         const { data: current, error: fetchError } = await supabase
             .from('receivables')
@@ -40,21 +48,21 @@ export async function PATCH(
         let updates = { ...body }
 
         // Recalculate interest if relevant fields changed
-        if (body.principal_amount !== undefined || body.interest_rate !== undefined || 
-            body.interest_type !== undefined || body.interest_start_date !== undefined || 
+        if (body.principal_amount !== undefined || body.interest_rate !== undefined ||
+            body.interest_type !== undefined || body.interest_start_date !== undefined ||
             body.interest_end_date !== undefined) {
-            
+
             const principal = body.principal_amount !== undefined ? Number(body.principal_amount) : current.principal_amount
             const rate = body.interest_rate !== undefined ? Number(body.interest_rate) : current.interest_rate
             const type = body.interest_type || current.interest_type || 'simple'
             const startDate = body.interest_start_date || current.interest_start_date
             const endDate = body.interest_end_date || current.interest_end_date
-            
+
             if (rate && rate > 0 && startDate) {
                 const interest_amount = calculateInterest(principal, rate, type, startDate, endDate)
                 updates.interest_amount = interest_amount
                 updates.last_interest_calculated_at = new Date().toISOString()
-                
+
                 // Update total receivable if not explicitly provided
                 if (body.total_receivable === undefined) {
                     updates.total_receivable = principal + interest_amount

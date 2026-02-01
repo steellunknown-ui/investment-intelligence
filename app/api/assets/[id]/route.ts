@@ -23,14 +23,23 @@ export async function PATCH(
 
         const body = await request.json()
 
+        // Sanitize empty date strings to null
+        const sanitizedBody = { ...body }
+        const dateFields = ['purchase_date', 'registration_date', 'due_date', 'warranty_expiry']
+        for (const field of dateFields) {
+            if (sanitizedBody[field] === '' || sanitizedBody[field] === undefined) {
+                sanitizedBody[field] = null
+            }
+        }
+
         // Basic Validation
-        if (body.ownership_percentage !== undefined && (Number(body.ownership_percentage) < 0 || Number(body.ownership_percentage) > 100)) {
+        if (sanitizedBody.ownership_percentage !== undefined && (Number(sanitizedBody.ownership_percentage) < 0 || Number(sanitizedBody.ownership_percentage) > 100)) {
             return NextResponse.json({ error: 'Ownership percentage must be between 0 and 100' }, { status: 400 })
         }
 
         const { data: asset, error } = await supabase
             .from('assets')
-            .update(body)
+            .update(sanitizedBody)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()

@@ -23,20 +23,29 @@ export async function PATCH(
 
         const body = await request.json()
 
+        // Sanitize empty date strings to null
+        const sanitizedBody = { ...body }
+        const dateFields = ['start_date', 'end_date', 'next_premium_date', 'maturity_date']
+        for (const field of dateFields) {
+            if (sanitizedBody[field] === '' || sanitizedBody[field] === undefined) {
+                sanitizedBody[field] = null
+            }
+        }
+
         // Validation for numeric fields if present
-        if (body.sum_insured !== undefined && Number(body.sum_insured) < 0) {
+        if (sanitizedBody.sum_insured !== undefined && Number(sanitizedBody.sum_insured) < 0) {
             return NextResponse.json({ error: 'Sum insured cannot be negative' }, { status: 400 })
         }
-        if (body.premium_amount !== undefined && Number(body.premium_amount) < 0) {
+        if (sanitizedBody.premium_amount !== undefined && Number(sanitizedBody.premium_amount) < 0) {
             return NextResponse.json({ error: 'Premium amount cannot be negative' }, { status: 400 })
         }
-        if (body.premium_frequency && !['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(body.premium_frequency)) {
+        if (sanitizedBody.premium_frequency && !['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(sanitizedBody.premium_frequency)) {
             return NextResponse.json({ error: 'Invalid premium frequency' }, { status: 400 })
         }
 
         const { data: policy, error } = await supabase
             .from('insurance_policies')
-            .update(body)
+            .update(sanitizedBody)
             .eq('id', id)
             .eq('user_id', user.id) // Extra safety + RLS
             .select()

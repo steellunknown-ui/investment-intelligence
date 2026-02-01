@@ -23,17 +23,26 @@ export async function PATCH(
 
         const body = await request.json()
 
+        // Sanitize empty date strings to null
+        const sanitizedBody = { ...body }
+        const dateFields = ['loan_start_date', 'loan_end_date', 'next_payment_date', 'due_date']
+        for (const field of dateFields) {
+            if (sanitizedBody[field] === '' || sanitizedBody[field] === undefined) {
+                sanitizedBody[field] = null
+            }
+        }
+
         // Basic Validation
-        if (body.principal_amount !== undefined && Number(body.principal_amount) < 0) {
+        if (sanitizedBody.principal_amount !== undefined && Number(sanitizedBody.principal_amount) < 0) {
             return NextResponse.json({ error: 'Principal cannot be negative' }, { status: 400 })
         }
-        if (body.outstanding_amount !== undefined && Number(body.outstanding_amount) < 0) {
+        if (sanitizedBody.outstanding_amount !== undefined && Number(sanitizedBody.outstanding_amount) < 0) {
             return NextResponse.json({ error: 'Outstanding cannot be negative' }, { status: 400 })
         }
 
         const { data: liability, error } = await supabase
             .from('liabilities')
-            .update(body)
+            .update(sanitizedBody)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
