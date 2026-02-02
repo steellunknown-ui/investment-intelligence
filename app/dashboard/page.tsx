@@ -193,91 +193,94 @@ export default function DashboardPage() {
       <div className="space-y-8">
 
         {/* SECTION 1: NET WORTH OVERVIEW */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Big Net Worth Card with Chart */}
-          <div className="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between min-h-[220px]">
-            <div>
-              <h2 className="text-emerald-100 font-medium text-sm uppercase tracking-wider mb-2">Total Net Worth</h2>
-              {loading ? (
-                <div className="h-10 w-32 bg-emerald-500/30 rounded animate-pulse" />
-              ) : (
-                <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(netWorth?.netWorth || 0)}</h1>
-              )}
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Overview Dashboard</h2>
+          <div className="border-b border-slate-200 dark:border-slate-800 mb-6" />
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Big Net Worth Card with Chart */}
+            <div className="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between min-h-[220px]">
+              <div>
+                <h2 className="text-emerald-100 font-medium text-sm uppercase tracking-wider mb-2">Total Net Worth</h2>
+                {loading ? (
+                  <div className="h-10 w-32 bg-emerald-500/30 rounded animate-pulse" />
+                ) : (
+                  <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(netWorth?.netWorth || 0)}</h1>
+                )}
+              </div>
+
+              {/* Net Worth History Chart */}
+              <NetWorthMiniChart className="my-3" />
+
+              <div className="pt-3 border-t border-emerald-500/30 flex justify-between items-end">
+                <div className="text-sm text-emerald-100">
+                  Updated {formatLastActivity(netWorth?.updatedAt || null)}
+                </div>
+                <div className="bg-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium">
+                  Live Aggregation
+                </div>
+              </div>
             </div>
 
-            {/* Net Worth History Chart */}
-            <NetWorthMiniChart className="my-3" />
-
-            <div className="pt-3 border-t border-emerald-500/30 flex justify-between items-end">
-              <div className="text-sm text-emerald-100">
-                Updated {formatLastActivity(netWorth?.updatedAt || null)}
-              </div>
-              <div className="bg-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium">
-                Live Aggregation
-              </div>
+            {/* Breakdown Grid */}
+            <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <QuickStatCard
+                icon={Wallet}
+                label="Cash & Bank"
+                value={formatCurrency(netWorth?.bankBalanceTotal || 0)}
+                color="text-blue-600"
+                loading={loading}
+                onClick={() => router.push('/banking')}
+                delay={0.1}
+              />
+              <QuickStatCard
+                icon={Landmark}
+                label="Real Assets"
+                value={formatCurrency(netWorth?.assetsTotalValue || 0)}
+                color="text-indigo-600"
+                loading={loading}
+                onClick={() => router.push('/assets')}
+                delay={0.15}
+              />
+              <QuickStatCard
+                icon={Gem}
+                label="Belongings"
+                value={formatCurrency(netWorth?.belongingsTotalValue || 0)}
+                color="text-violet-600"
+                loading={loading}
+                onClick={() => router.push('/belongings')}
+                delay={0.2}
+              />
+              <QuickStatCard
+                icon={ArrowRightLeft}
+                label="Receivables"
+                value={formatCurrency(netWorth?.receivablesOutstandingTotal || 0)}
+                color="text-cyan-600"
+                loading={loading}
+                onClick={() => router.push('/receivables')}
+                delay={0.25}
+              />
+              <QuickStatCard
+                icon={Briefcase}
+                label="Liabilities"
+                value={formatCurrency(netWorth?.liabilitiesOutstandingTotal || 0)}
+                color="text-red-600"
+                loading={loading}
+                onClick={() => router.push('/liabilities')}
+                delay={0.3}
+              />
+              <QuickStatCard
+                icon={Gauge}
+                label="Credit Score"
+                value={creditScore ? String(creditScore) : '—'}
+                color="text-emerald-600"
+                loading={loading}
+                onClick={() => router.push('/credit-score')}
+                delay={0.35}
+              />
             </div>
-          </div>
-
-          {/* Breakdown Grid */}
-          <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <QuickStatCard
-              icon={Wallet}
-              label="Cash & Bank"
-              value={formatCurrency(netWorth?.bankBalanceTotal || 0)}
-              color="text-blue-600"
-              loading={loading}
-              onClick={() => router.push('/banking')}
-              delay={0.1}
-            />
-            <QuickStatCard
-              icon={Landmark}
-              label="Real Assets"
-              value={formatCurrency(netWorth?.assetsTotalValue || 0)}
-              color="text-indigo-600"
-              loading={loading}
-              onClick={() => router.push('/assets')}
-              delay={0.15}
-            />
-            <QuickStatCard
-              icon={Gem}
-              label="Belongings"
-              value={formatCurrency(netWorth?.belongingsTotalValue || 0)}
-              color="text-violet-600"
-              loading={loading}
-              onClick={() => router.push('/belongings')}
-              delay={0.2}
-            />
-            <QuickStatCard
-              icon={ArrowRightLeft}
-              label="Receivables"
-              value={formatCurrency(netWorth?.receivablesOutstandingTotal || 0)}
-              color="text-cyan-600"
-              loading={loading}
-              onClick={() => router.push('/receivables')}
-              delay={0.25}
-            />
-            <QuickStatCard
-              icon={Briefcase}
-              label="Liabilities"
-              value={formatCurrency(netWorth?.liabilitiesOutstandingTotal || 0)}
-              color="text-red-600"
-              loading={loading}
-              onClick={() => router.push('/liabilities')}
-              delay={0.3}
-            />
-            <QuickStatCard
-              icon={Gauge}
-              label="Credit Score"
-              value={creditScore ? String(creditScore) : '—'}
-              color="text-emerald-600"
-              loading={loading}
-              onClick={() => router.push('/credit-score')}
-              delay={0.35}
-            />
           </div>
         </div>
-
-
 
         {/* SECTION 1.5: TREND GRAPH CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
