@@ -187,7 +187,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Desktop Sidebar - Fixed with Hover Expand */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-30 hidden lg:block h-screen",
+          "fixed left-0 top-0 z-50 hidden lg:block h-screen",
           "border-r border-slate-200 dark:border-slate-700",
           "bg-white dark:bg-slate-900",
           "transition-all duration-300 ease-in-out",
