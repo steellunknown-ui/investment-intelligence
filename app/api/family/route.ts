@@ -83,6 +83,41 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Failed to add family member' }, { status: 500 })
         }
 
+        // Get owner profile for email
+        const { data: ownerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('user_id', user.id)
+            .single()
+
+        // Send email notification
+        try {
+            const { sendEmail } = await import('@/src/lib/resend')
+            await sendEmail({
+                to: email,
+                subject: `${ownerProfile?.full_name || 'Someone'} is now monitoring your portfolio`,
+                html: `
+                    <h2>Portfolio Monitoring Notification</h2>
+                    <p>Hi,</p>
+                    <p><strong>${ownerProfile?.full_name || 'A family member'}</strong> (${ownerProfile?.email}) has added you to their Family Hub.</p>
+                    <p>They can now view your financial portfolio in <strong>read-only mode</strong>.</p>
+                    <p><strong>What this means:</strong></p>
+                    <ul>
+                        <li>They can see your accounts, assets, and investments</li>
+                        <li>They cannot edit or delete anything</li>
+                        <li>Your data remains secure</li>
+                    </ul>
+                    <p>Relation: <strong>${relation}</strong></p>
+                    <p>If you have concerns, please contact them directly.</p>
+                    <br>
+                    <p>Best regards,<br>Investment Intelligence Team</p>
+                `
+            })
+        } catch (emailError) {
+            console.error('Email notification failed:', emailError)
+            // Don't fail the request if email fails
+        }
+
         return NextResponse.json({ member }, { status: 201 })
     } catch (error) {
         console.error('Family members POST error:', error)
