@@ -18,7 +18,7 @@ export default function FamilyHubPage() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState({ email: "", relation: "" });
+    const [formData, setFormData] = useState({ name: "", email: "", relation: "" });
 
     const fetchMembers = async () => {
         try {
@@ -52,7 +52,7 @@ export default function FamilyHubPage() {
 
             if (res.ok) {
                 setIsModalOpen(false);
-                setFormData({ email: "", relation: "" });
+                setFormData({ name: "", email: "", relation: "" });
                 fetchMembers();
             } else {
                 const error = await res.json();
@@ -180,6 +180,13 @@ export default function FamilyHubPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleInvite} className="space-y-4">
+                            <Input
+                                label="Member Name"
+                                placeholder="e.g. Rahul Sharma"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
                             <Input
                                 label="Email Address"
                                 type="email"

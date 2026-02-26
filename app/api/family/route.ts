@@ -53,10 +53,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const { email, relation } = await request.json()
+        const { email, relation, name } = await request.json()
 
-        if (!email || !relation) {
-            return NextResponse.json({ error: 'Email and relation are required' }, { status: 400 })
+        if (!email || !relation || !name) {
+            return NextResponse.json({ error: 'Name, email and relation are required' }, { status: 400 })
         }
 
         // Use admin client to check auth.users
@@ -96,6 +96,13 @@ export async function POST(request: Request) {
             console.error('Family member insert error:', error)
             return NextResponse.json({ error: 'Failed to add family member' }, { status: 500 })
         }
+
+        // Update member profile with name if not set
+        await supabase
+            .from('profiles')
+            .update({ full_name: name })
+            .eq('user_id', memberUser.id)
+            .is('full_name', null)
 
         return NextResponse.json({ member }, { status: 201 })
     } catch (error) {
