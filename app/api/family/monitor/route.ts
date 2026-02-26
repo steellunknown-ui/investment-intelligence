@@ -17,16 +17,28 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Member ID required' }, { status: 400 })
         }
 
-        // Verify access
+        // Verify access - manually fetch
         const { data: familyMember, error: accessError } = await supabase
             .from('family_members')
-            .select('*, member_profile:profiles!family_members_member_user_id_fkey(full_name, email, avatar_url)')
+            .select('*')
             .eq('owner_id', user.id)
             .eq('member_user_id', memberId)
             .single()
 
         if (accessError || !familyMember) {
             return NextResponse.json({ error: 'Unauthorized access' }, { status: 403 })
+        }
+
+        // Fetch member profile
+        const { data: memberProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email, avatar_url')
+            .eq('user_id', memberId)
+            .single()
+
+        const memberWithProfile = {
+            ...familyMember,
+            member_profile: memberProfile
         }
 
         // Fetch all financial data
@@ -41,7 +53,7 @@ export async function GET(request: Request) {
         ])
 
         return NextResponse.json({
-            member: familyMember,
+            member: memberWithProfile,
             data: {
                 accounts: accounts.data || [],
                 assets: assets.data || [],
