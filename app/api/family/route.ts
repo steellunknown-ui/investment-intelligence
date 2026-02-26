@@ -12,7 +12,7 @@ export async function GET() {
 
         const { data: members, error } = await supabase
             .from('family_members')
-            .select('*, member_profile:profiles!family_members_member_user_id_fkey(full_name, email, avatar_url)')
+            .select('*')
             .eq('owner_id', user.id)
             .order('created_at', { ascending: false })
 
@@ -21,7 +21,23 @@ export async function GET() {
             return NextResponse.json({ error: 'Failed to fetch family members' }, { status: 500 })
         }
 
-        return NextResponse.json({ members: members || [] })
+        // Manually fetch profiles for each member
+        const membersWithProfiles = await Promise.all(
+            (members || []).map(async (member) => {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, email, avatar_url')
+                    .eq('user_id', member.member_user_id)
+                    .single()
+                
+                return {
+                    ...member,
+                    member_profile: profile
+                }
+            })
+        )
+
+        return NextResponse.json({ members: membersWithProfiles })
     } catch (error) {
         console.error('Family members GET error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
