@@ -43,14 +43,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Email and relation are required' }, { status: 400 })
         }
 
-        // Find user by email
-        const { data: memberProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('email', email)
-            .single()
-
-        if (profileError || !memberProfile) {
+        // Find user by email in auth.users
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
+        
+        const memberUser = authUsers?.users?.find(u => u.email === email)
+        
+        if (!memberUser) {
             return NextResponse.json({ error: 'User must create account first' }, { status: 404 })
         }
 
@@ -59,7 +57,7 @@ export async function POST(request: Request) {
             .from('family_members')
             .select('id')
             .eq('owner_id', user.id)
-            .eq('member_user_id', memberProfile.user_id)
+            .eq('member_user_id', memberUser.id)
             .single()
 
         if (existing) {
@@ -71,7 +69,7 @@ export async function POST(request: Request) {
             .from('family_members')
             .insert({
                 owner_id: user.id,
-                member_user_id: memberProfile.user_id,
+                member_user_id: memberUser.id,
                 relation,
                 role: 'viewer'
             })
