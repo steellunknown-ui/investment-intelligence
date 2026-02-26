@@ -43,10 +43,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Email and relation are required' }, { status: 400 })
         }
 
-        // Find user by email in auth.users
-        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-        
-        const memberUser = authUsers?.users?.find(u => u.email === email)
+        // Use admin client to check auth.users
+        const { supabaseAdmin } = await import('@/src/lib/supabase/admin')
+        const { data: authData } = await supabaseAdmin.auth.admin.listUsers()
+        const memberUser = authData?.users?.find(u => u.email === email)
         
         if (!memberUser) {
             return NextResponse.json({ error: 'User must create account first' }, { status: 404 })
