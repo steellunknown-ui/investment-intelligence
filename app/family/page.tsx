@@ -51,9 +51,16 @@ export default function FamilyHubPage() {
             });
 
             if (res.ok) {
+                const result = await res.json();
                 setIsModalOpen(false);
                 setFormData({ email: "", relation: "" });
-                fetchMembers();
+                
+                if (result.status === 'invited') {
+                    alert('✅ Invitation sent! They will appear here once they create an account.');
+                } else {
+                    alert('✅ Family member added successfully!');
+                    fetchMembers();
+                }
             } else {
                 const error = await res.json();
                 alert(error.error || "Failed to invite member");
