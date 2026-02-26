@@ -115,6 +115,10 @@ export interface BankAccount {
   account_holder_name: string;
   is_joint_account: boolean;
   joint_holder_name?: string | null;
+  joint_holders?: {
+    name: string;
+    relation?: string;
+  }[];
   current_balance: number;
   balance_as_of?: string | null;
   account_nominee_name?: string | null;

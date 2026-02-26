@@ -70,6 +70,12 @@ export default function BankingPage() {
     // QuickPick State
     const [showBankPick, setShowBankPick] = useState(false);
 
+    // Joint Holders State
+    const [jointHolderCount, setJointHolderCount] = useState(0);
+    const [jointHolders, setJointHolders] = useState<
+        { name: string; relation?: string }[]
+    >([]);
+
     // Form State
     const [formData, setFormData] = useState({
         account_number: "",
@@ -111,6 +117,8 @@ export default function BankingPage() {
             debit_card_number: "",
             notes: "",
         });
+        setJointHolderCount(0);
+        setJointHolders([]);
         setEditingId(null);
     };
 
@@ -153,6 +161,20 @@ export default function BankingPage() {
             debit_card_number: account.debit_card_number || "",
             notes: account.notes || "",
         });
+        
+        // Load joint holders
+        if (account.joint_holders && account.joint_holders.length > 0) {
+            setJointHolders(account.joint_holders);
+            setJointHolderCount(account.joint_holders.length);
+        } else if (account.joint_holder_name) {
+            // Convert old format to new
+            setJointHolders([{ name: account.joint_holder_name }]);
+            setJointHolderCount(1);
+        } else {
+            setJointHolders([]);
+            setJointHolderCount(0);
+        }
+        
         setEditingId(account.id);
         setIsModalOpen(true);
     };
@@ -185,10 +207,15 @@ export default function BankingPage() {
                 : "/api/banking/accounts";
             const method = editingId ? "PATCH" : "POST";
 
+            const payload = {
+                ...formData,
+                joint_holders: jointHolders.filter(h => h.name.trim() !== "")
+            };
+
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload),
             });
 
             if (res.ok) {
@@ -368,6 +395,24 @@ export default function BankingPage() {
                                             )}
                                         </div>
                                     )}
+
+                                    {/* Joint Holders Display */}
+                                    {account.joint_holders && account.joint_holders.length > 0 && (
+                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Joint Holders</p>
+                                            <div className="space-y-1">
+                                                {account.joint_holders.map((holder, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                                        <User className="h-3 w-3" />
+                                                        <span className="font-medium">{holder.name}</span>
+                                                        {holder.relation && (
+                                                            <span className="text-slate-400">({holder.relation})</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                                 <CardFooter className="pt-0 space-y-2">
                                     <div className="flex gap-2 justify-between">
@@ -520,6 +565,51 @@ export default function BankingPage() {
                                                 required
                                             />
                                         )}
+
+                                        {/* Dynamic Joint Holders */}
+                                        <div className="space-y-3">
+                                            <Select
+                                                label="How many joint holders?"
+                                                options={[
+                                                    { value: "0", label: "0" },
+                                                    { value: "1", label: "1" },
+                                                    { value: "2", label: "2" },
+                                                    { value: "3", label: "3" },
+                                                ]}
+                                                value={String(jointHolderCount)}
+                                                onChange={(e) => {
+                                                    const count = Number(e.target.value);
+                                                    setJointHolderCount(count);
+                                                    setJointHolders(Array.from({ length: count }, (_, i) => 
+                                                        jointHolders[i] || { name: "", relation: "" }
+                                                    ));
+                                                }}
+                                            />
+                                            {Array.from({ length: jointHolderCount }).map((_, idx) => (
+                                                <div key={idx} className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Joint Holder {idx + 1}</p>
+                                                    <Input
+                                                        placeholder="Name"
+                                                        value={jointHolders[idx]?.name || ""}
+                                                        onChange={(e) => {
+                                                            const updated = [...jointHolders];
+                                                            updated[idx] = { ...updated[idx], name: e.target.value };
+                                                            setJointHolders(updated);
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        placeholder="Relation (optional)"
+                                                        value={jointHolders[idx]?.relation || ""}
+                                                        onChange={(e) => {
+                                                            const updated = [...jointHolders];
+                                                            updated[idx] = { ...updated[idx], relation: e.target.value };
+                                                            setJointHolders(updated);
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+
                                         <Input
                                             label="Nominee Name"
                                             value={formData.account_nominee_name}
