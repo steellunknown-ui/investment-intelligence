@@ -21,7 +21,8 @@ import {
   Sparkles,
   Home,
   TrendingUp,
-  UsersRound
+  UsersRound,
+  BarChart3
 } from "lucide-react";
 import {
   Sheet,
@@ -47,6 +48,7 @@ const navigation = [
   { name: "Documents", href: "/documents", icon: FileText },
   { name: "AI Assistant", href: "/assistant", icon: Sparkles },
   { name: "Family Hub", href: "/family", icon: UsersRound },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Nominee", href: "/nominee", icon: Users },
   { name: "Activity & Alerts", href: "/activity", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },
