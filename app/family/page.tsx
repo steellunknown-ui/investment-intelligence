@@ -129,14 +129,22 @@ export default function FamilyHubPage() {
                             <Card key={member.id} className="hover:shadow-md transition-all">
                                 <CardHeader className="pb-3">
                                     <div className="flex justify-between items-start">
-                                        <div className="icon-container bg-blue-50 dark:bg-blue-900/20">
-                                            <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                        </div>
+                                        {member.member_profile?.avatar_url ? (
+                                            <img 
+                                                src={member.member_profile.avatar_url} 
+                                                alt={member.member_profile.full_name || "Avatar"}
+                                                className="h-12 w-12 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="icon-container bg-blue-50 dark:bg-blue-900/20">
+                                                <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                        )}
                                         <Badge variant="success">Monitoring</Badge>
                                     </div>
                                     <div className="mt-4">
                                         <h3 className="font-semibold text-slate-900 dark:text-white">
-                                            {member.member_profile?.full_name || "Unknown"}
+                                            {member.member_profile?.full_name || member.member_profile?.email || "Unknown"}
                                         </h3>
                                         <p className="text-sm text-slate-500 mt-1">{member.relation}</p>
                                     </div>

@@ -97,14 +97,25 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Failed to add family member' }, { status: 500 })
         }
 
-        // Update member profile with name if not set
+        // Update member profile with name
         await supabase
             .from('profiles')
             .update({ full_name: name })
             .eq('user_id', memberUser.id)
-            .is('full_name', null)
 
-        return NextResponse.json({ member }, { status: 201 })
+        // Fetch updated profile
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email, avatar_url')
+            .eq('user_id', memberUser.id)
+            .single()
+
+        return NextResponse.json({ 
+            member: {
+                ...member,
+                member_profile: profile
+            }
+        }, { status: 201 })
     } catch (error) {
         console.error('Family members POST error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
