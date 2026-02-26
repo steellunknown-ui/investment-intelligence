@@ -347,3 +347,18 @@ export interface UserContext {
   receivables: number;
   alerts: number;
 }
+
+export interface FamilyMember {
+  id: string;
+  owner_id: string;
+  member_user_id: string;
+  role: string;
+  relation: string;
+  created_at: string;
+  updated_at: string;
+  member_profile?: {
+    full_name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}

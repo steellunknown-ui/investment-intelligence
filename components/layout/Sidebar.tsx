@@ -20,7 +20,8 @@ import {
   FileText,
   Sparkles,
   Home,
-  TrendingUp
+  TrendingUp,
+  UsersRound
 } from "lucide-react";
 import {
   Sheet,
@@ -45,6 +46,7 @@ const navigation = [
   { name: "Credit Score", href: "/credit-score", icon: TrendingUp },
   { name: "Documents", href: "/documents", icon: FileText },
   { name: "AI Assistant", href: "/assistant", icon: Sparkles },
+  { name: "Family Hub", href: "/family", icon: UsersRound },
   { name: "Nominee", href: "/nominee", icon: Users },
   { name: "Activity & Alerts", href: "/activity", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },
