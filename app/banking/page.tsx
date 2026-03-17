@@ -34,11 +34,18 @@ import {
 } from "lucide-react";
 import type { BankAccount } from "@/lib/types";
 import { formatUpdatedLabel, formatDateTime } from "@/src/lib/time";
+import { TransactionsDialog } from "@/components/banking/TransactionsDialog";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { bankNames } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
+import { fetchBankDetailsByIFSC } from "@/src/lib/ifsc";
+import { IFSC_REGEX, validateBankAccountNumber } from "@/src/lib/financialValidationRules";
+import { Loader2, AlertCircle as AlertCircleIcon } from "lucide-react";
 
 // Constants
 const ACCOUNT_TYPES = [
@@ -66,6 +73,11 @@ export default function BankingPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+    // Transactions Dialog State
+    const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
+    const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
 
     // QuickPick State
     const [showBankPick, setShowBankPick] = useState(false);
@@ -95,7 +107,14 @@ export default function BankingPage() {
         net_banking_enabled: false,
         debit_card_number: "",
         notes: "",
+        city: "",
+        state: "",
     });
+
+    const [isFetchingIFSC, setIsFetchingIFSC] = useState(false);
+    const [ifscLoaded, setIfscLoaded] = useState(false);
+    const [detectedBank, setDetectedBank] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const resetForm = () => {
         setFormData({
@@ -116,10 +135,15 @@ export default function BankingPage() {
             net_banking_enabled: false,
             debit_card_number: "",
             notes: "",
+            city: "",
+            state: "",
         });
         setJointHolderCount(0);
         setJointHolders([]);
         setEditingId(null);
+        setIfscLoaded(false);
+        setDetectedBank(null);
+        setFieldErrors({});
     };
 
     const fetchAccounts = useCallback(async () => {
@@ -160,8 +184,10 @@ export default function BankingPage() {
             net_banking_enabled: account.net_banking_enabled,
             debit_card_number: account.debit_card_number || "",
             notes: account.notes || "",
+            city: account.city || "",
+            state: account.state || "",
         });
-        
+
         // Load joint holders
         if (account.joint_holders && account.joint_holders.length > 0) {
             setJointHolders(account.joint_holders);
@@ -174,7 +200,7 @@ export default function BankingPage() {
             setJointHolders([]);
             setJointHolderCount(0);
         }
-        
+
         setEditingId(account.id);
         setIsModalOpen(true);
     };
@@ -197,8 +223,165 @@ export default function BankingPage() {
         }
     };
 
+    const handleAccountNumberChange = (value: string) => {
+        setFormData(p => ({ ...p, account_number: value }));
+        
+        const validation = validateBankAccountNumber(formData.bank_name, value);
+        if (!validation.isValid) {
+            setFieldErrors(prev => ({ ...prev, account_number: validation.error! }));
+        } else {
+            setFieldErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.account_number;
+                return newErrors;
+            });
+        }
+    };
+
+    const handleIFSCChange = async (value: string) => {
+        let upValue = value.toUpperCase();
+        
+        // Smart Extraction: Extract IFSC from string (e.g., if user pasted a search result sentence)
+        const ifscMatch = upValue.match(/[A-Z]{4}0[A-Z0-9]{6}/);
+        if (ifscMatch) {
+            upValue = ifscMatch[0];
+        }
+        
+        setFormData(p => ({ ...p, ifsc_code: upValue }));
+        
+        // Reset errors 
+        setFieldErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.ifsc_code;
+            return newErrors;
+        });
+
+        // 1. Partial/Starting Letter Validation
+        if (upValue.length > 0) {
+            // First 4 characters must be alphabetic (Bank Code)
+            const prefix = upValue.substring(0, 4);
+            if (!/^[A-Z]*$/.test(prefix)) {
+                setFieldErrors(prev => ({ ...prev, ifsc_code: "Invalid IFSC Code: First 4 characters must be letters (Bank Code)" }));
+                return;
+            }
+            
+            // 5th character must be '0' if present
+            if (upValue.length >= 5 && upValue[4] !== '0') {
+                setFieldErrors(prev => ({ ...prev, ifsc_code: "Invalid IFSC Code: 5th character must be zero" }));
+                return;
+            }
+            
+            // Re-validate against full regex if length >= 11
+            if (upValue.length > 11) {
+                 setFieldErrors(prev => ({ ...prev, ifsc_code: "Invalid IFSC format: Maximum length is 11" }));
+                 return;
+            }
+        }
+
+        if (IFSC_REGEX.test(upValue)) {
+            setIsFetchingIFSC(true);
+            try {
+                const details = await fetchBankDetailsByIFSC(upValue);
+                if (details) {
+                    const matchedBank = bankNames.find(b => 
+                        b.toLowerCase().includes(details.BANK.toLowerCase()) || 
+                        details.BANK.toLowerCase().includes(b.split(' (')[0].toLowerCase())
+                    );
+
+                    setFormData(p => {
+                        const newFormData = {
+                            ...p,
+                            bank_name: matchedBank || details.BANK,
+                            branch_name: details.BRANCH,
+                            city: details.CITY,
+                            state: details.STATE
+                        };
+                        
+                        // Re-validate account number if it exists
+                        if (newFormData.account_number) {
+                            const validation = validateBankAccountNumber(newFormData.bank_name, newFormData.account_number);
+                            if (!validation.isValid) {
+                                setFieldErrors(prev => ({ ...prev, account_number: validation.error! }));
+                            } else {
+                                setFieldErrors(prev => {
+                                    const n = { ...prev };
+                                    delete n.account_number;
+                                    return n;
+                                });
+                            }
+                        }
+                        
+                        return newFormData;
+                    });
+
+                    setDetectedBank(matchedBank || details.BANK);
+                    setIfscLoaded(true);
+                } else {
+                    setFieldErrors(prev => ({ ...prev, ifsc_code: "Invalid IFSC Code. Please check the starting letters." }));
+                    setDetectedBank(null);
+                    setIfscLoaded(false);
+                }
+            } catch (error) {
+                setFieldErrors(prev => ({ ...prev, ifsc_code: "Failed to verify IFSC" }));
+                setDetectedBank(null);
+            } finally {
+                setIsFetchingIFSC(false);
+            }
+        } else {
+            setIfscLoaded(false);
+            setDetectedBank(null);
+            if (upValue.length >= 11) {
+                setFieldErrors(prev => ({ ...prev, ifsc_code: "Invalid IFSC Code. Please check the starting letters." }));
+            }
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const errors: Record<string, string> = {};
+
+        // 1. IFSC Check
+        if (!IFSC_REGEX.test(formData.ifsc_code)) {
+            errors.ifsc_code = "Invalid IFSC format";
+        } else if (!ifscLoaded) {
+            errors.ifsc_code = "IFSC code could not be verified online. Please check if it is correct.";
+        } else if (detectedBank && formData.bank_name !== detectedBank) {
+            // Check if selected bank matches detected bank
+            errors.bank_name = "Selected bank does not match IFSC bank.";
+        }
+
+        // 2. Account Number Validation (Regex: ^\d+$)
+        if (!/^\d+$/.test(formData.account_number)) {
+            errors.account_number = "Account number must contain digits only.";
+        } else {
+            const accValidation = validateBankAccountNumber(formData.bank_name, formData.account_number);
+            if (!accValidation.isValid) {
+                errors.account_number = accValidation.error || "Invalid account number length for selected bank.";
+            }
+        }
+
+        // 3. Bank Name Match Check
+        // If IFSC was verified, bank_name should ideally be autofilled. 
+        // If user manually changes it after, or if it doesn't match the expectation.
+        // We'll trust our presets matching logic in handleIFSCChange, but if we want to be strict:
+        // We need to store the detected bank name separately during handleIFSCChange to compare.
+        // For now, let's just make sure they selected SOME bank and it's not "Unknown".
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            
+            // Auto-scroll to first error
+            const firstErrorKey = Object.keys(errors)[0];
+            const element = document.getElementById(`bank-${firstErrorKey}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+            }
+            
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -272,34 +455,43 @@ export default function BankingPage() {
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                                 <Input
                                     placeholder="Search bank / account..."
-                                    className="pl-9 bg-white dark:bg-slate-800"
+                                    className="pl-9 bg-card"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline" className="gap-2 shrink-0">
-                                <Filter className="h-4 w-4" />
-                                <span className="hidden sm:inline">Filter</span>
+                            <div className="w-full sm:w-48 shrink-0">
+                                <Select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    options={[
+                                        { value: "all", label: "All Statuses" },
+                                        ...STATUS_OPTIONS
+                                    ]}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                            <Button
+                                onClick={() => {
+                                    resetForm();
+                                    setIsModalOpen(true);
+                                }}
+                                className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Account
                             </Button>
                         </div>
-                        <Button
-                            onClick={() => {
-                                resetForm();
-                                setIsModalOpen(true);
-                            }}
-                            className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Account
-                        </Button>
                     </div>
 
                     {/* Summary Card */}
                     {accounts.length > 0 && (
-                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 text-white shadow-lg">
-                            <p className="text-emerald-100 text-sm font-medium mb-1">Total Balance Across Accounts</p>
+                        <div className="rounded-xl p-6 shadow-lg" style={{ background: 'var(--summary-card-bg)', color: 'hsl(var(--summary-card-text))' }}>
+                            <p className="opacity-80 text-sm font-medium mb-1">Total Balance Across Accounts</p>
                             <h2 className="text-3xl font-bold">{formatCurrency(totalBalance)}</h2>
-                            <p className="text-emerald-100 text-xs mt-2 opacity-80">
+                            <p className="opacity-80 text-xs mt-2">
                                 {filteredAccounts.length} account{filteredAccounts.length !== 1 ? 's' : ''} listed
                             </p>
                         </div>
@@ -330,123 +522,183 @@ export default function BankingPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredAccounts.map((account) => (
-                            <Card key={account.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                <CardHeader className="pb-3">
-                                    <div className="flex justify-between items-start">
-                                        <div className="icon-container bg-blue-50 dark:bg-blue-900/20">
-                                            <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                        </div>
-                                        <Badge variant={account.status === 'active' ? 'success' : 'secondary'}>
-                                            {account.status}
-                                        </Badge>
-                                    </div>
-                                    <div className="mt-4">
-                                        <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                            {account.bank_name}
-                                        </h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-sm font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                                                •••• {account.account_number.slice(-4)}
-                                            </p>
-                                            <Badge variant="outline" className="text-[10px] h-5 px-1 uppercase tracking-wide">
-                                                {account.account_type.replace('_', ' ')}
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredAccounts.map((account) => (
+                                <Card key={account.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex justify-between items-start">
+                                            <div className="icon-container bg-blue-50 dark:bg-blue-900/20">
+                                                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <Badge variant={account.status === 'active' ? 'success' : 'secondary'}>
+                                                {account.status}
                                             </Badge>
                                         </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pb-3 space-y-3">
-                                    <div>
-                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Balance</p>
-                                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                            {formatCurrency(account.current_balance)}
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-slate-400">IFSC</span>
-                                            <div className="flex items-center gap-1 group/code cursor-pointer" onClick={() => handleCopy(account.ifsc_code, `ifsc-${account.id}`)}>
-                                                <span className="font-medium">{account.ifsc_code}</span>
-                                                {copiedId === `ifsc-${account.id}` ?
-                                                    <Check className="h-3 w-3 text-emerald-500" /> :
-                                                    <Copy className="h-3 w-3 opacity-0 group-hover/code:opacity-100 transition-opacity" />
-                                                }
+                                        <div className="mt-4">
+                                            <h3 className="font-semibold text-foreground line-clamp-1">
+                                                {account.bank_name}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-sm font-mono text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                                    •••• {account.account_number.slice(-4)}
+                                                </p>
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1 uppercase tracking-wide">
+                                                    {account.account_type.replace('_', ' ')}
+                                                </Badge>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-slate-400">Holder</span>
-                                            <span className="font-medium truncate">{account.account_holder_name.split(' ')[0]}</span>
+                                    </CardHeader>
+                                    <CardContent className="pb-3 space-y-3">
+                                        <div>
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Balance</p>
+                                            <p className="text-2xl font-bold text-foreground">
+                                                {formatCurrency(account.current_balance)}
+                                            </p>
                                         </div>
-                                    </div>
 
-                                    {(account.net_banking_enabled || account.linked_mobile) && (
-                                        <div className="flex gap-3 pt-1">
-                                            {account.net_banking_enabled && (
-                                                <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full dark:bg-emerald-900/20 dark:text-emerald-400">
-                                                    <CheckCircle className="h-3 w-3" /> Net Banking
+                                        <div className="pt-3 border-t border-border grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-slate-400">IFSC</span>
+                                                <div className="flex items-center gap-1 group/code cursor-pointer" onClick={() => handleCopy(account.ifsc_code, `ifsc-${account.id}`)}>
+                                                    <span className="font-medium">{account.ifsc_code}</span>
+                                                    {copiedId === `ifsc-${account.id}` ?
+                                                        <Check className="h-3 w-3 text-primary" /> :
+                                                        <Copy className="h-3 w-3 opacity-0 group-hover/code:opacity-100 transition-opacity" />
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-slate-400">Holder</span>
+                                                <span className="font-medium truncate">{account.account_holder_name.split(' ')[0]}</span>
+                                            </div>
+                                            {(account.branch_name || account.city) && (
+                                                <div className="flex flex-col gap-1 col-span-2 mt-1">
+                                                    <span className="text-slate-400">Location</span>
+                                                    <span className="font-medium truncate">
+                                                        {account.branch_name}{account.city ? `, ${account.city}` : ''}{account.state ? `, ${account.state}` : ''}
+                                                    </span>
                                                 </div>
                                             )}
-                                            {account.linked_mobile && (
-                                                <div className="flex items-center gap-1 text-xs text-slate-500">
-                                                    <Smartphone className="h-3 w-3" /> {account.linked_mobile.slice(-4)}
-                                                </div>
-                                            )}
                                         </div>
-                                    )}
 
-                                    {/* Joint Holders Display */}
-                                    {account.joint_holders && account.joint_holders.length > 0 && (
-                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                                            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Joint Holders</p>
-                                            <div className="space-y-1">
-                                                {account.joint_holders.map((holder, idx) => (
-                                                    <div key={idx} className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                                        <User className="h-3 w-3" />
-                                                        <span className="font-medium">{holder.name}</span>
-                                                        {holder.relation && (
-                                                            <span className="text-slate-400">({holder.relation})</span>
-                                                        )}
+                                        {(account.net_banking_enabled || account.linked_mobile) && (
+                                            <div className="flex gap-3 pt-1">
+                                                {account.net_banking_enabled && (
+                                                    <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full dark:bg-emerald-900/20 dark:text-accent">
+                                                        <CheckCircle className="h-3 w-3" /> Net Banking
                                                     </div>
-                                                ))}
+                                                )}
+                                                {account.linked_mobile && (
+                                                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                                                        <Smartphone className="h-3 w-3" /> {account.linked_mobile.slice(-4)}
+                                                    </div>
+                                                )}
                                             </div>
+                                        )}
+
+                                        {/* Joint Holders Display */}
+                                        {account.joint_holders && account.joint_holders.length > 0 && (
+                                            <div className="pt-3 border-t border-border">
+                                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Joint Holders</p>
+                                                <div className="space-y-1">
+                                                    {account.joint_holders.map((holder, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <User className="h-3 w-3" />
+                                                            <span className="font-medium">{holder.name}</span>
+                                                            {holder.relation && (
+                                                                <span className="text-slate-400">({holder.relation})</span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                    <CardFooter className="pt-0 flex items-center justify-between mt-auto">
+                                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                            {formatUpdatedLabel(account.updated_at || account.created_at)}
                                         </div>
-                                    )}
-                                </CardContent>
-                                <CardFooter className="pt-0 space-y-2">
-                                    <div className="flex gap-2 justify-between">
-                                        <EntityDocumentsBadge
-                                            entityType="bank_account"
-                                            entityId={account.id}
-                                        />
-                                        <div className="flex gap-2">
+                                        <div className="flex items-center gap-1">
                                             <Button
-                                                variant="ghost"
+                                                variant="secondary"
                                                 size="sm"
-                                                onClick={() => handleEdit(account)}
-                                                className="h-8 w-8 p-0"
+                                                onClick={() => {
+                                                    setSelectedAccount(account);
+                                                    setIsTransactionsOpen(true);
+                                                }}
+                                                className="h-8 gap-2 text-xs mr-1"
                                             >
+                                                <Landmark className="h-3 w-3" /> Ledger
+                                            </Button>
+                                            <EntityDocumentsBadge
+                                                entityType="bank_account"
+                                                entityId={account.id}
+                                            />
+                                            <GridDocUpload
+                                                entityType="bank_account"
+                                                entityId={account.id}
+                                            />
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(account)} className="h-8 w-8 p-0">
                                                 <Edit2 className="h-4 w-4 text-slate-500" />
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDelete(account.id)}
-                                                className="h-8 w-8 p-0 hover:text-red-600"
-                                            >
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(account.id)} className="h-8 w-8 p-0 hover:text-red-600">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                    </div>
-                                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>{formatUpdatedLabel(account.updated_at || account.created_at)}</span>
-                                        <span>{formatDateTime(account.updated_at || account.created_at)}</span>
-                                    </div>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredAccounts}
+                            columns={[
+                                {
+                                    key: 'bank_name', label: 'Bank', render: (a) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{a.bank_name}</span>
+                                            <span className="block text-xs text-slate-500">•••• {a.account_number.slice(-4)}</span>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    key: 'account_type', label: 'Type', render: (a) => (
+                                        <Badge variant="outline" className="text-xs capitalize">{a.account_type.replace('_', ' ')}</Badge>
+                                    )
+                                },
+                                {
+                                    key: 'current_balance', label: 'Balance', render: (a) => (
+                                        <span className="font-semibold text-foreground">{formatCurrency(a.current_balance)}</span>
+                                    )
+                                },
+                                { key: 'ifsc_code', label: 'IFSC', hideMobile: true },
+                                {
+                                    key: 'status', label: 'Status', render: (a) => (
+                                        <Badge variant={a.status === 'active' ? 'success' : 'secondary'} className="text-xs">{a.status}</Badge>
+                                    ), hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(a) => handleDelete(a.id)}
+                            renderDocUpload={(a) => (
+                                <GridDocUpload entityType="bank_account" entityId={a.id} />
+                            )}
+                            renderExtraActions={(a) => (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setSelectedAccount(a);
+                                        setIsTransactionsOpen(true);
+                                    }}
+                                    className="h-8 px-2 text-xs gap-1"
+                                >
+                                    <Landmark className="h-3 w-3" /> Ledger
+                                </Button>
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -463,7 +715,7 @@ export default function BankingPage() {
                                 <div className="space-y-4">
                                     {/* Section: Basic Info */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                                             <Building2 className="h-4 w-4" /> Account Details
                                         </h4>
                                         <div>
@@ -487,7 +739,23 @@ export default function BankingPage() {
                                                             subtitle="Popular Indian banks"
                                                             items={bankNames.map((name) => ({ label: name, value: name }))}
                                                             onSelect={(value) => {
-                                                                setFormData((p) => ({ ...p, bank_name: value }));
+                                                                setFormData((p) => {
+                                                                    const newFormData = { ...p, bank_name: value };
+                                                                    // Re-validate account number if it exists
+                                                                    if (newFormData.account_number) {
+                                                                        const val = validateBankAccountNumber(newFormData.bank_name, newFormData.account_number);
+                                                                        if (!val.isValid) {
+                                                                            setFieldErrors(prev => ({ ...prev, account_number: val.error! }));
+                                                                        } else {
+                                                                            setFieldErrors(prev => {
+                                                                                const n = { ...prev };
+                                                                                delete n.account_number;
+                                                                                return n;
+                                                                            });
+                                                                        }
+                                                                    }
+                                                                    return newFormData;
+                                                                });
                                                                 setShowBankPick(false);
                                                             }}
                                                         />
@@ -495,31 +763,102 @@ export default function BankingPage() {
                                                 </Sheet>
                                             </div>
                                             <Input
+                                                id="bank-bank_name"
                                                 placeholder="e.g. HDFC Bank"
                                                 value={formData.bank_name}
-                                                onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setFormData(p => {
+                                                        const newFormData = { ...p, bank_name: val };
+                                                        // Re-validate account number if it exists
+                                                        if (newFormData.account_number) {
+                                                            const validation = validateBankAccountNumber(newFormData.bank_name, newFormData.account_number);
+                                                            if (!validation.isValid) {
+                                                                setFieldErrors(prev => ({ ...prev, account_number: validation.error! }));
+                                                            } else {
+                                                                setFieldErrors(prev => {
+                                                                    const n = { ...prev };
+                                                                    delete n.account_number;
+                                                                    return n;
+                                                                });
+                                                            }
+                                                        }
+                                                        return newFormData;
+                                                    });
+                                                }}
                                                 required
+                                                disabled={ifscLoaded}
                                             />
+                                            {fieldErrors.bank_name && <p className="text-xs text-red-500 mt-1">{fieldErrors.bank_name}</p>}
                                         </div>
-                                        <Input
-                                            label="Account Number"
-                                            value={formData.account_number}
-                                            onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                                            required
-                                        />
-                                        <Input
-                                            label="IFSC Code"
-                                            placeholder="e.g. HDFC0001234"
-                                            value={formData.ifsc_code}
-                                            onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
-                                            required
-                                        />
+                                        <div className="space-y-1">
+                                            <Input
+                                                id="bank-account_number"
+                                                label="Account Number"
+                                                value={formData.account_number}
+                                                onChange={(e) => handleAccountNumberChange(e.target.value)}
+                                                required
+                                                className={fieldErrors.account_number ? "border-red-500" : ""}
+                                            />
+                                            {fieldErrors.account_number && (
+                                                <div className="flex items-center gap-1 text-xs text-red-500 font-medium">
+                                                    <AlertCircleIcon className="h-3 w-3" />
+                                                    {fieldErrors.account_number}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Input
+                                                id="bank-ifsc_code"
+                                                label="IFSC Code"
+                                                placeholder="e.g. HDFC0001234"
+                                                value={formData.ifsc_code}
+                                                onChange={(e) => handleIFSCChange(e.target.value)}
+                                                required
+                                                className={fieldErrors.ifsc_code ? "border-red-500" : ""}
+                                            />
+                                            {isFetchingIFSC && (
+                                                <div className="flex items-center gap-2 text-xs text-blue-600 animate-pulse">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Fetching bank details...
+                                                </div>
+                                            )}
+                                            {ifscLoaded && !fieldErrors.ifsc_code && (
+                                                <div className="flex items-center gap-1 text-xs text-primary font-medium">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    IFSC Verified Successfully
+                                                </div>
+                                            )}
+                                            {fieldErrors.ifsc_code && (
+                                                <div className="flex items-center gap-1 text-xs text-red-500 font-medium">
+                                                    <AlertCircleIcon className="h-3 w-3" />
+                                                    {fieldErrors.ifsc_code}
+                                                </div>
+                                            )}
+                                        </div>
                                         <Input
                                             label="Branch Name"
                                             placeholder="e.g. Indiranagar"
                                             value={formData.branch_name}
                                             onChange={(e) => setFormData({ ...formData, branch_name: e.target.value })}
+                                            disabled={ifscLoaded}
                                         />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input
+                                                label="City"
+                                                placeholder="e.g. Bangalore"
+                                                value={formData.city}
+                                                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                                disabled={ifscLoaded}
+                                            />
+                                            <Input
+                                                label="State"
+                                                placeholder="e.g. Karnataka"
+                                                value={formData.state}
+                                                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                                disabled={ifscLoaded}
+                                            />
+                                        </div>
                                         <Select
                                             label="Account Type"
                                             options={ACCOUNT_TYPES}
@@ -535,8 +874,8 @@ export default function BankingPage() {
                                     </div>
 
                                     {/* Section: Ownership */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                                    <div className="space-y-4 pt-2 border-t border-border">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                                             <User className="h-4 w-4" /> Ownership
                                         </h4>
                                         <Input
@@ -551,7 +890,7 @@ export default function BankingPage() {
                                                 id="is_joint"
                                                 checked={formData.is_joint_account}
                                                 onChange={(e) => setFormData({ ...formData, is_joint_account: e.target.checked })}
-                                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                             />
                                             <label htmlFor="is_joint" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 Joint Account?
@@ -580,14 +919,14 @@ export default function BankingPage() {
                                                 onChange={(e) => {
                                                     const count = Number(e.target.value);
                                                     setJointHolderCount(count);
-                                                    setJointHolders(Array.from({ length: count }, (_, i) => 
+                                                    setJointHolders(Array.from({ length: count }, (_, i) =>
                                                         jointHolders[i] || { name: "", relation: "" }
                                                     ));
                                                 }}
                                             />
                                             {Array.from({ length: jointHolderCount }).map((_, idx) => (
                                                 <div key={idx} className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                                                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Joint Holder {idx + 1}</p>
+                                                    <p className="text-xs font-medium text-muted-foreground">Joint Holder {idx + 1}</p>
                                                     <Input
                                                         placeholder="Name"
                                                         value={jointHolders[idx]?.name || ""}
@@ -618,8 +957,8 @@ export default function BankingPage() {
                                     </div>
 
                                     {/* Section: Balance & Extras */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                                    <div className="space-y-4 pt-2 border-t border-border">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                                             <CreditCard className="h-4 w-4" /> Balance & Features
                                         </h4>
                                         <Input
@@ -646,7 +985,7 @@ export default function BankingPage() {
                                                 id="net_banking"
                                                 checked={formData.net_banking_enabled}
                                                 onChange={(e) => setFormData({ ...formData, net_banking_enabled: e.target.checked })}
-                                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                             />
                                             <label htmlFor="net_banking" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 Net Banking Enabled
@@ -673,17 +1012,25 @@ export default function BankingPage() {
                                 />
                             )}
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting || (!!fieldErrors.ifsc_code && formData.ifsc_code.length > 0)}>
                                     {submitting ? "Saving..." : editingId ? "Update Account" : "Save Account"}
                                 </Button>
                             </div>
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                {/* Transactions/Ledger Dialog */}
+                <TransactionsDialog
+                    account={selectedAccount}
+                    open={isTransactionsOpen}
+                    onOpenChange={setIsTransactionsOpen}
+                    onUpdate={fetchAccounts}
+                />
             </div>
         </DashboardShell>
     );

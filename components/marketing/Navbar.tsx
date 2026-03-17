@@ -31,23 +31,31 @@ export function Navbar() {
 
     useEffect(() => {
         const checkSession = async () => {
-            const supabase = createSupabaseBrowserClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setIsLoggedIn(true);
-                if (user.user_metadata?.avatar_url) {
-                    setAvatarUrl(user.user_metadata.avatar_url);
-                }
-                if (user.user_metadata?.full_name) {
-                    const name = user.user_metadata.full_name;
-                    const parts = name.split(' ').filter(Boolean);
-                    if (parts.length >= 2) {
-                        setInitials(`${parts[0][0]}${parts[1][0]}`.toUpperCase());
-                    } else if (parts.length === 1) {
-                        setInitials(parts[0][0].toUpperCase());
+            try {
+                const supabase = createSupabaseBrowserClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    setIsLoggedIn(true);
+                    if (user.user_metadata?.avatar_url) {
+                        setAvatarUrl(user.user_metadata.avatar_url);
+                    } else if (user.user_metadata?.picture) {
+                        setAvatarUrl(user.user_metadata.picture);
                     }
-                } else if (user.email) {
-                    setInitials(user.email[0].toUpperCase());
+                    if (user.user_metadata?.full_name) {
+                        const name = user.user_metadata.full_name;
+                        const parts = name.split(' ').filter(Boolean);
+                        if (parts.length >= 2) {
+                            setInitials(`${parts[0][0]}${parts[1][0]}`.toUpperCase());
+                        } else if (parts.length === 1) {
+                            setInitials(parts[0][0].toUpperCase());
+                        }
+                    } else if (user.email) {
+                        setInitials(user.email[0].toUpperCase());
+                    }
+                }
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    console.error("Session check error:", error);
                 }
             }
         };
@@ -64,15 +72,15 @@ export function Navbar() {
     };
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700 shadow-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2">
                         <div className="icon-container">
-                            <TrendingUp className="h-5 w-5 icon-emerald" />
+                            <TrendingUp className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-lg font-bold text-slate-900 dark:text-white">
+                        <span className="text-lg font-bold text-foreground">
                             Investment Intelligence
                         </span>
                     </Link>
@@ -97,7 +105,7 @@ export function Navbar() {
                             <>
                                 <Button
                                     onClick={() => router.push("/dashboard")}
-                                    variant="primary"
+                                    className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
                                 >
                                     Go to Dashboard
                                 </Button>
@@ -130,7 +138,7 @@ export function Navbar() {
                                 <Button
                                     variant="ghost"
                                     onClick={() => router.push("/login")}
-                                    className="text-slate-700"
+                                    className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold border border-accent/10 shadow-sm"
                                 >
                                     Login
                                 </Button>
@@ -156,7 +164,7 @@ export function Navbar() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className="md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
+                <div className="md:hidden bg-white dark:bg-slate-900 border-t border-border shadow-lg">
                     <div className="px-4 py-4 space-y-3">
                         <div className="flex justify-end pb-2">
                             <ThemeToggle />
@@ -171,7 +179,7 @@ export function Navbar() {
                                 {link.label}
                             </a>
                         ))}
-                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                        <div className="pt-4 border-t border-border space-y-2">
                             {isLoggedIn ? (
                                 <>
                                     {/* Mobile Avatar */}
@@ -187,8 +195,7 @@ export function Navbar() {
                                     </div>
                                     <Button
                                         onClick={() => router.push("/dashboard")}
-                                        variant="primary"
-                                        className="w-full"
+                                        className="w-full bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
                                     >
                                         Go to Dashboard
                                     </Button>
@@ -203,9 +210,9 @@ export function Navbar() {
                             ) : (
                                 <>
                                     <Button
-                                        variant="secondary"
+                                        variant="ghost"
                                         onClick={() => router.push("/login")}
-                                        className="w-full"
+                                        className="w-full bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold border border-accent/10 shadow-sm"
                                     >
                                         Login
                                     </Button>

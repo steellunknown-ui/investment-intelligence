@@ -38,7 +38,7 @@ export function NetWorthMiniChart({ className }: NetWorthChartProps) {
 
     if (loading) {
         return (
-            <div className={`h-12 w-full bg-emerald-500/20 rounded animate-pulse ${className}`} />
+            <div className={`h-12 w-full bg-primary/20 rounded animate-pulse ${className}`} />
         );
     }
 
@@ -92,8 +92,8 @@ export function NetWorthMiniChart({ className }: NetWorthChartProps) {
                 {/* Gradient definition */}
                 <defs>
                     <linearGradient id="netWorthGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
-                        <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                        <stop offset="0%" stopColor="currentColor" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
                     </linearGradient>
                 </defs>
 
@@ -107,7 +107,7 @@ export function NetWorthMiniChart({ className }: NetWorthChartProps) {
                 <path
                     d={pathD}
                     fill="none"
-                    stroke="rgba(255,255,255,0.8)"
+                    stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -118,13 +118,13 @@ export function NetWorthMiniChart({ className }: NetWorthChartProps) {
                     cx={points[points.length - 1].x}
                     cy={points[points.length - 1].y}
                     r="3"
-                    fill="white"
+                    fill="currentColor"
                 />
             </svg>
 
             {/* Trend indicator */}
-            <div className="absolute bottom-0 right-0 text-xs text-emerald-100/80">
-                <span className={trend === "up" ? "text-green-200" : "text-red-200"}>
+            <div className="absolute bottom-0 right-0 text-xs opacity-80">
+                <span className={trend === "up" ? "text-green-500 dark:text-green-400 font-semibold" : "text-red-500 dark:text-red-400 font-semibold"}>
                     {trend === "up" ? "↑" : "↓"} {percentChange}%
                 </span>
                 <span className="ml-1 opacity-60">30d</span>

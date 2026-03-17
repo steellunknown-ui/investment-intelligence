@@ -4,8 +4,15 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Investment Intelligence",
-  description: "Professional investment portfolio intelligence platform",
+  title: "Investment Intelligence | Secure Portfolio Monitoring",
+  description: "Advanced investment portfolio intelligence platform with secure nominee access and inactivity protection.",
+  keywords: ["investments", "portfolio", "nominee access", "financial security", "asset management"],
+  authors: [{ name: "Investment Intelligence Team" }],
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -15,6 +22,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var theme = localStorage.getItem('theme') || 'light';
+              var colorTheme = localStorage.getItem('colorTheme') || 'emerald';
+              if (theme === 'dark') document.documentElement.classList.add('dark');
+              document.documentElement.classList.add('theme-' + colorTheme);
+            } catch (e) {}
+          })()
+        ` }} />
+      </head>
       <body>
         <ThemeProvider>
           {children}

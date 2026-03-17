@@ -6,7 +6,8 @@ import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { User, Camera, Upload } from "lucide-react";
+import { User, Camera, Upload, Palette } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface ProfileData {
   full_name: string;
@@ -41,6 +42,7 @@ export default function SettingsPage() {
     country: "India",
     avatar_url: null,
   });
+  const { colorTheme, setColorTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -252,6 +254,42 @@ export default function SettingsPage() {
                   placeholder="Country"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appearance Theme Card */}
+        <Card>
+          <CardHeader title="Appearance" description="Choose your dashboard color theme" />
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { id: "emerald", label: "Emerald Growth", primary: "bg-primary", accent: "bg-emerald-400" },
+                { id: "infinix", label: "INFINX Edition", primary: "bg-[#223761]", accent: "bg-[#BBF078]" },
+                { id: "infinix-2", label: "INFINX V2", primary: "bg-sky-200", accent: "bg-lime-200" },
+                { id: "royal", label: "Royal Heritage", primary: "bg-indigo-900", accent: "bg-amber-500" },
+                { id: "midnight", label: "Midnight Aurora", primary: "bg-purple-600", accent: "bg-purple-400" },
+              ].map((themeItem) => (
+                <button
+                  key={themeItem.id}
+                  onClick={() => setColorTheme(themeItem.id as any)}
+                  className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
+                    colorTheme === themeItem.id 
+                      ? "border-primary bg-primary/10/50 dark:bg-emerald-900/10 shadow-sm" 
+                      : "border-border hover:border-slate-200 dark:hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex -space-x-2 mb-3">
+                    <div className={`h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 ${themeItem.primary}`} />
+                    {themeItem.accent && (
+                      <div className={`h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 ${themeItem.accent}`} />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {themeItem.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>

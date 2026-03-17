@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
+import { createAlert } from '@/lib/alerts'
 
 export async function GET() {
     try {
@@ -87,6 +89,12 @@ export async function POST(request: Request) {
             )
         }
 
+        // Policy Number Validation
+        const validation = validateInsurancePolicyNumber(provider_name, policy_number)
+        if (!validation.isValid) {
+            return NextResponse.json({ error: "Invalid policy number format for selected provider." }, { status: 400 })
+        }
+
         if (Number(sum_insured) < 0 || Number(premium_amount) < 0) {
             return NextResponse.json(
                 { error: 'Amounts cannot be negative' },
@@ -135,6 +143,14 @@ export async function POST(request: Request) {
                 { status: 500 }
             )
         }
+
+        // Create notification alert
+        await createAlert(supabase, {
+            userId: user.id,
+            type: 'success',
+            title: 'New Policy Added',
+            message: `Insurance policy ${policy_number} for ${provider_name} has been successfully added.`
+        });
 
         return NextResponse.json({ policy }, { status: 201 })
     } catch (error) {

@@ -110,7 +110,7 @@ export function HoldingsTable({
             your portfolio
           </p>
         </div>
-        <Button onClick={onAddHolding} size="sm">
+        <Button onClick={onAddHolding} size="sm" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10">
           <Plus className="h-4 w-4" />
           Add Holding
         </Button>

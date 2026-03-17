@@ -48,6 +48,9 @@ import { formatUpdatedAt } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -80,6 +83,7 @@ export default function ReceivablesPage() {
     const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [receiveAmount, setReceiveAmount] = useState("");
     const [interestPreview, setInterestPreview] = useState<any>(null);
     const [reminderMode, setReminderMode] = useState<ReminderMode>("polite");
@@ -379,21 +383,21 @@ export default function ReceivablesPage() {
                 {/* Stats */}
                 {receivables.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 Ig:grid-cols-4 gap-4">
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Total Receivable</p>
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalReceivable)}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{formatCurrency(totalReceivable)}</h2>
                         </div>
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-800 shadow-sm">
-                            <p className="text-emerald-600 dark:text-emerald-400 text-xs font-medium uppercase tracking-wider mb-1">Total Received</p>
-                            <h2 className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(totalReceived)}</h2>
+                        <div className="bg-primary/10 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-800 shadow-sm">
+                            <p className="text-primary dark:text-accent text-xs font-medium uppercase tracking-wider mb-1">Total Received</p>
+                            <h2 className="text-2xl font-bold text-primary dark:text-emerald-300">{formatCurrency(totalReceived)}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Pending Collection</p>
                             <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalOutstanding)}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Overdue Records</p>
-                            <h2 className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>
+                            <h2 className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : 'text-foreground'}`}>
                                 {overdueCount}
                             </h2>
                         </div>
@@ -407,7 +411,7 @@ export default function ReceivablesPage() {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search by name, purpose..."
-                                className="pl-9 bg-white dark:bg-slate-800"
+                                className="pl-9 bg-card"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -419,16 +423,19 @@ export default function ReceivablesPage() {
                             className="w-[160px]"
                         />
                     </div>
-                    <Button
-                        onClick={() => {
-                            resetForm();
-                            setIsModalOpen(true);
-                        }}
-                        className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Receivable
-                    </Button>
+                    <div className="flex gap-2">
+                        <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                        <Button
+                            onClick={() => {
+                                resetForm();
+                                setIsModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add Receivable
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -455,214 +462,271 @@ export default function ReceivablesPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredReceivables.map((rec) => {
-                            const isOverdue = rec.expected_return_date && rec.expected_return_date < today && rec.status !== 'received';
-                            const percentReceived = Math.min((rec.amount_received / rec.total_receivable) * 100, 100);
-                            const hasInterest = rec.interest_amount && rec.interest_amount > 0;
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredReceivables.map((rec) => {
+                                const isOverdue = rec.expected_return_date && rec.expected_return_date < today && rec.status !== 'received';
+                                const percentReceived = Math.min((rec.amount_received / rec.total_receivable) * 100, 100);
+                                const hasInterest = rec.interest_amount && rec.interest_amount > 0;
 
-                            return (
-                                <Card key={rec.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 min-w-[2.5rem] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-semibold">
-                                                    {rec.given_to.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                                        {rec.given_to}
-                                                    </h3>
-                                                    {rec.relationship && <p className="text-xs text-slate-500">{rec.relationship}</p>}
-                                                </div>
-                                            </div>
-                                            <Badge
-                                                variant={rec.status === 'received' ? 'success' : isOverdue ? 'destructive' : 'secondary'}
-                                                className="capitalize"
-                                            >
-                                                {isOverdue && rec.status !== 'received' ? 'Overdue' : rec.status.replace('_', ' ')}
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pb-3 space-y-4">
-                                        {/* Financial breakdown */}
-                                        {hasInterest ? (
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Principal:</span>
-                                                    <span className="font-medium">{formatCurrency(rec.principal_amount)}</span>
-                                                </div>
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Interest:</span>
-                                                    <span className="font-medium text-blue-600">{formatCurrency(rec.interest_amount || 0)}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm border-t pt-1">
-                                                    <span className="text-slate-500">Total:</span>
-                                                    <span className="font-semibold">{formatCurrency(rec.total_receivable)}</span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex justify-between items-end mb-1">
-                                                <p className="text-xs text-slate-500 uppercase tracking-wider">Total Receivable</p>
-                                                <p className="text-sm font-medium text-slate-900 dark:text-white">{formatCurrency(rec.total_receivable)}</p>
-                                            </div>
-                                        )}
-
-                                        <div>
-                                            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${rec.status === 'received' ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                                                    style={{ width: `${percentReceived}%` }}
-                                                />
-                                            </div>
-                                            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                                                <span>Rec: {formatCurrency(rec.amount_received)}</span>
-                                                <span>Bal: {formatCurrency(rec.outstanding_amount)}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                                            {rec.expected_return_date && (
-                                                <div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-                                                    <Calendar className="h-3 w-3" />
-                                                    Exp. Return: {new Date(rec.expected_return_date).toLocaleDateString()}
-                                                </div>
-                                            )}
-                                            {rec.contact_number && (
-                                                <div className="flex items-center gap-2">
-                                                    <Phone className="h-3 w-3" />
-                                                    {rec.contact_number}
-                                                </div>
-                                            )}
-                                            {rec.purpose && (
-                                                <div className="flex items-center gap-2 italic text-slate-500">
-                                                    <FileText className="h-3 w-3" />
-                                                    {rec.purpose}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="pt-0 space-y-3">
-                                        {/* Action Buttons Row */}
-                                        <div className="flex justify-between gap-2">
-                                            <div className="flex gap-1 flex-1">
-                                                {rec.status !== 'received' && rec.status !== 'written_off' && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="flex-1 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                                                        onClick={() => openReceiveModal(rec)}
-                                                    >
-                                                        <ArrowDownLeft className="h-3 w-3 mr-1" /> Receive
-                                                    </Button>
-                                                )}
-                                                <EntityDocumentsBadge
-                                                    entityType="receivable"
-                                                    entityId={rec.id}
-                                                />
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(rec)} className="h-8 w-8 p-0">
-                                                    <Edit2 className="h-4 w-4 text-slate-500" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(rec.id)} className="h-8 w-8 p-0 hover:text-red-600">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Reminder System */}
-                                        {rec.contact_number && rec.outstanding_amount > 0 ? (
-                                            <TooltipProvider>
-                                                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                    <div className="flex gap-1 flex-1">
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="flex-1 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 hover:-translate-y-0.5 transition-all"
-                                                                    onClick={() => handleReminderAction(rec, 'whatsapp')}
-                                                                >
-                                                                    <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>Send WhatsApp Reminder</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="flex-1 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
-                                                                    onClick={() => handleReminderAction(rec, 'sms')}
-                                                                >
-                                                                    <Phone className="h-3 w-3 mr-1" /> SMS
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>Send SMS Reminder</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="text-xs text-slate-600 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
-                                                                    onClick={() => handleReminderAction(rec, 'copy')}
-                                                                >
-                                                                    <Copy className="h-3 w-3" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>Copy Reminder Text</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
+                                return (
+                                    <Card key={rec.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 min-w-[2.5rem] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-semibold">
+                                                        {rec.given_to.charAt(0).toUpperCase()}
                                                     </div>
-
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500">
-                                                                <ChevronDown className="h-3 w-3" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            {getReminderModes().map((mode) => (
-                                                                <DropdownMenuItem
-                                                                    key={mode.value}
-                                                                    onClick={() => setReminderMode(mode.value)}
-                                                                    className={reminderMode === mode.value ? "bg-blue-50 text-blue-700" : ""}
-                                                                >
-                                                                    {mode.label}
-                                                                    {reminderMode === mode.value && " ✓"}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    <div>
+                                                        <h3 className="font-semibold text-foreground line-clamp-1">
+                                                            {rec.given_to}
+                                                        </h3>
+                                                        {rec.relationship && <p className="text-xs text-slate-500">{rec.relationship}</p>}
+                                                    </div>
                                                 </div>
-                                            </TooltipProvider>
-                                        ) : (
-                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                <p className="text-xs text-slate-400 text-center italic">
-                                                    {!rec.contact_number ? "Add phone number to send reminders" : "No pending amount"}
-                                                </p>
+                                                <Badge
+                                                    variant={rec.status === 'received' ? 'success' : isOverdue ? 'destructive' : 'secondary'}
+                                                    className="capitalize"
+                                                >
+                                                    {isOverdue && rec.status !== 'received' ? 'Overdue' : rec.status.replace('_', ' ')}
+                                                </Badge>
                                             </div>
-                                        )}
+                                        </CardHeader>
+                                        <CardContent className="pb-3 space-y-4">
+                                            {hasInterest ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-slate-500">Principal:</span>
+                                                        <span className="font-medium">{formatCurrency(rec.principal_amount)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-slate-500">Interest:</span>
+                                                        <span className="font-medium text-blue-600">{formatCurrency(rec.interest_amount || 0)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm border-t pt-1">
+                                                        <span className="text-slate-500">Total:</span>
+                                                        <span className="font-semibold">{formatCurrency(rec.total_receivable)}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-end mb-1">
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider">Total Receivable</p>
+                                                    <p className="text-sm font-medium text-foreground">{formatCurrency(rec.total_receivable)}</p>
+                                                </div>
+                                            )}
 
-                                        {/* Last Updated */}
-                                        <div className="text-xs text-muted-foreground mt-2">
-                                            {formatUpdatedAt(rec.updated_at || rec.created_at)}
+                                            <div>
+                                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full ${rec.status === 'received' ? 'bg-primary' : 'bg-blue-500'}`}
+                                                        style={{ width: `${percentReceived}%` }}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                                                    <span>Rec: {formatCurrency(rec.amount_received)}</span>
+                                                    <span>Bal: {formatCurrency(rec.outstanding_amount)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-border space-y-2 text-xs text-muted-foreground">
+                                                {rec.expected_return_date && (
+                                                    <div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+                                                        <Calendar className="h-3 w-3" />
+                                                        Exp. Return: {new Date(rec.expected_return_date).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                                {rec.contact_number && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Phone className="h-3 w-3" />
+                                                        {rec.contact_number}
+                                                    </div>
+                                                )}
+                                                {rec.purpose && (
+                                                    <div className="flex items-center gap-2 italic text-slate-500">
+                                                        <FileText className="h-3 w-3" />
+                                                        {rec.purpose}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="pt-0 flex flex-col gap-3 mt-auto">
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                    {formatUpdatedAt(rec.updated_at || rec.created_at)}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {rec.status !== 'received' && rec.status !== 'written_off' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-2 text-xs border-emerald-200 text-primary hover:bg-primary/10 hover:text-emerald-800 mr-1"
+                                                            onClick={() => openReceiveModal(rec)}
+                                                        >
+                                                            <ArrowDownLeft className="h-3 w-3 mr-1" /> Receive
+                                                        </Button>
+                                                    )}
+                                                    <EntityDocumentsBadge
+                                                        entityType="receivable"
+                                                        entityId={rec.id}
+                                                    />
+                                                    <GridDocUpload
+                                                        entityType="receivable"
+                                                        entityId={rec.id}
+                                                    />
+                                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(rec)} className="h-8 w-8 p-0">
+                                                        <Edit2 className="h-4 w-4 text-slate-500" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(rec.id)} className="h-8 w-8 p-0 hover:text-red-600">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {rec.contact_number && rec.outstanding_amount > 0 ? (
+                                                <TooltipProvider>
+                                                    <div className="flex items-center gap-2 pt-2 border-t border-border">
+                                                        <div className="flex gap-1 flex-1">
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="flex-1 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 hover:-translate-y-0.5 transition-all"
+                                                                        onClick={() => handleReminderAction(rec, 'whatsapp')}
+                                                                    >
+                                                                        <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Send WhatsApp Reminder</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="flex-1 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
+                                                                        onClick={() => handleReminderAction(rec, 'sms')}
+                                                                    >
+                                                                        <Phone className="h-3 w-3 mr-1" /> SMS
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Send SMS Reminder</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="text-xs text-slate-600 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
+                                                                        onClick={() => handleReminderAction(rec, 'copy')}
+                                                                    >
+                                                                        <Copy className="h-3 w-3" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Copy Reminder Text</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500">
+                                                                    <ChevronDown className="h-3 w-3" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                {getReminderModes().map((mode) => (
+                                                                    <DropdownMenuItem
+                                                                        key={mode.value}
+                                                                        onClick={() => setReminderMode(mode.value)}
+                                                                        className={reminderMode === mode.value ? "bg-blue-50 text-blue-700" : ""}
+                                                                    >
+                                                                        {mode.label}
+                                                                        {reminderMode === mode.value && " ✓"}
+                                                                    </DropdownMenuItem>
+                                                                ))}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </TooltipProvider>
+                                            ) : (
+                                                <div className="pt-2 border-t border-border">
+                                                    <p className="text-xs text-slate-400 text-center italic">
+                                                        {!rec.contact_number ? "Add phone number to send reminders" : "No pending amount"}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            <div className="text-xs text-muted-foreground mt-2">
+                                                {formatUpdatedAt(rec.updated_at || rec.created_at)}
+                                            </div>
+                                        </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredReceivables}
+                            columns={[
+                                {
+                                    key: 'given_to', label: 'Person', render: (r) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{r.given_to}</span>
+                                            <span className="block text-xs text-slate-500">{r.relationship || r.purpose || ''}</span>
                                         </div>
-                                    </CardFooter>
-                                </Card>
-                            );
-                        })}
-                    </div>
+                                    )
+                                },
+                                {
+                                    key: 'total_receivable', label: 'Total', render: (r) => (
+                                        <span className="font-semibold text-foreground">{formatCurrency(r.total_receivable)}</span>
+                                    )
+                                },
+                                {
+                                    key: 'outstanding_amount', label: 'Pending', render: (r) => (
+                                        <span className={r.outstanding_amount > 0 ? 'text-red-600 font-medium' : 'text-primary'}>
+                                            {formatCurrency(r.outstanding_amount)}
+                                        </span>
+                                    )
+                                },
+                                {
+                                    key: 'expected_return_date', label: 'Due', render: (r) => (
+                                        <span className="text-xs">{r.expected_return_date ? new Date(r.expected_return_date).toLocaleDateString() : '—'}</span>
+                                    ), hideMobile: true
+                                },
+                                {
+                                    key: 'status', label: 'Status', render: (r) => {
+                                        const isOverdue = r.expected_return_date && r.expected_return_date < today && r.status !== 'received';
+                                        return <Badge variant={r.status === 'received' ? 'success' : isOverdue ? 'destructive' : 'secondary'} className="text-xs capitalize">
+                                            {isOverdue ? 'Overdue' : r.status.replace('_', ' ')}
+                                        </Badge>;
+                                    }, hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(r) => handleDelete(r.id)}
+                            renderDocBadge={(r) => (
+                                <EntityDocumentsBadge entityType="receivable" entityId={r.id} />
+                            )}
+                            renderDocUpload={(r) => (
+                                <GridDocUpload entityType="receivable" entityId={r.id} />
+                            )}
+                            renderExtraActions={(r) => (
+                                r.status !== 'received' && r.status !== 'written_off' ? (
+                                    <Button variant="ghost" size="sm" onClick={() => openReceiveModal(r)} className="h-8 px-2 text-xs gap-1 text-primary">
+                                        <ArrowDownLeft className="h-3 w-3" /> Rec
+                                    </Button>
+                                ) : null
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -733,7 +797,7 @@ export default function ReceivablesPage() {
                                     </div>
 
                                     {/* Money */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div className="space-y-4 pt-2 border-t border-border">
                                         <h4 className="text-sm font-medium">Financial Details</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <Input
@@ -789,15 +853,15 @@ export default function ReceivablesPage() {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                                     <div>
-                                                        <span className="text-slate-600 dark:text-slate-400">Principal:</span>
+                                                        <span className="text-muted-foreground">Principal:</span>
                                                         <span className="ml-2 font-medium">{formatCurrency(Number(formData.principal_amount))}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-slate-600 dark:text-slate-400">Interest:</span>
+                                                        <span className="text-muted-foreground">Interest:</span>
                                                         <span className="ml-2 font-medium text-blue-600">{formatCurrency(interestPreview.interest)}</span>
                                                     </div>
                                                     <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                                                        <span className="text-slate-600 dark:text-slate-400">Total Receivable:</span>
+                                                        <span className="text-muted-foreground">Total Receivable:</span>
                                                         <span className="ml-2 font-semibold text-lg">{formatCurrency(interestPreview.total)}</span>
                                                     </div>
                                                     <div className="col-span-2 text-xs text-slate-500">
@@ -821,7 +885,7 @@ export default function ReceivablesPage() {
                                     </div>
 
                                     {/* Dates & Other */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div className="space-y-4 pt-2 border-t border-border">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <Input
                                                 label="Date Given"
@@ -948,7 +1012,7 @@ export default function ReceivablesPage() {
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting}>
                                     {submitting ? "Saving..." : editingId ? "Update" : "Save"}
                                 </Button>
                             </div>
@@ -968,7 +1032,7 @@ export default function ReceivablesPage() {
 
                         {selectedReceivable && (
                             <div className="py-4 space-y-4">
-                                <div className="bg-slate-50 dark:bg-slate-900 rounded p-3 text-sm">
+                                <div className="bg-background rounded p-3 text-sm">
                                     {selectedReceivable.interest_amount && selectedReceivable.interest_amount > 0 ? (
                                         <>
                                             <div className="flex justify-between mb-1">
@@ -1020,7 +1084,7 @@ export default function ReceivablesPage() {
 
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsReceiveOpen(false)}>Cancel</Button>
-                            <Button onClick={handleQuickReceive} disabled={submitting || !receiveAmount} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            <Button onClick={handleQuickReceive} disabled={submitting || !receiveAmount} className="bg-primary hover:bg-primary/90 text-white">
                                 {submitting ? "Processing..." : "Confirm Receipt"}
                             </Button>
                         </DialogFooter>

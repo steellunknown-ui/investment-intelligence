@@ -189,18 +189,18 @@ const staggerContainer = {
 
 export default function HomePage() {
   const router = useRouter();
-
+  
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       {/* Hero Section - Dark theme */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900">
-        {/* Dark grid background */}
-        <div className="grid-pattern-dark" />
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: 'var(--section-bg)', color: 'hsl(var(--section-text))' }}>
+        {/* White grid pattern overlay */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjEiPjxwYXRoIGQ9Ik0wIDBoMzJ2MzJIMHoiLz48L2c+PC9zdmc+')] opacity-50 z-[5]" />
 
-        {/* Subtle emerald radial glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-600/10 rounded-full blur-3xl animate-subtle-glow z-[1]" />
+        {/* Subtle white radial glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white/5 rounded-full blur-3xl animate-subtle-glow z-[1]" />
 
         {/* Content */}
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
@@ -208,7 +208,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600/20 text-emerald-400 text-sm font-medium mb-8 border border-emerald-500/30"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/5 dark:bg-white/10 text-[hsl(var(--section-text))] text-sm font-medium mb-8 border border-white/20 backdrop-blur-sm"
           >
             <Sparkles className="h-4 w-4" />
             Secure your investment legacy
@@ -218,10 +218,10 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-7xl font-bold text-[hsl(var(--section-text))] leading-tight tracking-tight"
           >
             Track, Protect &{" "}
-            <span className="text-emerald-400">Secure</span>
+            <span className="text-[hsl(var(--section-text))]">Secure</span>
             <br />
             Your Investments
           </motion.h1>
@@ -230,7 +230,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto"
+            className="mt-6 text-lg sm:text-xl text-[hsl(var(--section-text))] opacity-90 max-w-2xl mx-auto"
           >
             The smart portfolio platform that ensures your loved ones can access your investments when it matters most.
           </motion.p>
@@ -244,17 +244,17 @@ export default function HomePage() {
             <Button
               onClick={() => router.push("/signup")}
               size="lg"
-              variant="primary"
-              className="w-full sm:w-auto px-8 py-4 text-lg shadow-lg shadow-emerald-600/25"
+              variant="ghost"
+              className="w-full sm:w-auto px-8 py-4 text-lg bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-lg shadow-accent/25 border border-accent/10"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => router.push("/login")}
               size="lg"
-              className="w-full sm:w-auto px-8 py-4 text-lg border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+              className="w-full sm:w-auto px-8 py-4 text-lg bg-[hsl(var(--section-text))]/5 backdrop-blur-md border border-[hsl(var(--section-text))]/30 text-[hsl(var(--section-text))] hover:bg-[hsl(var(--section-text))]/10 hover:text-[hsl(var(--section-text))] hover:scale-105 hover:shadow-md transition-all duration-200"
             >
               Login
             </Button>
@@ -267,15 +267,15 @@ export default function HomePage() {
             className="mt-12 flex items-center justify-center gap-8 text-slate-400 text-sm"
           >
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-accent" />
               Free to start
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-accent" />
               No credit card
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-accent" />
               256-bit encryption
             </div>
           </motion.div>
@@ -295,7 +295,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="section-spacing bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+      <section id="features" className="section-spacing bg-background relative overflow-hidden">
         {/* Shiny grid background */}
         <div className="grid-pattern-full dark:opacity-50" />
         <div className="max-w-7xl mx-auto page-padding relative z-10">
@@ -306,10 +306,10 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
               Everything you need to protect your wealth
             </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               A complete platform for tracking investments and ensuring your financial legacy is protected.
             </p>
           </motion.div>
@@ -329,13 +329,13 @@ export default function HomePage() {
                 className="group relative h-[110px] p-4 card-base card-hover flex gap-3 items-start"
               >
                 <div className="icon-container">
-                  <feature.icon className="h-5 w-5 icon-emerald" />
+                  <feature.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white leading-tight">
+                  <h3 className="text-[14px] font-semibold text-foreground leading-tight">
                     {feature.title}
                   </h3>
-                  <p className="text-[12px] text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{feature.description}</p>
+                  <p className="text-[12px] text-muted-foreground line-clamp-2 mt-1">{feature.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -344,7 +344,7 @@ export default function HomePage() {
       </section>
 
       {/* How it Works Section */}
-      <section id="how-it-works" className="section-spacing bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+      <section id="how-it-works" className="section-spacing bg-muted relative overflow-hidden">
         {/* Shiny grid background */}
         <div className="grid-pattern-full dark:opacity-50" />
         <div className="max-w-7xl mx-auto page-padding relative z-10">
@@ -355,10 +355,10 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
               How it works
             </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               Get started in just 3 simple steps
             </p>
           </motion.div>
@@ -381,13 +381,13 @@ export default function HomePage() {
                   <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-slate-300 to-transparent" />
                 )}
                 <div className="card-base card-hover p-4 h-[95px] flex flex-col">
-                  <div className="text-3xl font-bold text-emerald-600">
+                  <div className="text-3xl font-bold text-primary">
                     {item.step}
                   </div>
-                  <h3 className="mt-2 text-[14px] font-semibold text-slate-900 dark:text-white leading-tight">
+                  <h3 className="mt-2 text-[14px] font-semibold text-foreground leading-tight">
                     {item.title}
                   </h3>
-                  <p className="mt-1 text-[12px] text-slate-600 dark:text-slate-400 line-clamp-1">{item.description}</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground line-clamp-1">{item.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -403,8 +403,8 @@ export default function HomePage() {
             <Button
               onClick={() => router.push("/signup")}
               size="lg"
-              variant="primary"
-              className="px-8"
+              variant="ghost"
+              className="px-8 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
             >
               Start Protecting Your Portfolio
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -414,7 +414,7 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 relative overflow-hidden">
+      <section className="py-16 relative overflow-hidden" style={{ background: 'var(--section-bg)', color: 'hsl(var(--section-text))' }}>
         {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjEiPjxwYXRoIGQ9Ik0wIDBoMzJ2MzJIMHoiLz48L2c+PC9zdmc+')] opacity-50" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -431,8 +431,8 @@ export default function HomePage() {
                 variants={cardVariants}
                 className="text-center"
               >
-                <div className="text-3xl sm:text-4xl font-bold text-white">{stat.value}</div>
-                <div className="mt-2 text-sm text-white/80">{stat.label}</div>
+                <div className="text-3xl sm:text-4xl font-bold text-[hsl(var(--section-text))]">{stat.value}</div>
+                <div className="mt-2 text-sm text-[hsl(var(--section-text))] opacity-80">{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>
@@ -440,7 +440,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="section-spacing bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+      <section className="section-spacing bg-background relative overflow-hidden">
         <div className="grid-pattern-full dark:opacity-50" />
         <div className="max-w-7xl mx-auto page-padding relative z-10">
           <motion.div
@@ -450,10 +450,10 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
               Loved by investors across India
             </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               See what our users have to say about Investment Intelligence
             </p>
           </motion.div>
@@ -470,7 +470,7 @@ export default function HomePage() {
                 key={testimonial.name}
                 variants={cardVariants}
                 whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
-                className="card-base p-6 bg-white dark:bg-slate-800"
+                className="card-base p-6 bg-card"
               >
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
@@ -478,14 +478,14 @@ export default function HomePage() {
                   ))}
                 </div>
                 <Quote className="h-6 w-6 text-emerald-200 mb-3" />
-                <p className="text-slate-600 text-sm leading-relaxed">{testimonial.content}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{testimonial.content}</p>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-emerald-700">{testimonial.avatar}</span>
+                    <span className="text-sm font-semibold text-primary">{testimonial.avatar}</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-slate-900 dark:text-white text-sm">{testimonial.name}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{testimonial.role}</div>
+                    <div className="font-semibold text-foreground text-sm">{testimonial.name}</div>
+                    <div className="text-xs text-muted-foreground">{testimonial.role}</div>
                   </div>
                 </div>
               </motion.div>
@@ -495,7 +495,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us Section */}
-      <section className="section-spacing bg-white dark:bg-slate-950 relative z-10">
+      <section className="section-spacing bg-background relative z-10">
         <div className="max-w-7xl mx-auto page-padding">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -504,10 +504,10 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
                 Why choose Investment Intelligence?
               </h2>
-              <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+              <p className="mt-4 text-lg text-muted-foreground">
                 We built this platform because we believe everyone deserves peace of mind about their financial legacy.
               </p>
               <div className="mt-8 space-y-6">
@@ -521,11 +521,11 @@ export default function HomePage() {
                     className="flex gap-4"
                   >
                     <div className="icon-container shrink-0">
-                      <CheckCircle2 className="h-5 w-5 icon-emerald" />
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{benefit.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{benefit.description}</p>
+                      <h3 className="font-semibold text-foreground">{benefit.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{benefit.description}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -539,60 +539,60 @@ export default function HomePage() {
               transition={{ duration: 0.5 }}
               className="relative"
             >
-              <div className="card-base p-8 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-900">
+              <div className="card-base p-8 bg-gradient-to-br from-primary/5 to-card">
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center justify-between p-4 bg-card rounded-xl shadow-sm border border-border">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
                         <TrendingUp className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">Stocks & ETFs</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">12 holdings tracked</div>
+                        <div className="text-sm font-medium text-foreground">Stocks & ETFs</div>
+                        <div className="text-xs text-muted-foreground">12 holdings tracked</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+12.4%</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">₹4,50,000</div>
+                      <div className="text-sm font-semibold text-primary">+12.4%</div>
+                      <div className="text-xs text-muted-foreground">₹4,50,000</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center justify-between p-4 bg-card rounded-xl shadow-sm border border-border">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
                         <Shield className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">Mutual Funds</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">8 holdings tracked</div>
+                        <div className="text-sm font-medium text-foreground">Mutual Funds</div>
+                        <div className="text-xs text-muted-foreground">8 holdings tracked</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+8.2%</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">₹2,80,000</div>
+                      <div className="text-sm font-semibold text-primary">+8.2%</div>
+                      <div className="text-xs text-muted-foreground">₹2,80,000</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center justify-between p-4 bg-card rounded-xl shadow-sm border border-border">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
                         <Lock className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">Fixed Deposits</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">3 holdings tracked</div>
+                        <div className="text-sm font-medium text-foreground">Fixed Deposits</div>
+                        <div className="text-xs text-muted-foreground">3 holdings tracked</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+7.0%</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">₹1,50,000</div>
+                      <div className="text-sm font-semibold text-primary">+7.0%</div>
+                      <div className="text-xs text-muted-foreground">₹1,50,000</div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <div className="mt-6 p-4 bg-primary/10 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                  <div className="flex items-center gap-2 text-primary dark:text-accent">
                     <Users className="h-4 w-4" />
                     <span className="text-sm font-medium">2 Nominees configured</span>
                   </div>
-                  <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-500">Your family is protected</p>
+                  <p className="mt-1 text-xs text-primary dark:text-primary">Your family is protected</p>
                 </div>
               </div>
             </motion.div>
@@ -601,7 +601,7 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="section-spacing bg-white dark:bg-slate-950 relative z-10">
+      <section id="faq" className="section-spacing bg-background relative z-10">
         <div className="max-w-3xl mx-auto page-padding">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -610,10 +610,10 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
               Frequently asked questions
             </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            <p className="mt-4 text-lg text-muted-foreground">
               Everything you need to know about Investment Intelligence
             </p>
           </motion.div>
@@ -623,7 +623,7 @@ export default function HomePage() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: false, amount: 0.3 }}
-            className="mt-12 card-base p-6 sm:p-8 bg-white relative z-10"
+            className="mt-12 card-base p-6 sm:p-8 bg-card relative z-10"
           >
             <Accordion type="single" collapsible>
               {faqs.map((faq, index) => (
@@ -637,15 +637,15 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="section-spacing bg-slate-900 relative overflow-hidden">
-        {/* Dark grid background */}
-        <div className="grid-pattern-dark" />
+      <section className="section-spacing relative overflow-hidden bg-white text-slate-900 border-t border-b border-slate-100">
+        {/* Dark grid pattern overlay */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS1vcGFjaXR5PSIwLjA1Ij48cGF0aCBkPSJNMCAwaDMydjMySDB6Ii8+PC9nPjwvc3ZnPg==')] opacity-50 z-0" />
         <div className="max-w-4xl mx-auto page-padding text-center relative z-10">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl sm:text-4xl font-bold text-white tracking-tight"
+            className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight"
           >
             Ready to secure your investment legacy?
           </motion.h2>
@@ -654,7 +654,7 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="mt-4 text-lg text-slate-300 max-w-2xl mx-auto"
+            className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto"
           >
             Join thousands of investors who trust Investment Intelligence to protect their portfolios.
           </motion.p>
@@ -668,7 +668,8 @@ export default function HomePage() {
             <Button
               onClick={() => router.push("/signup")}
               size="lg"
-              className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white hover:bg-emerald-700"
+              variant="ghost"
+              className="w-full sm:w-auto px-8 py-4 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-lg shadow-accent/25 border border-accent/10"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />

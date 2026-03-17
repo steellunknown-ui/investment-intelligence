@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
-import { Trash2, Plus, Calendar, AlertCircle } from "lucide-react";
+import { Trash2, Plus, Calendar, AlertCircle, CreditCard, Loader2 } from "lucide-react";
 import type { InsurancePolicy, InsurancePayment } from "@/lib/types";
+import { toast } from "sonner";
 
 interface PaymentsDialogProps {
     policy: InsurancePolicy | null;
@@ -33,6 +34,7 @@ export function PaymentsDialog({ policy, open, onOpenChange, onUpdate }: Payment
     const [payments, setPayments] = useState<InsurancePayment[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -79,6 +81,21 @@ export function PaymentsDialog({ policy, open, onOpenChange, onUpdate }: Payment
     const handleAddPayment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!policy) return;
+
+        // Simulate payment gateway delay if mode is online/auto_debit
+        if (["online", "auto_debit"].includes(formData.payment_mode)) {
+            setIsProcessingPayment(true);
+            toast.loading("Initiating secure payment gateway...", { id: "payment-toast" });
+
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            toast.loading("Processing payment securely...", { id: "payment-toast" });
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            toast.success("Payment successful! Generating receipt...", { id: "payment-toast" });
+
+            setIsProcessingPayment(false);
+        }
+
         setSubmitting(true);
 
         try {
@@ -166,10 +183,15 @@ export function PaymentsDialog({ policy, open, onOpenChange, onUpdate }: Payment
 
                 <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
                     {/* Add Payment Form */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <h4 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                            <Plus className="h-4 w-4" /> Record New Payment
-                        </h4>
+                    <div className="bg-background/50 p-4 rounded-xl border border-border">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-primary" /> Pay Premium
+                            </h4>
+                            <span className="text-xs bg-emerald-100 text-primary px-2 py-0.5 rounded-full dark:bg-emerald-900/50 dark:text-accent">
+                                Simulated Gateway
+                            </span>
+                        </div>
                         <form onSubmit={handleAddPayment} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                             <Input
                                 label="Date"
@@ -194,26 +216,32 @@ export function PaymentsDialog({ policy, open, onOpenChange, onUpdate }: Payment
                                 value={formData.payment_mode}
                                 onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })}
                             />
-                            <Button type="submit" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white w-full">
-                                {submitting ? "Saving..." : "Add Record"}
+                            <Button
+                                type="submit"
+                                disabled={submitting || isProcessingPayment}
+                                className="bg-primary hover:bg-primary/90 text-white w-full transition-all"
+                            >
+                                {isProcessingPayment ? (
+                                    <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Processing...</span>
+                                ) : submitting ? "Saving..." : "Pay Now"}
                             </Button>
                         </form>
                     </div>
 
                     {/* Summary */}
-                    <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                    <div className="flex justify-between items-center bg-primary/10 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-full">
-                                <AlertCircle className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                                <AlertCircle className="h-5 w-5 text-primary dark:text-accent" />
                             </div>
                             <div>
-                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Total Paid</p>
+                                <p className="text-xs text-primary dark:text-accent font-medium">Total Paid</p>
                                 <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">{formatCurrency(totalPaid)}</p>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-slate-500">Next Due Date</p>
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                            <p className="text-sm font-medium text-foreground">
                                 {policy.next_premium_due ? new Date(policy.next_premium_due).toLocaleDateString() : 'Not set'}
                             </p>
                         </div>
@@ -221,11 +249,11 @@ export function PaymentsDialog({ policy, open, onOpenChange, onUpdate }: Payment
 
                     {/* History Table */}
                     <div>
-                        <h4 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                             <Calendar className="h-4 w-4" /> Payment History
                         </h4>
 
-                        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+                        <div className="border border-border rounded-lg overflow-hidden">
                             <Table
                                 columns={columns}
                                 data={payments}

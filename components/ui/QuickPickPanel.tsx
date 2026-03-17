@@ -32,7 +32,7 @@ export function QuickPickPanel({ title, subtitle, items, onSelect }: QuickPickPa
         <Card className="h-full flex flex-col">
             <div className="p-4 border-b border-border">
                 <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    <Sparkles className="h-4 w-4 text-primary" />
                     <h3 className="font-semibold text-sm text-foreground">{title}</h3>
                 </div>
                 {subtitle && (

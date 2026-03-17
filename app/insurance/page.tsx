@@ -36,6 +36,10 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { insuranceProviders } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable, type GridColumn } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
+import { validateInsurancePolicyNumber } from "@/src/lib/financialValidationRules";
 
 // Constants
 const POLICY_TYPES = [
@@ -67,6 +71,11 @@ export default function InsurancePage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+    // Search & Filter State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
 
     // Payment Dialog State
     const [paymentPolicy, setPaymentPolicy] = useState<InsurancePolicy | null>(null);
@@ -93,6 +102,8 @@ export default function InsurancePage() {
         notes: "",
     });
 
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const resetForm = () => {
         setFormData({
             policy_number: "",
@@ -111,6 +122,23 @@ export default function InsurancePage() {
             notes: "",
         });
         setEditingId(null);
+        setFieldErrors({});
+    };
+
+    const handlePolicyNumberChange = (value: string) => {
+        const upValue = value.toUpperCase();
+        setFormData(prev => ({ ...prev, policy_number: upValue }));
+        
+        const validation = validateInsurancePolicyNumber(formData.provider_name, upValue);
+        if (!validation.isValid) {
+            setFieldErrors(prev => ({ ...prev, policy_number: validation.error! }));
+        } else {
+            setFieldErrors(prev => {
+                const n = { ...prev };
+                delete n.policy_number;
+                return n;
+            });
+        }
     };
 
     const fetchPolicies = useCallback(async () => {
@@ -173,6 +201,22 @@ export default function InsurancePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        const validation = validateInsurancePolicyNumber(formData.provider_name, formData.policy_number);
+        if (!validation.isValid) {
+            const errorMsg = "Invalid policy number format for selected provider.";
+            setFieldErrors({ policy_number: errorMsg });
+            
+            // Auto-scroll to error
+            const element = document.getElementById("insurance-policy_number");
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+            }
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -221,6 +265,15 @@ export default function InsurancePage() {
         return new Date(dateStr) < new Date() && new Date(dateStr).toDateString() !== new Date().toDateString();
     };
 
+    const filteredPolicies = policies.filter(policy => {
+        const matchesSearch =
+            (policy.policy_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+            policy.provider_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            policy.policy_number.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === "all" || policy.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <DashboardShell
             title="Insurance"
@@ -234,24 +287,35 @@ export default function InsurancePage() {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search policies..."
-                                className="pl-9 bg-white dark:bg-slate-800"
+                                className="pl-9 bg-card"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <Button variant="outline" className="gap-2 shrink-0">
-                            <Filter className="h-4 w-4" />
-                            Filter
+                        <div className="w-full sm:w-48 shrink-0">
+                            <Select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                options={[
+                                    { value: "all", label: "All Statuses" },
+                                    ...STATUS_OPTIONS
+                                ]}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                        <Button
+                            onClick={() => {
+                                resetForm();
+                                setIsModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add Policy
                         </Button>
                     </div>
-                    <Button
-                        onClick={() => {
-                            resetForm();
-                            setIsModalOpen(true);
-                        }}
-                        className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Policy
-                    </Button>
                 </div>
 
                 {/* Content Area */}
@@ -261,13 +325,13 @@ export default function InsurancePage() {
                             <div key={i} className="h-48 bg-slate-100 rounded-xl animate-pulse" />
                         ))}
                     </div>
-                ) : policies.length === 0 ? (
+                ) : filteredPolicies.length === 0 ? (
                     <div className="min-h-[400px]">
                         <EmptyState
                             icon={Shield}
-                            title="No insurance policies added"
+                            title={searchQuery || statusFilter !== 'all' ? "No matching policies found" : "No insurance policies added"}
                             description="Track your insurance coverage, premiums, and renewal dates in one place."
-                            action={{
+                            action={searchQuery || statusFilter !== 'all' ? undefined : {
                                 label: "Add Your First Policy",
                                 onClick: () => {
                                     resetForm();
@@ -278,76 +342,79 @@ export default function InsurancePage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {policies.map((policy) => {
-                            const overdue = isOverdue(policy.next_premium_due);
-                            return (
-                                <Card key={policy.id} className="relative hover:shadow-md transition-shadow group">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="icon-container bg-emerald-50 dark:bg-emerald-900/20">
-                                                <Shield className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {overdue && policy.status === 'active' && (
-                                                    <Badge variant="destructive" className="flex items-center gap-1">
-                                                        <AlertCircle className="h-3 w-3" /> Overdue
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredPolicies.map((policy) => {
+                                const overdue = isOverdue(policy.next_premium_due);
+                                return (
+                                    <Card key={policy.id} className="relative hover:shadow-md transition-shadow group">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="icon-container bg-primary/10 dark:bg-emerald-900/20">
+                                                    <Shield className="h-5 w-5 text-primary dark:text-accent" />
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {overdue && policy.status === 'active' && (
+                                                        <Badge variant="destructive" className="flex items-center gap-1">
+                                                            <AlertCircle className="h-3 w-3" /> Overdue
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant={policy.status === 'active' ? 'success' : 'secondary'}>
+                                                        {policy.status}
                                                     </Badge>
-                                                )}
-                                                <Badge variant={policy.status === 'active' ? 'success' : 'secondary'}>
-                                                    {policy.status}
-                                                </Badge>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="mt-4">
-                                            <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                                {policy.provider_name}
-                                            </h3>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                                {policy.policy_type} • {policy.policy_number}
-                                            </p>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pb-3 space-y-3">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Sum Insured</span>
-                                            <span className="font-medium">{formatCurrency(policy.sum_insured)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Premium</span>
-                                            <span className="font-medium">
-                                                {formatCurrency(policy.premium_amount)}
-                                                <span className="text-xs text-slate-400 font-normal">
-                                                    /{policy.premium_frequency === 'yearly' ? 'yr' : 'mo'}
+                                            <div className="mt-4">
+                                                <h3 className="font-semibold text-foreground line-clamp-1">
+                                                    {policy.provider_name}
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {policy.policy_type} • {policy.policy_number}
+                                                </p>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pb-3 space-y-3">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-500">Sum Insured</span>
+                                                <span className="font-medium">{formatCurrency(policy.sum_insured)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-500">Premium</span>
+                                                <span className="font-medium">
+                                                    {formatCurrency(policy.premium_amount)}
+                                                    <span className="text-xs text-slate-400 font-normal">
+                                                        /{policy.premium_frequency === 'yearly' ? 'yr' : 'mo'}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        </div>
-                                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-xs text-slate-500">
-                                            <span className="flex items-center gap-1">
-                                                <User className="h-3 w-3" />
-                                                {policy.insured_name || 'Self'}
-                                            </span>
-                                            {policy.next_premium_due ? (
-                                                <span className={`flex items-center gap-1 ${overdue ? 'text-red-500 font-medium' : ''}`}>
-                                                    <Calendar className="h-3 w-3" />
-                                                    Due: {new Date(policy.next_premium_due).toLocaleDateString()}
-                                                </span>
-                                            ) : policy.end_date ? (
+                                            </div>
+                                            <div className="pt-2 border-t border-border flex justify-between text-xs text-slate-500">
                                                 <span className="flex items-center gap-1">
-                                                    <Calendar className="h-3 w-3" />
-                                                    End: {new Date(policy.end_date).toLocaleDateString()}
+                                                    <User className="h-3 w-3" />
+                                                    {policy.insured_name || 'Self'}
                                                 </span>
-                                            ) : null}
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex gap-2 justify-between">
-                                            <div className="flex gap-2 flex-1">
+                                                {policy.next_premium_due ? (
+                                                    <span className={`flex items-center gap-1 ${overdue ? 'text-red-500 font-medium' : ''}`}>
+                                                        <Calendar className="h-3 w-3" />
+                                                        Due: {new Date(policy.next_premium_due).toLocaleDateString()}
+                                                    </span>
+                                                ) : policy.end_date ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        End: {new Date(policy.end_date).toLocaleDateString()}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {formatUpdatedLabel(policy.updated_at || policy.created_at)}
+                                            </div>
+                                            <div className="flex items-center gap-1">
                                                 <Button
                                                     variant="secondary"
                                                     size="sm"
                                                     onClick={() => handleOpenPayments(policy)}
-                                                    className="h-8 gap-2 text-xs"
+                                                    className="h-8 gap-2 text-xs mr-1"
                                                 >
                                                     <History className="h-3 w-3" /> Payments
                                                 </Button>
@@ -355,35 +422,70 @@ export default function InsurancePage() {
                                                     entityType="insurance_policy"
                                                     entityId={policy.id}
                                                 />
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(policy)}
-                                                    className="h-8 w-8 p-0"
-                                                >
+                                                <GridDocUpload
+                                                    entityType="insurance_policy"
+                                                    entityId={policy.id}
+                                                />
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(policy)} className="h-8 w-8 p-0">
                                                     <Edit2 className="h-4 w-4 text-slate-500" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(policy.id)}
-                                                    className="h-8 w-8 p-0 hover:text-red-600"
-                                                >
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(policy.id)} className="h-8 w-8 p-0 hover:text-red-600">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
+                                        </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredPolicies}
+                            columns={[
+                                {
+                                    key: 'provider_name', label: 'Provider', render: (p) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{p.provider_name}</span>
+                                            <span className="block text-xs text-slate-500">{p.policy_number}</span>
                                         </div>
-                                        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                                            <span>{formatUpdatedLabel(policy.updated_at || policy.created_at)}</span>
-                                            <span>{formatDateTime(policy.updated_at || policy.created_at)}</span>
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            );
-                        })}
-                    </div>
+                                    )
+                                },
+                                {
+                                    key: 'policy_type', label: 'Type', render: (p) => (
+                                        <Badge variant="outline" className="text-xs capitalize">{p.policy_type}</Badge>
+                                    )
+                                },
+                                {
+                                    key: 'sum_insured', label: 'Sum Insured', render: (p) => (
+                                        <span className="font-medium">{formatCurrency(p.sum_insured)}</span>
+                                    )
+                                },
+                                {
+                                    key: 'premium_amount', label: 'Premium', render: (p) => (
+                                        <span>{formatCurrency(p.premium_amount)}<span className="text-xs text-slate-400">/{p.premium_frequency === 'yearly' ? 'yr' : 'mo'}</span></span>
+                                    ), hideMobile: true
+                                },
+                                {
+                                    key: 'status', label: 'Status', render: (p) => (
+                                        <Badge variant={p.status === 'active' ? 'success' : 'secondary'} className="text-xs">{p.status}</Badge>
+                                    ), hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(p) => handleDelete(p.id)}
+                            renderDocBadge={(p) => (
+                                <EntityDocumentsBadge entityType="insurance_policy" entityId={p.id} />
+                            )}
+                            renderDocUpload={(p) => (
+                                <GridDocUpload entityType="insurance_policy" entityId={p.id} />
+                            )}
+                            renderExtraActions={(p) => (
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenPayments(p)} className="h-8 px-2 text-xs gap-1">
+                                    <History className="h-3 w-3" /> Pay
+                                </Button>
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -398,12 +500,19 @@ export default function InsurancePage() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <Input
-                                        label="Policy Number"
-                                        value={formData.policy_number}
-                                        onChange={(e) => setFormData({ ...formData, policy_number: e.target.value })}
-                                        required
-                                    />
+                                    <div className="space-y-1">
+                                        <Input
+                                            id="insurance-policy_number"
+                                            label="Policy Number"
+                                            value={formData.policy_number}
+                                            onChange={(e) => handlePolicyNumberChange(e.target.value)}
+                                            required
+                                            className={fieldErrors.policy_number ? "border-red-500" : ""}
+                                        />
+                                        {fieldErrors.policy_number && (
+                                            <p className="text-xs text-red-500 font-medium">{fieldErrors.policy_number}</p>
+                                        )}
+                                    </div>
 
                                     <div>
                                         <div className="flex items-center gap-2 mb-1.5">
@@ -426,7 +535,22 @@ export default function InsurancePage() {
                                                         subtitle="Popular Indian insurers"
                                                         items={insuranceProviders.map((name) => ({ label: name, value: name }))}
                                                         onSelect={(value) => {
-                                                            setFormData((p) => ({ ...p, provider_name: value }));
+                                                            setFormData((p) => {
+                                                                const n = { ...p, provider_name: value };
+                                                                if (n.policy_number) {
+                                                                    const val = validateInsurancePolicyNumber(n.provider_name, n.policy_number);
+                                                                    if (!val.isValid) {
+                                                                        setFieldErrors(prev => ({ ...prev, policy_number: val.error! }));
+                                                                    } else {
+                                                                        setFieldErrors(prev => {
+                                                                            const errs = { ...prev };
+                                                                            delete errs.policy_number;
+                                                                            return errs;
+                                                                        });
+                                                                    }
+                                                                }
+                                                                return n;
+                                                            });
                                                             setShowProviderPick(false);
                                                         }}
                                                     />
@@ -436,7 +560,25 @@ export default function InsurancePage() {
                                         <Input
                                             placeholder="e.g. LIC, HDFC Ergo"
                                             value={formData.provider_name}
-                                            onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setFormData(p => {
+                                                    const n = { ...p, provider_name: val };
+                                                    if (n.policy_number) {
+                                                        const valid = validateInsurancePolicyNumber(n.provider_name, n.policy_number);
+                                                        if (!valid.isValid) {
+                                                            setFieldErrors(prev => ({ ...prev, policy_number: valid.error! }));
+                                                        } else {
+                                                            setFieldErrors(prev => {
+                                                                const errs = { ...prev };
+                                                                delete errs.policy_number;
+                                                                return errs;
+                                                            });
+                                                        }
+                                                    }
+                                                    return n;
+                                                });
+                                            }}
                                             required
                                         />
                                     </div>
@@ -540,7 +682,7 @@ export default function InsurancePage() {
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting}>
                                     {submitting ? "Saving..." : editingId ? "Update Policy" : "Save Policy"}
                                 </Button>
                             </div>

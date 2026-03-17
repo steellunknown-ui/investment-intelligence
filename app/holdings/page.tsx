@@ -271,7 +271,7 @@ export default function HoldingsPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10">
                 {submitting ? "Adding..." : "Add Holding"}
               </Button>
             </div>

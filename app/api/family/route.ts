@@ -86,6 +86,7 @@ export async function POST(request: Request) {
             .insert({
                 owner_id: user.id,
                 member_user_id: memberUser.id,
+                member_name: name,
                 relation,
                 role: 'viewer'
             })
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
 
         if (error) {
             console.error('Family member insert error:', error)
-            return NextResponse.json({ error: 'Failed to add family member' }, { status: 500 })
+            return NextResponse.json({ error: error.message || 'Failed to add family member' }, { status: 500 })
         }
 
         // Update member profile with name

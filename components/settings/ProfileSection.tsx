@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Avatar } from "@/components/ui/Avatar";
 import { User, Camera, Upload } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 
 interface ProfileSectionProps {
   user?: {
@@ -39,7 +41,16 @@ export function ProfileSection({ user }: ProfileSectionProps) {
           email: data.user.email || '',
           phone: data.user.phone || '',
         });
-        setAvatarUrl(data.user.avatar_url);
+        
+        // Check for Google OAuth avatar first
+        const supabase = createSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user?.user_metadata?.picture) {
+          setAvatarUrl(user.user_metadata.picture);
+        } else {
+          setAvatarUrl(data.user.avatar_url);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -116,13 +127,11 @@ export function ProfileSection({ user }: ProfileSectionProps) {
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 overflow-hidden">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <User className="h-8 w-8" />
-                )}
-              </div>
+              <Avatar 
+                src={avatarUrl} 
+                alt="Profile Avatar" 
+                size="lg"
+              />
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}

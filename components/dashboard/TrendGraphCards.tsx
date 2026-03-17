@@ -12,6 +12,7 @@ import {
     XAxis,
 } from "recharts";
 import { MotionCard } from "@/components/ui/MotionCard";
+import { ChartExplanationModal } from "./ChartExplanationModal";
 
 interface ChartDataPoint {
     label: string;
@@ -117,10 +118,10 @@ export function AssetsTrendCard() {
                             <span className="text-[10px] font-medium ml-auto">{formatCompact(entry.value)}</span>
                         </div>
                     ))}
-                    <div className="border-t border-slate-200 dark:border-slate-700 mt-2 pt-1">
+                    <div className="border-t border-border mt-2 pt-1">
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] text-muted-foreground">Total</span>
-                            <span className="text-xs font-semibold text-emerald-600">{formatCompact(total)}</span>
+                            <span className="text-xs font-semibold text-primary">{formatCompact(total)}</span>
                         </div>
                     </div>
                 </div>
@@ -132,6 +133,7 @@ export function AssetsTrendCard() {
 export function LiabilitiesTrendCard() {
     const [data, setData] = useState<ChartDataPoint[]>([]);
     const [latestValue, setLatestValue] = useState(0);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -174,58 +176,88 @@ export function LiabilitiesTrendCard() {
     const trend = data.length >= 2 ?
         ((data[data.length - 1].value - data[0].value) / data[0].value * 100).toFixed(1) : "0";
 
+    const generateInsights = () => {
+        const insights = [];
+        if (Number(trend) < 0) {
+            insights.push(`Your liabilities have decreased by ${Math.abs(Number(trend))}% over the last 6 snapshots.`);
+        } else if (Number(trend) > 0) {
+            insights.push(`Your liabilities have increased by ${trend}% over the last 6 snapshots.`);
+        } else {
+            insights.push(`Your liabilities have remained stable.`);
+        }
+        insights.push(`The bar chart visualizes your debt repayment progress or accumulation over time.`);
+        return insights;
+    };
+
     return (
-        <MotionCard className="vault-card p-4" delay={0.15}>
-            <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Liabilities Trend
-                </p>
-                <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+        <>
+            <MotionCard
+                className="vault-card p-4 cursor-help select-none"
+                delay={0.15}
+                onClick={(e) => {
+                    if (e.detail === 2) setIsModalOpen(true);
+                }}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Liabilities Trend
+                    </p>
+                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
+                        ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
                         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    }`}>
-                    {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                        }`}>
+                        {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                    </div>
                 </div>
-            </div>
-            <div className="flex items-center gap-3 mb-2">
-                <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
-                <span className="text-[10px] text-muted-foreground">current</span>
-            </div>
-            <div className="h-[90px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                        <XAxis
-                            dataKey="label"
-                            tick={{ fontSize: 9, fill: "#94a3b8" }}
-                            tickLine={false}
-                            axisLine={false}
-                        />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                            {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={LIABILITY_COLORS[index % LIABILITY_COLORS.length]} />
-                            ))}
-                        </Bar>
-                        <Tooltip
-                            formatter={(value) => [formatCompact(Number(value)), "Liabilities"]}
-                            contentStyle={{
-                                backgroundColor: "#fff",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "8px",
-                                fontSize: "11px",
-                                color: "#1e293b",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                            }}
-                            labelStyle={{ color: "#64748b", fontWeight: 500 }}
-                        />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </MotionCard>
+                <div className="flex items-center gap-3 mb-2">
+                    <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
+                    <span className="text-[10px] text-muted-foreground">current</span>
+                </div>
+                <div className="h-[90px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                            <XAxis
+                                dataKey="label"
+                                tick={{ fontSize: 9, fill: "#94a3b8" }}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={LIABILITY_COLORS[index % LIABILITY_COLORS.length]} />
+                                ))}
+                            </Bar>
+                            <Tooltip
+                                formatter={(value) => [formatCompact(Number(value)), "Liabilities"]}
+                                contentStyle={{
+                                    backgroundColor: "#fff",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "8px",
+                                    fontSize: "11px",
+                                    color: "#1e293b",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                                }}
+                                labelStyle={{ color: "#64748b", fontWeight: 500 }}
+                            />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </MotionCard>
+
+            <ChartExplanationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Liabilities Trend"
+                summary="The Liabilities Trend chart (Bar Chart) monitors your total outstanding debt over the last 6 snapshots, allowing you to track repayment progress or debt accumulation at a glance."
+                insights={generateInsights()}
+            />
+        </>
     );
 }
 
 export function NetWorthTrendCard() {
     const [data, setData] = useState<{ name: string; value: number }[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -259,61 +291,90 @@ export function NetWorthTrendCard() {
 
     const total = data.reduce((sum, d) => sum + d.value, 0);
 
+    const generateInsights = () => {
+        const insights = [];
+        const highest = [...data].sort((a, b) => b.value - a.value)[0];
+        if (highest && highest.value > 0) {
+            insights.push(`${highest.name} contributes the most to your gross net worth (${((highest.value / total) * 100).toFixed(1)}%).`);
+        }
+        if (total > 0) {
+            insights.push(`Your total asset-side value (excluding liabilities) is ${formatCompact(total)}.`);
+        }
+        insights.push(`The donut chart visualizes how your wealth is distributed across different categories.`);
+        return insights;
+    };
+
     return (
-        <MotionCard className="vault-card p-4" delay={0.2}>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Net Worth Breakdown
-            </p>
-            <div className="h-[140px] w-full flex items-center">
-                <div className="w-1/2 h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={30}
-                                outerRadius={50}
-                                paddingAngle={2}
-                                dataKey="value"
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={(value) => formatCompact(Number(value))}
-                                contentStyle={{
-                                    backgroundColor: "#fff",
-                                    border: "1px solid #e2e8f0",
-                                    borderRadius: "8px",
-                                    fontSize: "11px",
-                                    color: "#1e293b",
-                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                                }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </div>
-                <div className="w-1/2 pl-2">
-                    {data.map((entry, index) => (
-                        <div key={entry.name} className="flex items-center gap-2 mb-1">
-                            <div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
-                            />
-                            <span className="text-[10px] text-muted-foreground">{entry.name}</span>
-                            <span className="text-[10px] font-medium ml-auto">{formatCompact(entry.value)}</span>
-                        </div>
-                    ))}
-                    <div className="border-t border-slate-200 dark:border-slate-700 mt-2 pt-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-muted-foreground">Total</span>
-                            <span className="text-xs font-semibold text-emerald-600">{formatCompact(total)}</span>
+        <>
+            <MotionCard
+                className="vault-card p-4 cursor-help select-none"
+                delay={0.2}
+                onClick={(e) => {
+                    if (e.detail === 2) setIsModalOpen(true);
+                }}
+            >
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Net Worth Breakdown
+                </p>
+                <div className="h-[140px] w-full flex items-center">
+                    <div className="w-1/2 h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={data}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={30}
+                                    outerRadius={50}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value) => formatCompact(Number(value))}
+                                    contentStyle={{
+                                        backgroundColor: "#fff",
+                                        border: "1px solid #e2e8f0",
+                                        borderRadius: "8px",
+                                        fontSize: "11px",
+                                        color: "#1e293b",
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                                    }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="w-1/2 pl-2">
+                        {data.map((entry, index) => (
+                            <div key={entry.name} className="flex items-center gap-2 mb-1">
+                                <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                                />
+                                <span className="text-[10px] text-muted-foreground">{entry.name}</span>
+                                <span className="text-[10px] font-medium ml-auto">{formatCompact(entry.value)}</span>
+                            </div>
+                        ))}
+                        <div className="border-t border-border mt-2 pt-1">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-muted-foreground">Total</span>
+                                <span className="text-xs font-semibold text-primary">{formatCompact(total)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </MotionCard>
+            </MotionCard>
+
+            <ChartExplanationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Net Worth Breakdown"
+                summary="The Net Worth Breakdown chart (Donut Chart) illustrates the composition of your gross net worth, showing how much is held in Bank accounts, Real Assets, Belongings, and Receivables."
+                insights={generateInsights()}
+            />
+        </>
     );
 }

@@ -88,7 +88,7 @@ export function AIInsightsCard() {
             case "info":
                 return <Info className="h-4 w-4 text-blue-600" />;
             case "success":
-                return <CheckCircle className="h-4 w-4 text-emerald-600" />;
+                return <CheckCircle className="h-4 w-4 text-primary" />;
         }
     };
 
@@ -99,7 +99,7 @@ export function AIInsightsCard() {
             case "info":
                 return "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20";
             case "success":
-                return "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20";
+                return "border-emerald-200 dark:border-emerald-800 bg-primary/10 dark:bg-emerald-900/20";
         }
     };
 
@@ -142,7 +142,7 @@ export function AIInsightsCard() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
                             <Clock className="h-6 w-6 text-amber-600" />
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        <p className="text-sm text-muted-foreground mb-3">
                             AI insights temporarily unavailable.
                         </p>
                         <p className="text-xs text-slate-500 mb-4">
@@ -211,7 +211,7 @@ export function AIInsightsCard() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 mb-3">
                             <Sparkles className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                        <p className="text-sm text-muted-foreground mb-4">
                             Get personalized insights about your portfolio
                         </p>
                         <Button
@@ -270,7 +270,7 @@ export function AIInsightsCard() {
                         <Button
                             size="sm"
                             onClick={() => router.push("/assistant")}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="bg-primary hover:bg-primary/90 text-white"
                         >
                             Chat with AI
                         </Button>
@@ -285,10 +285,10 @@ export function AIInsightsCard() {
                                 <div className="flex items-start gap-2">
                                     <div className="flex-shrink-0 mt-0.5">{getIcon(insight.type)}</div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="text-xs font-semibold text-slate-900 dark:text-white line-clamp-1">
+                                        <h4 className="text-xs font-semibold text-foreground line-clamp-1">
                                             {insight.title}
                                         </h4>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                             {insight.detail}
                                         </p>
                                         {insight.action && (

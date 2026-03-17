@@ -40,6 +40,14 @@ export async function GET(
                 .from('nominee_access_tokens')
                 .update({ used_at: now })
                 .eq('id', tokenData.id);
+
+            // Log successful initial access
+            await supabaseAdmin.from('audit_logs').insert({
+                user_id: tokenData.user_id,
+                event_type: 'NOMINEE_ACCESS_SUCCESS',
+                description: `Nominee has successfully accessed the portfolio using a secure token.`,
+                metadata: { token_id: tokenData.id, nominee_id: tokenData.nominee_id }
+            });
         }
 
         // Fetch nominee name

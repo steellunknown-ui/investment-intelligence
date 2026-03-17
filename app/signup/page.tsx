@@ -89,13 +89,13 @@ export default function SignupPage() {
     return (
         <div className="min-h-screen flex">
             {/* Left Panel - Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background relative overflow-hidden">
                 {/* Shiny grid background */}
                 <div className="grid-pattern-full dark:opacity-50" />
                 <div className="w-full max-w-md relative z-10">
                     {/* Mobile Logo */}
                     <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-                        <div className="icon-container bg-emerald-600">
+                        <div className="icon-container bg-primary">
                             <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <span className="text-xl font-bold text-slate-900">Investment Intelligence</span>
@@ -104,8 +104,8 @@ export default function SignupPage() {
                     {/* Form Card */}
                     <div className="card-base p-8">
                         <div className="text-center mb-8">
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Create your account</h2>
-                            <p className="text-slate-600 dark:text-slate-400 mt-2">Start protecting your investment legacy</p>
+                            <h2 className="text-2xl font-bold text-foreground tracking-tight">Create your account</h2>
+                            <p className="text-muted-foreground mt-2">Start protecting your investment legacy</p>
                         </div>
 
                         <form onSubmit={handleSignup} className="space-y-5">
@@ -118,7 +118,7 @@ export default function SignupPage() {
                                     placeholder="John Doe"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
-                                    className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors"
+                                    className="h-12 bg-background border-border focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors"
                                 />
                             </div>
 
@@ -132,7 +132,7 @@ export default function SignupPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors"
+                                    className="h-12 bg-background border-border focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors"
                                 />
                             </div>
 
@@ -148,7 +148,7 @@ export default function SignupPage() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                         minLength={6}
-                                        className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors pr-12"
+                                        className="h-12 bg-background border-border focus:bg-white dark:focus:bg-slate-950 focus:border-emerald-300 transition-colors pr-12"
                                     />
                                     <button
                                         type="button"
@@ -181,7 +181,7 @@ export default function SignupPage() {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200"
+                                className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200"
                             >
                                 {loading ? (
                                     <span className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export default function SignupPage() {
                                 Already have an account?{" "}
                                 <Link
                                     href="/login"
-                                    className="font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                                    className="font-medium text-primary hover:text-primary dark:text-primary dark:hover:text-accent transition-colors"
                                 >
                                     Sign in
                                 </Link>
@@ -225,7 +225,7 @@ export default function SignupPage() {
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
                 {/* Subtle emerald glow */}
                 <div className="absolute inset-0">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl animate-subtle-glow" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-subtle-glow" />
                 </div>
 
                 {/* Grid Pattern */}
@@ -238,7 +238,7 @@ export default function SignupPage() {
                             <h1 className="text-4xl font-bold leading-tight text-white">
                                 Everything you need to
                                 <br />
-                                <span className="text-emerald-400">
+                                <span className="text-accent">
                                     protect your wealth
                                 </span>
                             </h1>
@@ -262,8 +262,8 @@ export default function SignupPage() {
 function BenefitItem({ text }: { text: string }) {
     return (
         <div className="flex items-center gap-3">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600/20">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20">
+                <CheckCircle2 className="h-4 w-4 text-accent" />
             </div>
             <span className="text-white/80">{text}</span>
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
 
 export async function PATCH(
     request: Request,
@@ -40,6 +41,24 @@ export async function PATCH(
         }
         if (sanitizedBody.premium_frequency && !['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(sanitizedBody.premium_frequency)) {
             return NextResponse.json({ error: 'Invalid premium frequency' }, { status: 400 })
+        }
+
+        // Policy Number Validation (if provided or provider changed)
+        if (sanitizedBody.policy_number || sanitizedBody.provider_name) {
+            const { data: existing } = await supabase
+                .from('insurance_policies')
+                .select('provider_name, policy_number')
+                .eq('id', id)
+                .single();
+            
+            if (existing) {
+                const provider = sanitizedBody.provider_name || existing.provider_name;
+                const policy = sanitizedBody.policy_number || existing.policy_number;
+                const validation = validateInsurancePolicyNumber(provider, policy);
+                if (!validation.isValid) {
+                    return NextResponse.json({ error: "Invalid policy number format for selected provider." }, { status: 400 });
+                }
+            }
         }
 
         const { data: policy, error } = await supabase

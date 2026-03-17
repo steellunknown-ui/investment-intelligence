@@ -41,6 +41,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { belongingCategories, belongingStatus, storageLocations } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
 
 // Constants
 const CATEGORIES = [
@@ -73,6 +76,10 @@ export default function BelongingsPage() {
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [showInsuredOnly, setShowInsuredOnly] = useState(false);
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+    // Queued documents for new entries
+    const [queuedDocIds, setQueuedDocIds] = useState<string[]>([]);
 
     // QuickPick State
     const [showCategoryPick, setShowCategoryPick] = useState(false);
@@ -127,6 +134,7 @@ export default function BelongingsPage() {
             notes: "",
         });
         setEditingId(null);
+        setQueuedDocIds([]);
     };
 
     const fetchBelongings = useCallback(async () => {
@@ -209,6 +217,7 @@ export default function BelongingsPage() {
                 purchase_value: formData.purchase_value ? Number(formData.purchase_value) : null,
                 current_estimated_value: formData.current_estimated_value ? Number(formData.current_estimated_value) : null,
                 weight_grams: formData.weight_grams ? Number(formData.weight_grams) : null,
+                linked_document_ids: queuedDocIds // Include queued docs for linking
             };
 
             const res = await fetch(url, {
@@ -281,19 +290,19 @@ export default function BelongingsPage() {
                 {/* Stats */}
                 {belongings.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-emerald-600 dark:bg-emerald-700 rounded-xl p-4 text-white shadow-lg">
-                            <p className="text-emerald-100 text-xs font-medium uppercase tracking-wider mb-1">Total Estimated Value</p>
+                        <div className="rounded-xl p-4 shadow-lg" style={{ background: 'var(--summary-card-bg)', color: 'hsl(var(--summary-card-text))' }}>
+                            <p className="opacity-80 text-xs font-medium uppercase tracking-wider mb-1">Total Estimated Value</p>
                             <h2 className="text-2xl font-bold">{formatCurrency(totalValue)}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Items Tracked</p>
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{totalItems}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{totalItems}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Insured Items</p>
-                            <h2 className="text-2xl font-bold text-emerald-600">{insuredCount}</h2>
+                            <h2 className="text-2xl font-bold text-primary">{insuredCount}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">In Locker</p>
                             <h2 className="text-2xl font-bold text-blue-600">{lockerCount}</h2>
                         </div>
@@ -308,7 +317,7 @@ export default function BelongingsPage() {
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                                 <Input
                                     placeholder="Search items..."
-                                    className="pl-9 bg-white dark:bg-slate-800"
+                                    className="pl-9 bg-card"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -324,16 +333,19 @@ export default function BelongingsPage() {
                                 options={[{ value: "all", label: "All Status" }, ...STATUS_OPTIONS]}
                             />
                         </div>
-                        <Button
-                            onClick={() => {
-                                resetForm();
-                                setIsModalOpen(true);
-                            }}
-                            className="w-full sm:w-auto gap-2 bg-violet-600 hover:bg-violet-700 text-white"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Item
-                        </Button>
+                        <div className="flex gap-2">
+                            <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                            <Button
+                                onClick={() => {
+                                    resetForm();
+                                    setIsModalOpen(true);
+                                }}
+                                className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Item
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -344,7 +356,7 @@ export default function BelongingsPage() {
                             onChange={(e) => setShowInsuredOnly(e.target.checked)}
                             className="h-4 w-4 rounded border-slate-300 text-violet-600"
                         />
-                        <label htmlFor="insuredOnly" className="text-sm text-slate-600 dark:text-slate-400">Show only insured items</label>
+                        <label htmlFor="insuredOnly" className="text-sm text-muted-foreground">Show only insured items</label>
                     </div>
                 </div>
 
@@ -372,90 +384,97 @@ export default function BelongingsPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredBelongings.map((item) => {
-                            const Icon = getIcon(item.category);
-                            const value = item.current_estimated_value || item.purchase_value;
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredBelongings.map((item) => {
+                                const Icon = getIcon(item.category);
+                                const value = item.current_estimated_value || item.purchase_value;
 
-                            return (
-                                <Card key={item.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
-                                                    <Icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                return (
+                                    <Card key={item.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+                                                        <Icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-foreground line-clamp-1">
+                                                            {item.item_name}
+                                                        </h3>
+                                                        {item.quantity > 1 ? (
+                                                            <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600">
+                                                                Qty: {item.quantity}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-500 capitalize">{item.category}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                                        {item.item_name}
-                                                    </h3>
-                                                    {item.quantity > 1 ? (
-                                                        <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600">
-                                                            Qty: {item.quantity}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-500 capitalize">{item.category}</span>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <Badge variant="secondary" className="capitalize text-[10px]">
+                                                        {item.status.replace('_', ' ')}
+                                                    </Badge>
+                                                    {item.is_insured && (
+                                                        <Badge variant="outline" className="text-primary border-emerald-200 bg-primary/10 text-[10px] gap-1">
+                                                            <ShieldCheck className="h-3 w-3" /> Insured
+                                                        </Badge>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <Badge variant="secondary" className="capitalize text-[10px]">
-                                                    {item.status.replace('_', ' ')}
-                                                </Badge>
-                                                {item.is_insured && (
-                                                    <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-[10px] gap-1">
-                                                        <ShieldCheck className="h-3 w-3" /> Insured
-                                                    </Badge>
+                                        </CardHeader>
+                                        <CardContent className="pb-3 space-y-3">
+                                            <div>
+                                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Value</p>
+                                                <p className="text-xl font-bold text-foreground">
+                                                    {formatCurrency(value)}
+                                                </p>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-border space-y-2 text-xs text-muted-foreground">
+                                                {(item.storage_location || item.status === 'in_locker') && (
+                                                    <div className="flex items-center gap-2">
+                                                        {item.status === 'in_locker' ? <Lock className="h-3 w-3 text-blue-500" /> : <MapPin className="h-3 w-3" />}
+                                                        <span className={item.status === 'in_locker' ? 'text-blue-600 font-medium' : ''}>
+                                                            {item.status === 'in_locker' ? 'Bank Locker' : item.storage_location}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {(item.material || item.weight_grams) && (
+                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                        {item.material && (
+                                                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
+                                                                {item.material}
+                                                            </span>
+                                                        )}
+                                                        {item.purity && (
+                                                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
+                                                                {item.purity}
+                                                            </span>
+                                                        )}
+                                                        {item.weight_grams && (
+                                                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
+                                                                {item.weight_grams}g
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pb-3 space-y-3">
-                                        <div>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Value</p>
-                                            <p className="text-xl font-bold text-slate-900 dark:text-white">
-                                                {formatCurrency(value)}
-                                            </p>
-                                        </div>
-
-                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                                            {(item.storage_location || item.status === 'in_locker') && (
-                                                <div className="flex items-center gap-2">
-                                                    {item.status === 'in_locker' ? <Lock className="h-3 w-3 text-blue-500" /> : <MapPin className="h-3 w-3" />}
-                                                    <span className={item.status === 'in_locker' ? 'text-blue-600 font-medium' : ''}>
-                                                        {item.status === 'in_locker' ? 'Bank Locker' : item.storage_location}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {(item.material || item.weight_grams) && (
-                                                <div className="flex flex-wrap gap-2 mt-2">
-                                                    {item.material && (
-                                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
-                                                            {item.material}
-                                                        </span>
-                                                    )}
-                                                    {item.purity && (
-                                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
-                                                            {item.purity}
-                                                        </span>
-                                                    )}
-                                                    {item.weight_grams && (
-                                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-medium">
-                                                            {item.weight_grams}g
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex justify-between gap-1">
-                                            <EntityDocumentsBadge
-                                                entityType="belonging"
-                                                entityId={item.id}
-                                            />
-                                            <div className="flex gap-1">
+                                        </CardContent>
+                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {formatUpdatedAt(item.updated_at || item.created_at)}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <EntityDocumentsBadge
+                                                    entityType="belonging"
+                                                    entityId={item.id}
+                                                />
+                                                <GridDocUpload
+                                                    entityType="belonging"
+                                                    entityId={item.id}
+                                                />
                                                 <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="h-8 w-8 p-0">
                                                     <Edit2 className="h-4 w-4 text-slate-500" />
                                                 </Button>
@@ -463,15 +482,54 @@ export default function BelongingsPage() {
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
+                                        </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredBelongings}
+                            columns={[
+                                {
+                                    key: 'item_name', label: 'Item', render: (b) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{b.item_name}</span>
+                                            <span className="block text-xs text-slate-500 capitalize">{b.category}{b.quantity > 1 ? ` ×${b.quantity}` : ''}</span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {formatUpdatedAt(item.updated_at || item.created_at)}
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            );
-                        })}
-                    </div>
+                                    )
+                                },
+                                {
+                                    key: 'current_estimated_value', label: 'Value', render: (b) => (
+                                        <span className="font-semibold text-foreground">{formatCurrency(b.current_estimated_value || b.purchase_value)}</span>
+                                    )
+                                },
+                                {
+                                    key: 'storage_location', label: 'Location', render: (b) => (
+                                        <span className="text-xs">{b.storage_location || (b.status === 'in_locker' ? 'Bank Locker' : '—')}</span>
+                                    ), hideMobile: true
+                                },
+                                {
+                                    key: 'status', label: 'Status', render: (b) => (
+                                        <Badge variant="secondary" className="text-xs capitalize">{b.status.replace('_', ' ')}</Badge>
+                                    ), hideMobile: true
+                                },
+                                {
+                                    key: 'is_insured', label: 'Insured', render: (b) => (
+                                        b.is_insured ? <Badge variant="outline" className="text-primary border-emerald-200 bg-primary/10 text-[10px]">Yes</Badge> : <span className="text-xs text-slate-400">No</span>
+                                    ), hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(b) => handleDelete(b.id)}
+                            renderDocBadge={(b) => (
+                                <EntityDocumentsBadge entityType="belonging" entityId={b.id} />
+                            )}
+                            renderDocUpload={(b) => (
+                                <GridDocUpload entityType="belonging" entityId={b.id} />
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -581,7 +639,7 @@ export default function BelongingsPage() {
 
                                     {/* Jewelry Specifics (Conditional) */}
                                     {(formData.category === 'jewelry' || formData.category === 'watch') && (
-                                        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="space-y-4 pt-2 border-t border-border">
                                             <h4 className="text-sm font-medium flex items-center gap-2"><Gem className="h-4 w-4" /> Material Details</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <Input
@@ -608,7 +666,7 @@ export default function BelongingsPage() {
                                     )}
 
                                     {/* Valuation */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div className="space-y-4 pt-2 border-t border-border">
                                         <h4 className="text-sm font-medium">Valuation</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <Input
@@ -639,7 +697,7 @@ export default function BelongingsPage() {
                                     </div>
 
                                     {/* Storage & Locker, Documentation & Insurance, Notes - keeping existing structure */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div className="space-y-4 pt-2 border-t border-border">
                                         <h4 className="text-sm font-medium flex items-center gap-2"><MapPin className="h-4 w-4" /> Storage Location</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
@@ -695,47 +753,95 @@ export default function BelongingsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <div className="space-y-4 pt-2 border-t border-border">
                                         <h4 className="text-sm font-medium flex items-center gap-2"><FileText className="h-4 w-4" /> Documents & Insurance</h4>
-                                        <div className="flex flex-wrap gap-4">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id="has_invoice"
-                                                    checked={formData.has_invoice}
-                                                    onChange={(e) => setFormData({ ...formData, has_invoice: e.target.checked })}
-                                                    className="h-4 w-4 rounded border-slate-300 text-violet-600"
-                                                />
-                                                <Label htmlFor="has_invoice">Has Invoice</Label>
+                                        <div className="space-y-4">
+                                            <div className="flex flex-wrap gap-6">
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="has_invoice"
+                                                            checked={formData.has_invoice}
+                                                            onChange={(e) => setFormData({ ...formData, has_invoice: e.target.checked })}
+                                                            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                                                        />
+                                                        <Label htmlFor="has_invoice" className="cursor-pointer">Has Invoice</Label>
+                                                    </div>
+                                                    {formData.has_invoice && (
+                                                        <p className="text-[10px] text-violet-600 bg-violet-50 dark:bg-violet-900/20 px-2 py-1 rounded-md border border-violet-100 dark:border-violet-800 animate-in fade-in slide-in-from-top-1">
+                                                            if u have invoice pls upload the document of invoice
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="has_certificate"
+                                                            checked={formData.has_certificate}
+                                                            onChange={(e) => setFormData({ ...formData, has_certificate: e.target.checked })}
+                                                            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                                                        />
+                                                        <Label htmlFor="has_certificate" className="cursor-pointer">Has Certificate</Label>
+                                                    </div>
+                                                    {formData.has_certificate && (
+                                                        <p className="text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800 animate-in fade-in slide-in-from-top-1">
+                                                            pls upload you certifiactre as a proof
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="is_insured"
+                                                            checked={formData.is_insured}
+                                                            onChange={(e) => setFormData({ ...formData, is_insured: e.target.checked })}
+                                                            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                                                        />
+                                                        <Label htmlFor="is_insured" className="cursor-pointer">Is Insured</Label>
+                                                    </div>
+                                                    {formData.is_insured && (
+                                                        <p className="text-[10px] text-primary bg-primary/10 dark:bg-emerald-900/20 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-800 animate-in fade-in slide-in-from-top-1">
+                                                            the item is insured, please upload the insurance document
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id="has_certificate"
-                                                    checked={formData.has_certificate}
-                                                    onChange={(e) => setFormData({ ...formData, has_certificate: e.target.checked })}
-                                                    className="h-4 w-4 rounded border-slate-300 text-violet-600"
+
+                                            {formData.is_insured && (
+                                                <Input
+                                                    label="Insurance Policy Reference"
+                                                    placeholder="Policy # or insurance company name"
+                                                    value={formData.insurance_policy_reference}
+                                                    onChange={(e) => setFormData({ ...formData, insurance_policy_reference: e.target.value })}
                                                 />
-                                                <Label htmlFor="has_certificate">Has Certificate</Label>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id="is_insured"
-                                                    checked={formData.is_insured}
-                                                    onChange={(e) => setFormData({ ...formData, is_insured: e.target.checked })}
-                                                    className="h-4 w-4 rounded border-slate-300 text-violet-600"
-                                                />
-                                                <Label htmlFor="is_insured">Is Insured</Label>
-                                            </div>
+                                            )}
+
+                                            {/* Integrated Document Upload UI */}
+                                            {(formData.has_invoice || formData.has_certificate || formData.is_insured) && (
+                                                <div className="mt-4 p-4 rounded-xl border border-dashed border-border bg-slate-50/50 dark:bg-slate-900/30">
+                                                    <div className="space-y-3">
+                                                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                            {editingId ? "Upload your documents here:" : "Queue documents for upload (will be linked after saving):"}
+                                                        </p>
+                                                        <EntityDocumentUpload
+                                                            entityType="belonging"
+                                                            entityId={editingId || undefined}
+                                                            onDocUploaded={(docId) => {
+                                                                if (!editingId) {
+                                                                    setQueuedDocIds(prev => [...prev, docId]);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        {formData.is_insured && (
-                                            <Input
-                                                label="Insurance Policy Reference"
-                                                value={formData.insurance_policy_reference}
-                                                onChange={(e) => setFormData({ ...formData, insurance_policy_reference: e.target.value })}
-                                            />
-                                        )}
+
                                         <Input
                                             label="Notes"
                                             value={formData.notes}
@@ -770,19 +876,12 @@ export default function BelongingsPage() {
                                 </div>
                             </div>
 
-                            {/* Document Upload - only when editing */}
-                            {editingId && (
-                                <EntityDocumentUpload
-                                    entityType="belonging"
-                                    entityId={editingId}
-                                />
-                            )}
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-violet-600 hover:bg-violet-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting}>
                                     {submitting ? "Saving..." : editingId ? "Update Item" : "Save Item"}
                                 </Button>
                             </div>

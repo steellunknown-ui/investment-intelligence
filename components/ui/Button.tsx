@@ -10,16 +10,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+        primary: "bg-primary text-white hover:bg-primary/90 shadow-sm",
         secondary:
           "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700",
         ghost: "hover:bg-slate-100 text-slate-700",
         danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
         // shadcn aliases
-        default: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+        default: "bg-primary text-white hover:bg-primary/90 shadow-sm",
         destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
         outline: "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700",
-        link: "text-emerald-600 underline-offset-4 hover:underline",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         sm: "h-8 px-3 text-sm gap-1.5 rounded-lg",

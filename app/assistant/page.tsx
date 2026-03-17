@@ -137,12 +137,12 @@ export default function AssistantPage() {
                                 >
                                     <div
                                         className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${msg.role === "assistant"
-                                            ? "bg-emerald-100 dark:bg-emerald-900/30"
+                                            ? "bg-emerald-100 dark:bg-primary/20"
                                             : "bg-slate-100 dark:bg-slate-800"
                                             }`}
                                     >
                                         {msg.role === "assistant" ? (
-                                            <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                            <Sparkles className="h-4 w-4 text-primary dark:text-accent" />
                                         ) : (
                                             <div className="h-4 w-4 rounded-full bg-slate-400" />
                                         )}
@@ -153,8 +153,8 @@ export default function AssistantPage() {
                                     >
                                         <div
                                             className={`inline-block px-4 py-3 rounded-2xl ${msg.role === "assistant"
-                                                ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
-                                                : "bg-emerald-600 text-white"
+                                                ? "bg-slate-100 dark:bg-slate-800 text-foreground"
+                                                : "bg-primary text-white"
                                                 }`}
                                         >
                                             <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -172,12 +172,12 @@ export default function AssistantPage() {
                             ))}
                             {loading && (
                                 <div className="flex gap-3">
-                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                        <Loader2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-100 dark:bg-primary/20 flex items-center justify-center">
+                                        <Loader2 className="h-4 w-4 text-primary dark:text-accent animate-spin" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="inline-block px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800">
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            <p className="text-sm text-muted-foreground">
                                                 Analyzing your portfolio...
                                             </p>
                                         </div>
@@ -188,7 +188,7 @@ export default function AssistantPage() {
                         </div>
 
                         {/* Input Section */}
-                        <div className="border-t border-slate-200 dark:border-slate-700 p-4">
+                        <div className="border-t border-border p-4">
                             <div className="flex gap-2">
                                 <Input
                                     value={input}
@@ -201,7 +201,7 @@ export default function AssistantPage() {
                                 <Button
                                     onClick={handleSend}
                                     disabled={!input.trim() || loading}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    className="bg-primary hover:bg-primary/90 text-white"
                                 >
                                     {loading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -220,7 +220,7 @@ export default function AssistantPage() {
                     <Card>
                         <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
-                                <div className="icon-container bg-emerald-600">
+                                <div className="icon-container bg-primary">
                                     <TrendingUp className="h-4 w-4 text-white" />
                                 </div>
                                 <h3 className="font-semibold text-sm">Portfolio Summary</h3>
@@ -229,14 +229,14 @@ export default function AssistantPage() {
                         <CardContent className="space-y-3">
                             <div>
                                 <p className="text-xs text-slate-500 mb-1">Net Worth</p>
-                                <p className="text-xl font-bold text-slate-900 dark:text-white">
+                                <p className="text-xl font-bold text-foreground">
                                     {context ? formatCurrency(context.netWorth.total) : "---"}
                                 </p>
                             </div>
-                            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-xs">
+                            <div className="pt-3 border-t border-border grid grid-cols-2 gap-3 text-xs">
                                 <div>
                                     <p className="text-slate-500">Assets</p>
-                                    <p className="font-medium text-emerald-600">
+                                    <p className="font-medium text-primary">
                                         {context ? formatCurrency(context.netWorth.assets) : "---"}
                                     </p>
                                 </div>
@@ -262,15 +262,15 @@ export default function AssistantPage() {
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600 dark:text-slate-400">
+                                <span className="text-muted-foreground">
                                     Unread Alerts
                                 </span>
-                                <span className="font-semibold text-slate-900 dark:text-white">
+                                <span className="font-semibold text-foreground">
                                     {context?.alerts || 0}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600 dark:text-slate-400">
+                                <span className="text-muted-foreground">
                                     Overdue Insurance
                                 </span>
                                 <span className="font-semibold text-amber-600">
@@ -289,7 +289,7 @@ export default function AssistantPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                            <p className="text-xs text-muted-foreground">
                                 Ask me about:
                             </p>
                             <div className="space-y-1">

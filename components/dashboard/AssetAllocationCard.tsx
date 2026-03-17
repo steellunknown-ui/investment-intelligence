@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white/95 backdrop-blur-sm border border-slate-200 p-2 rounded-lg shadow-lg text-xs">
         <p className="font-semibold text-slate-700 mb-1">{label}</p>
-        <p className="text-emerald-600 font-medium">
+        <p className="text-primary font-medium">
           {new Intl.NumberFormat("en-IN", {
             style: "currency",
             currency: "INR",
@@ -90,7 +90,7 @@ export function AssetAllocationCard({
         title="Asset Breakdown"
         description="Visualizing your financial distribution"
         action={
-          <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+          <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
             <TrendingUp className="h-3 w-3" />
             Analysis
           </div>

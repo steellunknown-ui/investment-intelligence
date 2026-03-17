@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { createAlert } from '@/lib/alerts'
 
 export async function GET() {
     try {
@@ -147,6 +148,14 @@ export async function POST(request: Request) {
                 { status: 500 }
             )
         }
+
+        // Create notification alert
+        await createAlert(supabase, {
+            userId: user.id,
+            type: 'success',
+            title: 'Asset Added',
+            message: `New asset "${asset_name}" (${asset_type}) has been added to your vault.`
+        });
 
         return NextResponse.json({ asset }, { status: 201 })
     } catch (error) {

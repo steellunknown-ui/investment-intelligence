@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { IFSC_REGEX, validateBankAccountNumber } from '@/src/lib/financialValidationRules'
 
 export async function PATCH(
     request: Request,
@@ -30,6 +31,31 @@ export async function PATCH(
         if (body.is_joint_account && !body.joint_holder_name) {
             return NextResponse.json({ error: 'Joint holder name is required' }, { status: 400 })
         }
+
+        // IFSC Validation (if provided)
+        if (body.ifsc_code && !IFSC_REGEX.test(body.ifsc_code)) {
+            return NextResponse.json({ error: 'Invalid IFSC format' }, { status: 400 })
+        }
+
+        // Account Number Validation (if provided or bank changed)
+        if (body.account_number || body.bank_name) {
+            const { data: existing } = await supabase
+                .from('bank_accounts')
+                .select('bank_name, account_number')
+                .eq('id', id)
+                .single();
+            
+            if (existing) {
+                const bank = body.bank_name || existing.bank_name;
+                const acc = body.account_number || existing.account_number;
+                const accValidation = validateBankAccountNumber(bank, acc);
+                if (!accValidation.isValid) {
+                    return NextResponse.json({ error: accValidation.error }, { status: 400 });
+                }
+            }
+        }
+        // Actually, let's just do basic checks for PATCH to avoid breaking partial updates
+        // but IFSC is safe to check if present.
 
         const { data: account, error } = await supabase
             .from('bank_accounts')

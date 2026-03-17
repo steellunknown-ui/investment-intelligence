@@ -27,10 +27,17 @@ export interface Nominee {
   id: string;
   user_id: string;
   name: string;
-  email: string;
+  email?: string;
+  nominee_phone: string;
+  aadhaar_hash?: string;
+  pan_hash?: string;
+  verification_method: string;
   relationship: string | null;
   access_level: "view_only" | "limited";
   is_verified: boolean;
+  failed_attempts?: number;
+  is_blocked?: boolean;
+  blocked_until?: string;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +117,8 @@ export interface BankAccount {
   account_number: string;
   bank_name: string;
   branch_name?: string | null;
+  city?: string | null;
+  state?: string | null;
   ifsc_code: string;
   account_type: string;
   account_holder_name: string;
@@ -305,6 +314,19 @@ export interface NetWorthSummary {
   belongingsTotalValue: number;
   receivablesOutstandingTotal: number;
   liabilitiesOutstandingTotal: number;
+  
+  // New specific fields requested
+  assets_value: number;
+  assets_count: number;
+  belongings_value: number;
+  belongings_count: number;
+  bank_balance: number;
+  bank_accounts: number;
+  receivables_total: number;
+  receivables_count: number;
+  liabilities_total: number;
+  liabilities_count: number;
+
   netWorth: number;
   updatedAt: string;
 }
@@ -354,6 +376,7 @@ export interface FamilyMember {
   member_user_id: string;
   role: string;
   relation: string;
+  member_name?: string;
   created_at: string;
   updated_at: string;
   member_profile?: {

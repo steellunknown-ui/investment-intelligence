@@ -56,13 +56,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Failed to upload avatar' }, { status: 500 })
         }
 
-        // Get signed URL (valid for 1 year)
-        const { data: signedUrlData, error: urlError } = await supabase.storage
+        // Get public URL (bucket is now public)
+        const { data: publicUrlData } = supabase.storage
             .from('avatars')
-            .createSignedUrl(fileName, 365 * 24 * 60 * 60) // 1 year
+            .getPublicUrl(fileName)
 
-        if (urlError) {
-            console.error('Signed URL error:', urlError)
+        if (!publicUrlData || !publicUrlData.publicUrl) {
+            console.error('Failed to get public URL')
             return NextResponse.json({ error: 'Failed to generate avatar URL' }, { status: 500 })
         }
 
@@ -71,16 +71,27 @@ export async function POST(request: Request) {
             .from('profiles')
             .upsert({
                 id: user.id,
-                avatar_url: signedUrlData.signedUrl,
+                avatar_url: publicUrlData.publicUrl,
                 updated_at: new Date().toISOString()
             })
+
+        // Also update auth user metadata for Navbar consistency
+        const { error: authError } = await supabase.auth.updateUser({
+            data: { avatar_url: publicUrlData.publicUrl }
+        })
+
+        if (authError) {
+            console.error('Auth metadata update error:', authError)
+            // We can continue even if auth metadata fails, as DB is the source of truth,
+            // but it's good to log it.
+        }
 
         if (updateError) {
             console.error('Profile update error:', updateError)
             return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
         }
 
-        return NextResponse.json({ avatar_url: signedUrlData.signedUrl })
+        return NextResponse.json({ avatar_url: publicUrlData.publicUrl })
     } catch (error) {
         console.error('Avatar upload error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

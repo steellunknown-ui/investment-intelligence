@@ -31,7 +31,7 @@ import {
   ArrowRightLeft,
   Briefcase,
   Download,
-  Gauge
+  LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
@@ -53,23 +53,34 @@ function formatCurrency(value: number): string {
   return isNegative ? `-${formatted}` : formatted;
 }
 
-// Format date to relative or absolute
+// Format date to readable timestamp with time
 function formatLastActivity(dateStr: string | null): string {
   if (!dateStr) return "—";
 
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
+  const timeStr = date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 
-  return date.toLocaleDateString("en-IN", {
+  const dateFormatted = date.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
   });
+
+  if (diffMins < 2) return `Just now`;
+  if (diffMins < 60) return `${diffMins}m ago, ${timeStr}`;
+  if (diffHours < 24) return `${diffHours}h ago, ${timeStr}`;
+  if (diffDays === 1) return `Yesterday, ${timeStr}`;
+
+  return `${dateFormatted}, ${timeStr}`;
 }
 
 export default function DashboardPage() {
@@ -79,7 +90,7 @@ export default function DashboardPage() {
   const [onboardingStatus, setOnboardingStatus] = useState<any>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [creditScore, setCreditScore] = useState<number | null>(null);
+  const [lastLoginAt, setLastLoginAt] = useState<string | null>(null);
 
   const fetchNetWorth = useCallback(async () => {
     try {
@@ -89,11 +100,15 @@ export default function DashboardPage() {
         const data = await res.json();
         setNetWorth(data);
       }
-      // Also fetch credit score
-      const scoreRes = await fetch("/api/credit-score/calculate");
-      if (scoreRes.ok) {
-        const scoreData = await scoreRes.json();
-        setCreditScore(scoreData.score?.score || null);
+      // Fetch last login timestamp
+      try {
+        const loginRes = await fetch("/api/dashboard/last-login");
+        if (loginRes.ok) {
+          const loginData = await loginRes.json();
+          setLastLoginAt(loginData.lastLoginAt || null);
+        }
+      } catch (loginErr) {
+        console.error("Fetch last login error:", loginErr);
       }
     } catch (err) {
       console.error("Fetch net worth error:", err);
@@ -194,16 +209,16 @@ export default function DashboardPage() {
 
         {/* SECTION 1: NET WORTH OVERVIEW */}
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Overview Dashboard</h2>
-          <div className="border-b border-slate-200 dark:border-slate-800 mb-6" />
+          <h2 className="text-xl font-semibold text-foreground mb-4">Overview Dashboard</h2>
+          <div className="border-b border-border mb-6" />
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Big Net Worth Card with Chart */}
-            <div className="md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between min-h-[220px]">
+            <div className="md:col-span-2 lg:col-span-1 rounded-2xl p-6 shadow-xl flex flex-col justify-between min-h-[220px]" style={{ background: 'var(--summary-card-bg)', color: 'hsl(var(--summary-card-text))' }}>
               <div>
-                <h2 className="text-emerald-100 font-medium text-sm uppercase tracking-wider mb-2">Total Net Worth</h2>
+                <h2 className="opacity-80 font-medium text-sm uppercase tracking-wider mb-2">Total Net Worth</h2>
                 {loading ? (
-                  <div className="h-10 w-32 bg-emerald-500/30 rounded animate-pulse" />
+                  <div className="h-10 w-32 bg-primary/30 rounded animate-pulse" />
                 ) : (
                   <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(netWorth?.netWorth || 0)}</h1>
                 )}
@@ -212,22 +227,24 @@ export default function DashboardPage() {
               {/* Net Worth History Chart */}
               <NetWorthMiniChart className="my-3" />
 
-              <div className="pt-3 border-t border-emerald-500/30 flex justify-between items-end">
-                <div className="text-sm text-emerald-100">
+              <div className="pt-3 border-t border-[hsl(var(--summary-card-text))]/30 flex justify-between items-end">
+                <div className="text-sm opacity-80">
                   Updated {formatLastActivity(netWorth?.updatedAt || null)}
                 </div>
-                <div className="bg-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium">
+                <div className="bg-[hsl(var(--summary-card-text))]/10 px-3 py-1 rounded-full text-xs font-medium border border-[hsl(var(--summary-card-text))]/20">
                   Live Aggregation
                 </div>
               </div>
             </div>
 
             {/* Breakdown Grid */}
-            <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
               <QuickStatCard
                 icon={Wallet}
                 label="Cash & Bank"
                 value={formatCurrency(netWorth?.bankBalanceTotal || 0)}
+                count={`${netWorth?.bank_accounts || 0} Accounts`}
+                description="Total Balance"
                 color="text-blue-600"
                 loading={loading}
                 onClick={() => router.push('/banking')}
@@ -237,6 +254,8 @@ export default function DashboardPage() {
                 icon={Landmark}
                 label="Real Assets"
                 value={formatCurrency(netWorth?.assetsTotalValue || 0)}
+                count={`${netWorth?.assets_count || 0} ${netWorth?.assets_count === 1 ? 'Asset' : 'Assets'}`}
+                description="Total Assets Value"
                 color="text-indigo-600"
                 loading={loading}
                 onClick={() => router.push('/assets')}
@@ -246,6 +265,8 @@ export default function DashboardPage() {
                 icon={Gem}
                 label="Belongings"
                 value={formatCurrency(netWorth?.belongingsTotalValue || 0)}
+                count={`${netWorth?.belongings_count || 0} ${netWorth?.belongings_count === 1 ? 'Item' : 'Items'}`}
+                description="Total Belongings Value"
                 color="text-violet-600"
                 loading={loading}
                 onClick={() => router.push('/belongings')}
@@ -255,6 +276,8 @@ export default function DashboardPage() {
                 icon={ArrowRightLeft}
                 label="Receivables"
                 value={formatCurrency(netWorth?.receivablesOutstandingTotal || 0)}
+                count={`${netWorth?.receivables_count || 0} ${netWorth?.receivables_count === 1 ? 'Person' : 'People'}`}
+                description="Total Receivable Amount"
                 color="text-cyan-600"
                 loading={loading}
                 onClick={() => router.push('/receivables')}
@@ -264,18 +287,21 @@ export default function DashboardPage() {
                 icon={Briefcase}
                 label="Liabilities"
                 value={formatCurrency(netWorth?.liabilitiesOutstandingTotal || 0)}
+                count={`${netWorth?.liabilities_count || 0} ${netWorth?.liabilities_count === 1 ? 'Loan' : 'Loans'}`}
+                description="Total Outstanding"
                 color="text-red-600"
                 loading={loading}
                 onClick={() => router.push('/liabilities')}
                 delay={0.3}
               />
               <QuickStatCard
-                icon={Gauge}
-                label="Credit Score"
-                value={creditScore ? String(creditScore) : '—'}
-                color="text-emerald-600"
+                icon={LogIn}
+                label="Last Login"
+                value={formatLastActivity(lastLoginAt)}
+                count="Security Log"
+                description="Account Access Time"
+                color="text-primary"
                 loading={loading}
-                onClick={() => router.push('/credit-score')}
                 delay={0.35}
               />
             </div>
@@ -291,11 +317,11 @@ export default function DashboardPage() {
 
         {/* SECTION 2: WELCOME / ONBOARDING */}
         {!loading && !hasData && (
-          <Card className="relative overflow-hidden border-emerald-200 bg-emerald-50">
+          <Card className="relative overflow-hidden border-emerald-200 bg-primary/10">
             <div className="relative p-6 sm:p-8">
               <div className="flex items-start gap-4">
                 <div className="icon-container bg-emerald-100 p-2 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-emerald-600" />
+                  <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-slate-900 tracking-tight">Welcome to Financial Intelligence!</h3>
@@ -305,7 +331,7 @@ export default function DashboardPage() {
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       onClick={() => router.push("/banking")}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors"
                     >
                       Add Bank Account
                       <ArrowUpRight className="h-4 w-4" />
@@ -329,8 +355,8 @@ export default function DashboardPage() {
           For now we keep them if they rely on separate 'summary' logic or hide them if not needed.
           Keeping structure clean.
         */}
-        <div className="border-t border-slate-200 dark:border-slate-800 pt-8">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Portfolio Analytics</h3>
+        <div className="border-t border-border pt-8">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Portfolio Analytics</h3>
           <div className="grid gap-6 lg:grid-cols-3">
             <PortfolioSummaryCard
               hasData={!!hasData} // Using net worth presence as proxy
@@ -368,6 +394,8 @@ function QuickStatCard({
   icon: Icon,
   label,
   value,
+  count,
+  description,
   color = "text-slate-900",
   onClick,
   loading = false,
@@ -376,6 +404,8 @@ function QuickStatCard({
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
+  count?: string;
+  description?: string;
   color?: string;
   onClick?: () => void;
   loading?: boolean;
@@ -383,21 +413,31 @@ function QuickStatCard({
 }) {
   return (
     <MotionCard
-      className={`vault-card card-hover relative overflow-hidden flex flex-col justify-center ${onClick ? "cursor-pointer" : ""
-        }`}
+      className={`vault-card card-hover relative overflow-hidden flex flex-col justify-center h-full ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
       delay={delay}
     >
       <div className="p-4 flex items-center justify-between">
-        <div>
+        <div className="flex-1">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
           {loading ? (
-            <div className="h-6 w-24 bg-slate-100 dark:bg-slate-800 rounded mt-1 animate-pulse" />
+            <div className="space-y-2 mt-2">
+              <div className="h-6 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-4 w-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+            </div>
           ) : (
-            <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
+            <>
+              <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
+              {count && (
+                <p className="text-sm font-medium text-muted-foreground mt-0.5">{count}</p>
+              )}
+              {description && (
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-tight">{description}</p>
+              )}
+            </>
           )}
         </div>
-        <div className="h-10 w-10 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
           <Icon className={`h-5 w-5 ${color} opacity-80`} />
         </div>
       </div>

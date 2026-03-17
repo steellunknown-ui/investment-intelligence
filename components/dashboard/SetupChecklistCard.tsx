@@ -112,7 +112,7 @@ export function SetupChecklistCard({ checklist, progress }: SetupChecklistCardPr
                         </p>
                     </div>
                     <div className="text-right">
-                        <p className="text-2xl font-bold text-emerald-600">{progress.done}/{progress.total}</p>
+                        <p className="text-2xl font-bold text-primary">{progress.done}/{progress.total}</p>
                         <p className="text-xs text-muted-foreground">completed</p>
                     </div>
                 </div>
@@ -135,17 +135,17 @@ export function SetupChecklistCard({ checklist, progress }: SetupChecklistCardPr
                             <div
                                 key={item.id}
                                 className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${item.completed
-                                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'
-                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                        ? 'bg-primary/10 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'
+                                        : 'bg-card border-border'
                                     }`}
                             >
                                 <div className="flex items-center gap-3 flex-1">
                                     <div className={`p-2 rounded-lg ${item.completed
-                                            ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                                            ? 'bg-emerald-100 dark:bg-primary/20'
                                             : 'bg-slate-100 dark:bg-slate-800'
                                         }`}>
                                         <Icon className={`h-4 w-4 ${item.completed
-                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                ? 'text-primary dark:text-accent'
                                                 : 'text-slate-500'
                                             }`} />
                                     </div>
@@ -161,7 +161,7 @@ export function SetupChecklistCard({ checklist, progress }: SetupChecklistCardPr
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {item.completed ? (
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                        <CheckCircle2 className="h-5 w-5 text-primary dark:text-accent" />
                                     ) : (
                                         <Button
                                             size="sm"

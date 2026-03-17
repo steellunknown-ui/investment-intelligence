@@ -84,7 +84,7 @@ export function PublicChatbot() {
                     <a
                         key={i}
                         href={match[2]}
-                        className="text-emerald-600 underline hover:text-emerald-700 font-medium"
+                        className="text-primary underline hover:text-primary font-medium"
                     >
                         {match[1]}
                     </a>
@@ -102,11 +102,11 @@ export function PublicChatbot() {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="mb-4 w-[350px] max-w-[calc(100vw-48px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col"
+                        className="mb-4 w-[350px] max-w-[calc(100vw-48px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col"
                         style={{ maxHeight: "500px", height: "500px" }}
                     >
                         {/* Header */}
-                        <div className="bg-emerald-600 p-4 text-white flex justify-between items-center shadow-md">
+                        <div className="bg-primary p-4 text-white flex justify-between items-center shadow-md">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 bg-white/20 rounded-full">
                                     <Sparkles className="h-4 w-4" />
@@ -136,8 +136,8 @@ export function PublicChatbot() {
                                 >
                                     <div
                                         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                                                ? "bg-emerald-600 text-white rounded-br-none"
-                                                : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-bl-none"
+                                                ? "bg-primary text-white rounded-br-none"
+                                                : "bg-card text-slate-800 dark:text-slate-200 border border-border rounded-bl-none"
                                             }`}
                                     >
                                         {renderMessageContent(msg.content)}
@@ -146,8 +146,8 @@ export function PublicChatbot() {
                             ))}
                             {loading && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm border border-slate-100 dark:border-slate-700">
-                                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                                    <div className="bg-card rounded-2xl rounded-bl-none px-4 py-3 shadow-sm border border-border">
+                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
                                     </div>
                                 </div>
                             )}
@@ -155,7 +155,7 @@ export function PublicChatbot() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                        <div className="p-3 bg-white dark:bg-slate-900 border-t border-border">
                             <div className="flex gap-2">
                                 <Input
                                     value={input}
@@ -170,7 +170,7 @@ export function PublicChatbot() {
                                     size="sm"
                                     onClick={handleSend}
                                     disabled={!input.trim() || loading}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 w-10 p-0 rounded-lg shrink-0"
+                                    className="bg-primary hover:bg-primary/90 text-white h-10 w-10 p-0 rounded-lg shrink-0"
                                 >
                                     {loading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -194,7 +194,7 @@ export function PublicChatbot() {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-colors ${isOpen
                         ? "bg-slate-800 text-white hover:bg-slate-900"
-                        : "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "bg-primary text-white hover:bg-primary/90"
                     }`}
             >
                 {isOpen ? (

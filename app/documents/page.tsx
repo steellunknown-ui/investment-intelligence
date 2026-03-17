@@ -359,7 +359,7 @@ export default function DocumentsPage() {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search by name, tags..."
-                                className="pl-9 bg-white dark:bg-slate-800"
+                                className="pl-9 bg-card"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -412,14 +412,14 @@ export default function DocumentsPage() {
                         {documents.map((doc) => {
                             const Icon = getFileIcon(doc.mime_type);
                             return (
-                                <Card key={doc.id} className={`relative group hover:shadow-md transition-all cursor-pointer ${doc.is_archived ? 'opacity-60 bg-slate-50' : 'bg-white dark:bg-slate-800'}`} onClick={() => handleViewDocument(doc)}>
+                                <Card key={doc.id} className={`relative group hover:shadow-md transition-all cursor-pointer ${doc.is_archived ? 'opacity-60 bg-slate-50' : 'bg-card'}`} onClick={() => handleViewDocument(doc)}>
                                     <div className="p-4 flex gap-3">
                                         <div className={`h-10 w-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0 ${doc.is_locked ? 'blur-md' : ''}`}>
                                             <Icon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
-                                                <h3 className={`font-medium text-slate-900 dark:text-white truncate ${doc.is_locked ? 'blur-sm' : ''}`} title={doc.title || doc.file_name}>
+                                                <h3 className={`font-medium text-foreground truncate ${doc.is_locked ? 'blur-sm' : ''}`} title={doc.title || doc.file_name}>
                                                     {doc.title || doc.file_name}
                                                 </h3>
                                                 <DropdownMenu>
@@ -505,7 +505,7 @@ export default function DocumentsPage() {
                         <form onSubmit={handleUpload} className="space-y-4">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                         <input
                                             type="file"
                                             ref={fileInputRef}
@@ -514,8 +514,8 @@ export default function DocumentsPage() {
                                         />
                                         {uploadFile ? (
                                             <div className="flex flex-col items-center gap-2">
-                                                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                                                <p className="text-sm font-medium text-emerald-600">{uploadFile.name}</p>
+                                                <CheckCircle2 className="h-8 w-8 text-primary" />
+                                                <p className="text-sm font-medium text-primary">{uploadFile.name}</p>
                                                 <p className="text-xs text-slate-500">{formatBytes(uploadFile.size)}</p>
                                             </div>
                                         ) : (

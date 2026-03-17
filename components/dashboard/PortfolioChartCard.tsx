@@ -58,7 +58,7 @@ export function PortfolioChartCard({ totalValue }: PortfolioChartCardProps) {
                 description="6-month growth trend"
                 action={
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium ${isPositive
-                            ? "bg-emerald-50 text-emerald-600"
+                            ? "bg-primary/10 text-primary"
                             : "bg-red-50 text-red-600"
                         }`}>
                         {isPositive ? (

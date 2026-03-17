@@ -37,6 +37,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { assetCategories, assetTypes, ownershipTypes, assetStatus } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
 
 // Constants
 const ASSET_CATEGORIES = [
@@ -44,15 +47,14 @@ const ASSET_CATEGORIES = [
     { value: "immovable", label: "Immovable" },
 ];
 
-const ASSET_TYPES = [
-    { value: "property", label: "Property" },
-    { value: "vehicle", label: "Vehicle" },
-    { value: "gold", label: "Gold" },
-    { value: "jewelry", label: "Jewelry" },
-    { value: "art", label: "Art" },
-    { value: "machinery", label: "Machinery" },
-    { value: "equipment", label: "Equipment" },
-    { value: "other", label: "Other" },
+const ASSET_TYPES = assetTypes.map(type => ({
+    value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+    label: type
+}));
+
+const IMMOVABLE_TYPES = [
+    "residential_property", "commercial_property", "plot_land", "farm_land", 
+    "shop_office", "flat_apartment", "house_villa", "property"
 ];
 
 const STATUS_OPTIONS = [
@@ -71,6 +73,7 @@ export default function AssetsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
     // QuickPick State
     const [showAssetCategoryPick, setShowAssetCategoryPick] = useState(false);
@@ -296,15 +299,15 @@ export default function AssetsPage() {
                 <div className="flex flex-col gap-6">
                     {assets.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-emerald-600 dark:bg-emerald-700 rounded-xl p-4 text-white shadow-lg">
-                                <p className="text-emerald-100 text-xs font-medium uppercase tracking-wider mb-1">Total Asset Value</p>
+                            <div className="rounded-xl p-4 shadow-lg" style={{ background: 'var(--summary-card-bg)', color: 'hsl(var(--summary-card-text))' }}>
+                                <p className="opacity-80 text-xs font-medium uppercase tracking-wider mb-1">Total Asset Value</p>
                                 <h2 className="text-2xl font-bold">{formatCurrency(totalValue)}</h2>
                             </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                                 <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Assets Tracking</p>
-                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{filteredAssets.length}</h2>
+                                <h2 className="text-2xl font-bold text-foreground">{filteredAssets.length}</h2>
                             </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                                 <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Under Loan</p>
                                 <h2 className="text-2xl font-bold text-amber-600">{underLoanCount}</h2>
                             </div>
@@ -317,7 +320,7 @@ export default function AssetsPage() {
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                                 <Input
                                     placeholder="Search assets..."
-                                    className="pl-9 bg-white dark:bg-slate-800"
+                                    className="pl-9 bg-card"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -328,16 +331,19 @@ export default function AssetsPage() {
                                 options={[{ value: "all", label: "All Categories" }, ...ASSET_CATEGORIES]}
                             />
                         </div>
-                        <Button
-                            onClick={() => {
-                                resetForm();
-                                setIsModalOpen(true);
-                            }}
-                            className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Asset
-                        </Button>
+                        <div className="flex gap-2">
+                            <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                            <Button
+                                onClick={() => {
+                                    resetForm();
+                                    setIsModalOpen(true);
+                                }}
+                                className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Asset
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -365,102 +371,138 @@ export default function AssetsPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredAssets.map((asset) => {
-                            const Icon = getIcon(asset.asset_type);
-                            return (
-                                <Card key={asset.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="icon-container bg-indigo-50 dark:bg-indigo-900/20">
-                                                <Icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {asset.is_under_loan && (
-                                                    <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
-                                                        Loan
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredAssets.map((asset) => {
+                                const Icon = getIcon(asset.asset_type);
+                                return (
+                                    <Card key={asset.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="icon-container bg-indigo-50 dark:bg-indigo-900/20">
+                                                    <Icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {asset.is_under_loan && (
+                                                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                                                            Loan
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant={asset.status === 'owned' ? 'default' : 'secondary'} className="capitalize">
+                                                        {asset.status}
                                                     </Badge>
-                                                )}
-                                                <Badge variant={asset.status === 'owned' ? 'default' : 'secondary'} className="capitalize">
-                                                    {asset.status}
-                                                </Badge>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="mt-4">
-                                            <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                                {asset.asset_name}
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                <Badge variant="outline" className="text-[10px] h-5 px-1 uppercase tracking-wide">
-                                                    {asset.asset_type}
-                                                </Badge>
-                                                {asset.location && (
-                                                    <span className="text-xs text-slate-500 truncate max-w-[150px]">
-                                                        📍 {asset.location}
-                                                    </span>
-                                                )}
+                                            <div className="mt-4">
+                                                <h3 className="font-semibold text-foreground line-clamp-1">
+                                                    {asset.asset_name}
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                    <Badge variant="outline" className="text-[10px] h-5 px-1 uppercase tracking-wide">
+                                                        {asset.asset_type}
+                                                    </Badge>
+                                                    {asset.location && (
+                                                        <span className="text-xs text-slate-500 truncate max-w-[150px]">
+                                                            📍 {asset.location}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pb-3 space-y-3">
-                                        <div>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Current Value</p>
-                                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                                {formatCurrency(asset.current_market_value || asset.purchase_value)}
-                                            </p>
-                                        </div>
+                                        </CardHeader>
+                                        <CardContent className="pb-3 space-y-3">
+                                            <div>
+                                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Current Value</p>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    {formatCurrency(asset.current_market_value || asset.purchase_value)}
+                                                </p>
+                                            </div>
 
-                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-slate-400">Owner</span>
-                                                <span className="font-medium flex items-center gap-1">
-                                                    <Users className="h-3 w-3" />
-                                                    {asset.ownership_type === 'sole' ? 'Sole Owner' : `Joint (${asset.ownership_percentage}%)`}
-                                                </span>
-                                            </div>
-                                            {asset.is_under_loan && (
+                                            <div className="pt-3 border-t border-border grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-slate-400">Loan Due</span>
-                                                    <span className="font-medium text-amber-600">
-                                                        {formatCurrency(asset.loan_outstanding)}
+                                                    <span className="text-slate-400">Owner</span>
+                                                    <span className="font-medium flex items-center gap-1">
+                                                        <Users className="h-3 w-3" />
+                                                        {asset.ownership_type === 'sole' ? 'Sole Owner' : `Joint (${asset.ownership_percentage}%)`}
                                                     </span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex gap-2 justify-between">
-                                            <EntityDocumentsBadge
-                                                entityType="asset"
-                                                entityId={asset.id}
-                                            />
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(asset)}
-                                                    className="h-8 w-8 p-0"
-                                                >
+                                                {asset.is_under_loan && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-slate-400">Loan Due</span>
+                                                        <span className="font-medium text-amber-600">
+                                                            {formatCurrency(asset.loan_outstanding)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {formatUpdatedAt(asset.updated_at || asset.created_at)}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <EntityDocumentsBadge
+                                                    entityType="asset"
+                                                    entityId={asset.id}
+                                                />
+                                                <GridDocUpload
+                                                    entityType="asset"
+                                                    entityId={asset.id}
+                                                />
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)} className="h-8 w-8 p-0">
                                                     <Edit2 className="h-4 w-4 text-slate-500" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(asset.id)}
-                                                    className="h-8 w-8 p-0 hover:text-red-600"
-                                                >
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(asset.id)} className="h-8 w-8 p-0 hover:text-red-600">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
+                                        </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredAssets}
+                            columns={[
+                                {
+                                    key: 'asset_name', label: 'Asset', render: (a) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{a.asset_name}</span>
+                                            <span className="block text-xs text-slate-500">{a.location || a.asset_type}</span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {formatUpdatedAt(asset.updated_at || asset.created_at)}
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            );
-                        })}
-                    </div>
+                                    )
+                                },
+                                {
+                                    key: 'asset_type', label: 'Type', render: (a) => (
+                                        <Badge variant="outline" className="text-xs capitalize">{a.asset_type}</Badge>
+                                    )
+                                },
+                                {
+                                    key: 'current_market_value', label: 'Value', render: (a) => (
+                                        <span className="font-semibold text-foreground">{formatCurrency(a.current_market_value || a.purchase_value)}</span>
+                                    )
+                                },
+                                {
+                                    key: 'ownership_type', label: 'Owner', render: (a) => (
+                                        <span className="text-xs capitalize">{a.ownership_type}</span>
+                                    ), hideMobile: true
+                                },
+                                {
+                                    key: 'status', label: 'Status', render: (a) => (
+                                        <Badge variant={a.status === 'owned' ? 'default' : 'secondary'} className="text-xs capitalize">{a.status}</Badge>
+                                    ), hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(a) => handleDelete(a.id)}
+                            renderDocBadge={(a) => (
+                                <EntityDocumentsBadge entityType="asset" entityId={a.id} />
+                            )}
+                            renderDocUpload={(a) => (
+                                <GridDocUpload entityType="asset" entityId={a.id} />
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -477,7 +519,7 @@ export default function AssetsPage() {
                                 <div className="space-y-6">
                                     {/* Section 1: Classification */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <Briefcase className="h-4 w-4" /> Classification
                                         </h4>
                                         <Input
@@ -508,15 +550,20 @@ export default function AssetsPage() {
                                                             subtitle="Popular asset types"
                                                             items={assetTypes.map(type => ({ value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: type }))}
                                                             onSelect={(value) => {
-                                                                setFormData(p => ({ ...p, asset_type: value }));
-                                                                setShowAssetTypePick(false);
-                                                            }}
-                                                        />
-                                                    </SheetContent>
-                                                </Sheet>
-                                            </div>
-                                            <Select
-                                                options={ASSET_TYPES}
+                                                                 const isImmovable = IMMOVABLE_TYPES.includes(value);
+                                                                 setFormData(p => ({
+                                                                     ...p,
+                                                                     asset_type: value,
+                                                                     asset_category: isImmovable ? 'immovable' : 'movable'
+                                                                 }));
+                                                                 setShowAssetTypePick(false);
+                                                             }}
+                                                         />
+                                                     </SheetContent>
+                                                 </Sheet>
+                                             </div>
+                                             <Select
+                                                 options={ASSET_TYPES}
                                                 value={formData.asset_type}
                                                 onChange={(e) => setFormData({ ...formData, asset_type: e.target.value })}
                                             />
@@ -537,7 +584,7 @@ export default function AssetsPage() {
 
                                     {/* Section 2: Valuation */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <DollarSign className="h-4 w-4" /> Valuation
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -571,7 +618,7 @@ export default function AssetsPage() {
                                     {/* Section 3: Details (Conditional) */}
                                     {formData.asset_category === 'immovable' && (
                                         <div className="space-y-4">
-                                            <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                            <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                                 <Home className="h-4 w-4" /> Property Details
                                             </h4>
                                             <div className="space-y-4">
@@ -607,7 +654,7 @@ export default function AssetsPage() {
 
                                     {formData.asset_type === 'vehicle' && (
                                         <div className="space-y-4">
-                                            <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                            <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                                 <Car className="h-4 w-4" /> Vehicle Details
                                             </h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -639,7 +686,7 @@ export default function AssetsPage() {
                                     {/* Section 4: Loan */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 border-b pb-2">
-                                            <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                                            <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                                                 <FileText className="h-4 w-4" /> Loan Information
                                             </h4>
                                             <div className="ml-auto flex items-center gap-2">
@@ -656,7 +703,7 @@ export default function AssetsPage() {
                                             </div>
                                         </div>
                                         {formData.is_under_loan && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-background/50 p-4 rounded-lg">
                                                 <Input
                                                     label="Loan Provider"
                                                     value={formData.loan_provider}
@@ -686,7 +733,7 @@ export default function AssetsPage() {
 
                                     {/* Section 5: Ownership & Notes */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <Users className="h-4 w-4" /> Ownership & Notes
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -742,10 +789,20 @@ export default function AssetsPage() {
                                             const ownershipItem = ownershipTypes.find(type => type.toLowerCase() === value);
                                             const statusItem = assetStatus.find(status => status.toLowerCase() === value);
 
+
+
+
+
+
                                             if (categoryItem) {
                                                 setFormData(p => ({ ...p, asset_category: value }));
                                             } else if (typeItem) {
-                                                setFormData(p => ({ ...p, asset_type: value }));
+                                                const isImmovable = IMMOVABLE_TYPES.includes(value);
+                                                setFormData(p => ({ 
+                                                    ...p, 
+                                                    asset_type: value,
+                                                    asset_category: isImmovable ? "immovable" : "movable"
+                                                }));
                                             } else if (ownershipItem) {
                                                 setFormData(p => ({ ...p, ownership_type: value }));
                                             } else if (statusItem) {
@@ -764,11 +821,11 @@ export default function AssetsPage() {
                                 />
                             )}
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting}>
                                     {submitting ? "Saving..." : editingId ? "Update Asset" : "Save Asset"}
                                 </Button>
                             </div>

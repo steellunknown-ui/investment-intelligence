@@ -32,7 +32,8 @@ export async function GET() {
                 .from('profiles')
                 .insert({
                     id: user.id,
-                    full_name: user.user_metadata?.full_name || '',
+                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                    avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
                     country: 'India'
                 })
                 .select()
@@ -54,7 +55,8 @@ export async function GET() {
                     state: newProfile.state || '',
                     pincode: newProfile.pincode || '',
                     country: newProfile.country || 'India',
-                    avatar_url: newProfile.avatar_url || user.user_metadata?.picture || null
+                    // Priority: Stored avatar_url > Google OAuth picture
+                    avatar_url: newProfile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null
                 }
             })
         }
@@ -70,7 +72,8 @@ export async function GET() {
                 state: profile.state || '',
                 pincode: profile.pincode || '',
                 country: profile.country || 'India',
-                avatar_url: profile.avatar_url || user.user_metadata?.picture || null
+                // Priority: Stored avatar_url > Google OAuth picture
+                avatar_url: profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null
             }
         })
     } catch (error) {

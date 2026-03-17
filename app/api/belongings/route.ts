@@ -77,7 +77,8 @@ export async function POST(request: Request) {
             has_certificate,
             bank_locker_details,
             status,
-            notes
+            notes,
+            linked_document_ids // New field
         } = body
 
         // Validation
@@ -126,6 +127,25 @@ export async function POST(request: Request) {
                 { error: error.message || 'Failed to create belonging' },
                 { status: 500 }
             )
+        }
+
+        // Link documents if provided
+        if (linked_document_ids && Array.isArray(linked_document_ids) && linked_document_ids.length > 0) {
+            const links = linked_document_ids.map(docId => ({
+                user_id: user.id,
+                document_id: docId,
+                entity_type: 'belonging',
+                entity_id: belonging.id
+            }))
+
+            const { error: linkError } = await supabase
+                .from('document_links')
+                .insert(links)
+
+            if (linkError) {
+                console.error('Failed to link documents during creation:', linkError)
+                // Note: We don't fail the whole creation if linking fails, but we log it.
+            }
         }
 
         return NextResponse.json({ belonging }, { status: 201 })

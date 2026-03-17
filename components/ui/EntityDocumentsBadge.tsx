@@ -86,7 +86,7 @@ export function EntityDocumentsBadge({ entityType, entityId }: EntityDocumentsBa
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType?.startsWith('image/')) {
-            return <Image className="h-3.5 w-3.5 text-emerald-500" />;
+            return <Image className="h-3.5 w-3.5 text-primary" />;
         }
         return <FileText className="h-3.5 w-3.5 text-blue-500" />;
     };
@@ -146,7 +146,7 @@ export function EntityDocumentsBadge({ entityType, entityId }: EntityDocumentsBa
                                     e.stopPropagation();
                                     handleDownload(doc.id, doc.file_name);
                                 }}
-                                className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
+                                className="p-1 text-primary hover:text-primary hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
                                 title="Download"
                             >
                                 <Download className="h-3.5 w-3.5" />

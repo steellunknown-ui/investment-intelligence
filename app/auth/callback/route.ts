@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { trackLoginActivity } from "@/src/lib/login-tracker";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,18 +86,29 @@ export async function GET(request: Request) {
         if (data?.user) {
             // Step 6: Upsert profile (non-critical)
             try {
-                const { full_name, avatar_url, email } = data.user.user_metadata || {};
+                const metadata = data.user.user_metadata || {};
+                const full_name = metadata.full_name || metadata.name;
+                const avatar_url = metadata.avatar_url || metadata.picture;
+                const email = metadata.email || data.user.email;
+
                 await supabase
                     .from("profiles")
                     .upsert({
                         id: data.user.id,
                         full_name: full_name || null,
                         avatar_url: avatar_url || null,
-                        email: email || data.user.email,
+                        email: email,
                         updated_at: new Date().toISOString(),
                     }, { onConflict: "id" });
             } catch (profileErr) {
                 console.error('Profile upsert failed (non-critical):', profileErr);
+            }
+
+            // Step 7: Track login for inactivity monitoring (non-critical)
+            try {
+                await trackLoginActivity(supabase, data.user.id);
+            } catch (trackErr) {
+                console.error('Login tracking failed (non-critical):', trackErr);
             }
 
             console.log('Auth successful, redirecting to:', `${siteUrl}${next}`);

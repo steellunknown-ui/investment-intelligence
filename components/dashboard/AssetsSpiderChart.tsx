@@ -11,6 +11,7 @@ import {
     Tooltip,
 } from "recharts";
 import { MotionCard } from "@/components/ui/MotionCard";
+import { ChartExplanationModal } from "./ChartExplanationModal";
 
 interface ChartDataPoint {
     subject: string;
@@ -27,6 +28,7 @@ function formatCompact(value: number): string {
 
 export function AssetsSpiderChart() {
     const [data, setData] = useState<ChartDataPoint[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -41,7 +43,6 @@ export function AssetsSpiderChart() {
                         { subject: "Bank", value: Number(result.bankBalanceTotal) || 0 },
                     ];
 
-                    // Find max value to determine fullMark
                     const maxValue = Math.max(...rawData.map(d => d.value)) || 100000;
 
                     const chartData = rawData.map(d => ({
@@ -63,51 +64,82 @@ export function AssetsSpiderChart() {
         fetchData();
     }, []);
 
-    // Calculate total for display
     const total = data.reduce((sum, d) => sum + d.value, 0);
 
-    return (
-        <MotionCard className="vault-card p-4" delay={0.1}>
-            <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Assets Breakdown
-                </p>
-                <span className="text-xs font-semibold text-emerald-600">
-                    {formatCompact(total)}
-                </span>
-            </div>
+    const generateInsights = () => {
+        const insights = [];
+        const highest = [...data].sort((a, b) => b.value - a.value)[0];
+        if (highest && highest.value > 0) {
+            insights.push(`${highest.subject} is your largest asset category at ${formatCompact(highest.value)}.`);
+        }
+        const bankData = data.find(d => d.subject === "Bank");
+        if (bankData && bankData.value > 0) {
+            insights.push(`Your liquid cash (Bank) accounts for ${((bankData.value / total) * 100).toFixed(1)}% of these assets.`);
+        }
+        if (total > 0) {
+            insights.push(`The spider chart shows the balance between your physical assets, receivables, and liquid cash.`);
+        }
+        return insights.length > 0 ? insights : ["No significant asset data to analyze yet."];
+    };
 
-            <div className="h-[140px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-                        <PolarGrid stroke="#e2e8f0" />
-                        <PolarAngleAxis
-                            dataKey="subject"
-                            tick={{ fontSize: 10, fill: "#64748b" }}
-                        />
-                        <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-                        <Radar
-                            name="Assets"
-                            dataKey="value"
-                            stroke="#10b981"
-                            strokeWidth={2}
-                            fill="#10b981"
-                            fillOpacity={0.4}
-                        />
-                        <Tooltip
-                            formatter={(value) => formatCompact(Number(value))}
-                            contentStyle={{
-                                backgroundColor: "#fff",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "8px",
-                                fontSize: "11px",
-                                color: "#1e293b",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                            }}
-                        />
-                    </RadarChart>
-                </ResponsiveContainer>
-            </div>
-        </MotionCard>
+    return (
+        <>
+            <MotionCard
+                className="vault-card p-4 cursor-help select-none"
+                delay={0.1}
+                onClick={(e) => {
+                    if (e.detail === 2) setIsModalOpen(true);
+                }}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Assets Breakdown
+                    </p>
+                    <span className="text-xs font-semibold text-primary">
+                        {formatCompact(total)}
+                    </span>
+                </div>
+
+                <div className="h-[140px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                            <PolarGrid stroke="#e2e8f0" />
+                            <PolarAngleAxis
+                                dataKey="subject"
+                                tick={{ fontSize: 10, fill: "#64748b" }}
+                            />
+                            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                            <Radar
+                                name="Assets"
+                                dataKey="value"
+                                stroke="#10b981"
+                                strokeWidth={2}
+                                fill="#10b981"
+                                fillOpacity={0.4}
+                            />
+                            <Tooltip
+                                formatter={(value) => formatCompact(Number(value))}
+                                contentStyle={{
+                                    backgroundColor: "#fff",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "8px",
+                                    fontSize: "11px",
+                                    color: "#1e293b",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                                }}
+                            />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                </div>
+            </MotionCard>
+
+            <ChartExplanationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Assets Breakdown"
+                summary="The Assets Breakdown chart (Radar Chart) provides a multi-dimensional view of your asset distribution across Real Assets, Belongings, Receivables, and Bank balance."
+                insights={generateInsights()}
+            />
+        </>
     );
 }

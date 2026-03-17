@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatUpdatedAt } from "@/lib/dateUtils";
-import { UserPlus, Info, Trash2, Mail, Users, CheckCircle, Clock } from "lucide-react";
+import { UserPlus, Info, Trash2, Mail, Users, CheckCircle, Clock, ShieldCheck, Phone, Lock, Unlock } from "lucide-react";
 import { RELATIONSHIP_OPTIONS, ACCESS_LEVELS } from "@/lib/constants";
 import type { Nominee } from "@/lib/types";
 
@@ -30,6 +30,9 @@ export default function NomineePage() {
   // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [aadhaar, setAadhaar] = useState("");
+  const [pan, setPan] = useState("");
   const [relationship, setRelationship] = useState("");
   const [accessLevel, setAccessLevel] = useState("view_only");
 
@@ -55,6 +58,9 @@ export default function NomineePage() {
   const resetForm = () => {
     setName("");
     setEmail("");
+    setPhone("");
+    setAadhaar("");
+    setPan("");
     setRelationship("");
     setAccessLevel("view_only");
     setError(null);
@@ -70,13 +76,35 @@ export default function NomineePage() {
     setError(null);
     setSubmitting(true);
 
+    // Very basic client-side check for phone
+    if (!phone || phone.length < 10) {
+      setError("A valid phone number is required for nominee setup.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
+      // Basic Frontend hashing (Ideally done via a robust library like crypto-js, using Web Crypto API here)
+      const hashString = async (str: string) => {
+        if (!str) return null;
+        const msgBuffer = new TextEncoder().encode(str);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      };
+
+      const aadhaarHash = await hashString(aadhaar);
+      const panHash = await hashString(pan);
+
       const res = await fetch("/api/nominees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           email,
+          nominee_phone: phone,
+          aadhaar_hash: aadhaarHash,
+          pan_hash: panHash,
           relationship: relationship || null,
           access_level: accessLevel,
         }),
@@ -109,6 +137,26 @@ export default function NomineePage() {
       fetchNominees();
     } catch (err) {
       console.error("Delete nominee error:", err);
+    }
+  };
+
+  const handleUnlock = async (nomineeId: string) => {
+    try {
+      const res = await fetch(`/api/nominees/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nominee_id: nomineeId, action: 'unlock' })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to unlock nominee");
+      }
+
+      // Refresh list to clear blocked status locally
+      fetchNominees();
+
+    } catch (err) {
+      console.error("Unlock error:", err);
     }
   };
 
@@ -149,7 +197,7 @@ export default function NomineePage() {
             </p>
           </div>
           {nominees.length < 3 && (
-            <Button onClick={handleAddNominee}>
+            <Button onClick={handleAddNominee} className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10">
               <UserPlus className="h-4 w-4 mr-2" />
               Add Nominee
             </Button>
@@ -202,37 +250,66 @@ export default function NomineePage() {
                     </button>
                   </div>
 
-                  {/* Relationship */}
-                  {nominee.relationship && (
-                    <p className="text-sm text-neutral-600">
-                      {RELATIONSHIP_OPTIONS.find(r => r.value === nominee.relationship)?.label || nominee.relationship}
-                    </p>
-                  )}
+                  {/* Relationship & Phone */}
+                  <div className="flex flex-col gap-1">
+                    {nominee.relationship && (
+                      <p className="text-sm text-neutral-600">
+                        {RELATIONSHIP_OPTIONS.find(r => r.value === nominee.relationship)?.label || nominee.relationship}
+                      </p>
+                    )}
+                    {nominee.nominee_phone && (
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+                        <Phone className="h-3.5 w-3.5" />
+                        {nominee.nominee_phone}
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="default">
-                      {accessLevelLabels[nominee.access_level] || nominee.access_level}
-                    </Badge>
-                    <Badge variant={nominee.is_verified ? "success" : "warning"}>
-                      {nominee.is_verified ? (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Verified
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-3 w-3 mr-1" />
-                          Pending
-                        </>
+                  {/* Badges and Actions */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="default">
+                        {accessLevelLabels[nominee.access_level] || nominee.access_level}
+                      </Badge>
+                      <Badge variant={nominee.is_verified ? "success" : "warning"}>
+                        {nominee.is_verified ? (
+                          <>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pending
+                          </>
+                        )}
+                      </Badge>
+                      {nominee.is_blocked && (
+                        <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Blocked (Too many attempts)
+                        </Badge>
                       )}
-                    </Badge>
-                  </div>
+                    </div>
 
-                  {/* Last Updated */}
-                  <div className="text-xs text-muted-foreground pt-2 border-t border-slate-100">
-                    {formatUpdatedAt(nominee.updated_at || nominee.created_at)}
+                    {/* Admin Unlock Action */}
+                    {nominee.is_blocked && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUnlock(nominee.id)}
+                        className="w-full text-primary border-emerald-200 hover:bg-primary/10 hover:border-emerald-300"
+                      >
+                        <Unlock className="h-4 w-4 mr-2" />
+                        Unlock Access
+                      </Button>
+                    )}
                   </div>
+                </div>
+
+                {/* Last Updated */}
+                <div className="text-xs text-muted-foreground pt-2 border-t border-slate-100">
+                  {formatUpdatedAt(nominee.updated_at || nominee.created_at)}
                 </div>
               </Card>
             ))}
@@ -241,7 +318,7 @@ export default function NomineePage() {
       </div>
 
       {/* Add Nominee Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      < Dialog open={isModalOpen} onOpenChange={setIsModalOpen} >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add Nominee</DialogTitle>
@@ -257,14 +334,45 @@ export default function NomineePage() {
               onChange={(e) => setName(e.target.value)}
               required
             />
-            <Input
-              label="Email Address"
-              type="email"
-              placeholder="john@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Email Address"
+                type="email"
+                placeholder="john@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Input
+                label="Phone Number (Required)"
+                type="tel"
+                placeholder="+91 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-border">
+              <div className="col-span-2 mb-1 flex items-center gap-2 text-xs font-medium text-primary dark:text-accent">
+                <ShieldCheck className="h-4 w-4" /> Identity Verification (Optional but Recommended)
+              </div>
+              <Input
+                label="Aadhaar Number"
+                placeholder="XXXX XXXX XXXX"
+                value={aadhaar}
+                onChange={(e) => setAadhaar(e.target.value)}
+              />
+              <Input
+                label="PAN Number"
+                placeholder="ABCDE1234F"
+                value={pan}
+                onChange={(e) => setPan(e.target.value)}
+              />
+              <div className="col-span-2 text-[10px] text-slate-400">
+                * Identity numbers are heavily encrypted using SHA-256 hashing. Raw numbers are NEVER saved or visible in the database.
+              </div>
+            </div>
+
             <Select
               label="Relationship"
               options={RELATIONSHIP_OPTIONS.map((r) => ({
@@ -296,13 +404,13 @@ export default function NomineePage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10">
                 {submitting ? "Adding..." : "Add Nominee"}
               </Button>
             </div>
           </form>
         </DialogContent>
-      </Dialog>
-    </DashboardShell>
+      </Dialog >
+    </DashboardShell >
   );
 }

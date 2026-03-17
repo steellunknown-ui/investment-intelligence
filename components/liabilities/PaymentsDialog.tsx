@@ -136,7 +136,7 @@ export function PaymentsDialog({ liability, open, onOpenChange, onUpdate }: Paym
         {
             key: "amount",
             header: "Amount",
-            render: (payment: LiabilityPayment) => <span className="font-medium text-emerald-600">{formatCurrency(payment.amount)}</span>
+            render: (payment: LiabilityPayment) => <span className="font-medium text-primary">{formatCurrency(payment.amount)}</span>
         },
         {
             key: "outstanding",
@@ -170,8 +170,8 @@ export function PaymentsDialog({ liability, open, onOpenChange, onUpdate }: Paym
 
                 <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
                     {/* Add Payment Form */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <h4 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <div className="bg-background/50 p-4 rounded-xl border border-border">
+                        <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                             <Plus className="h-4 w-4" /> Record New Payment
                         </h4>
                         <form onSubmit={handleAddPayment} className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
@@ -225,7 +225,7 @@ export function PaymentsDialog({ liability, open, onOpenChange, onUpdate }: Paym
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-slate-500">Current Outstanding</p>
-                            <p className="text-lg font-bold text-slate-900 dark:text-white">
+                            <p className="text-lg font-bold text-foreground">
                                 {formatCurrency(liability.outstanding_amount)}
                             </p>
                         </div>
@@ -233,11 +233,11 @@ export function PaymentsDialog({ liability, open, onOpenChange, onUpdate }: Paym
 
                     {/* History Table */}
                     <div>
-                        <h4 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                             <Calendar className="h-4 w-4" /> Payment History
                         </h4>
 
-                        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+                        <div className="border border-border rounded-lg overflow-hidden">
                             <Table
                                 columns={columns}
                                 data={payments}

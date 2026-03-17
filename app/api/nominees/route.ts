@@ -57,14 +57,22 @@ export async function POST(request: Request) {
         updateLastActivity(supabase, user.id)
 
         const body = await request.json()
-        const { name, email, relationship, access_level } = body
+        const { name, email, relationship, access_level, nominee_phone, aadhaar_hash, pan_hash } = body
 
-        // Validate required fields
-        if (!name || !email) {
+        // Validate required fields (Phone is now mandatory)
+        if (!name || !nominee_phone) {
             return NextResponse.json(
-                { error: 'Name and email are required' },
+                { error: 'Name and Phone Number are required' },
                 { status: 400 }
             )
+        }
+
+        // Determine verification method based on what was provided
+        let verificationMethod = 'phone_only';
+        if (aadhaar_hash) {
+            verificationMethod = 'phone_aadhaar';
+        } else if (pan_hash) {
+            verificationMethod = 'phone_pan_email';
         }
 
         // Check nominee limit (max 3)
@@ -85,7 +93,11 @@ export async function POST(request: Request) {
             .insert({
                 user_id: user.id,
                 name,
-                email: email.toLowerCase(),
+                email: email ? email.toLowerCase() : null,
+                nominee_phone,
+                aadhaar_hash: aadhaar_hash || null,
+                pan_hash: pan_hash || null,
+                verification_method: verificationMethod,
                 relationship: relationship || null,
                 access_level: access_level || 'view_only',
                 is_verified: false,

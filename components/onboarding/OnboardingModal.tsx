@@ -52,8 +52,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                         >
                             <DialogHeader>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                                        <Sparkles className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                    <div className="p-3 bg-emerald-100 dark:bg-primary/20 rounded-xl">
+                                        <Sparkles className="h-6 w-6 text-primary dark:text-accent" />
                                     </div>
                                     <DialogTitle className="text-2xl">Welcome to Investment Intelligence!</DialogTitle>
                                 </div>
@@ -64,8 +64,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                             </DialogHeader>
 
                             <div className="mt-6 space-y-4">
-                                <div className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 bg-background rounded-lg">
+                                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                                     <div>
                                         <h4 className="font-medium text-sm mb-1">Complete Financial Visibility</h4>
                                         <p className="text-xs text-muted-foreground">
@@ -73,8 +73,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 bg-background rounded-lg">
+                                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                                     <div>
                                         <h4 className="font-medium text-sm mb-1">Family Protection</h4>
                                         <p className="text-xs text-muted-foreground">
@@ -82,8 +82,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-4 p-4 bg-background rounded-lg">
+                                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                                     <div>
                                         <h4 className="font-medium text-sm mb-1">Secure & Private</h4>
                                         <p className="text-xs text-muted-foreground">
@@ -105,8 +105,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                         >
                             <DialogHeader>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                                        <Wallet className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                    <div className="p-3 bg-emerald-100 dark:bg-primary/20 rounded-xl">
+                                        <Wallet className="h-6 w-6 text-primary dark:text-accent" />
                                     </div>
                                     <DialogTitle className="text-2xl">Setup Your Financial Foundation</DialogTitle>
                                 </div>
@@ -116,27 +116,27 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                             </DialogHeader>
 
                             <div className="mt-6 space-y-3">
-                                <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                <div className="p-4 border border-border rounded-lg">
                                     <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-600">1</div>
+                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</div>
                                         Bank Accounts
                                     </h4>
                                     <p className="text-xs text-muted-foreground ml-8">
                                         Link your savings, checking, and credit card accounts
                                     </p>
                                 </div>
-                                <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                <div className="p-4 border border-border rounded-lg">
                                     <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-600">2</div>
+                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</div>
                                         Assets & Property
                                     </h4>
                                     <p className="text-xs text-muted-foreground ml-8">
                                         Add real estate, vehicles, and investments
                                     </p>
                                 </div>
-                                <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                <div className="p-4 border border-border rounded-lg">
                                     <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-600">3</div>
+                                        <div className="h-6 w-6 rounded-full bg-emerald-100 dark:bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">3</div>
                                         Liabilities (Optional)
                                     </h4>
                                     <p className="text-xs text-muted-foreground ml-8">
@@ -157,8 +157,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                         >
                             <DialogHeader>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                                        <Shield className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                    <div className="p-3 bg-emerald-100 dark:bg-primary/20 rounded-xl">
+                                        <Shield className="h-6 w-6 text-primary dark:text-accent" />
                                     </div>
                                     <DialogTitle className="text-2xl">Protect Your Legacy</DialogTitle>
                                 </div>
@@ -168,24 +168,24 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                             </DialogHeader>
 
                             <div className="mt-6 space-y-4">
-                                <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                                <div className="p-5 bg-primary/10 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
                                     <h4 className="font-semibold text-sm mb-2">Setup Nominees</h4>
                                     <p className="text-xs text-muted-foreground mb-3">
                                         Designate trusted individuals who can access your financial records in case of emergency or inactivity.
                                     </p>
                                     <ul className="space-y-1.5 text-xs text-muted-foreground">
                                         <li className="flex items-center gap-2">
-                                            <div className="h-1 w-1 rounded-full bg-emerald-600" />
+                                            <div className="h-1 w-1 rounded-full bg-primary" />
                                             Add up to 3 nominees
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="h-1 w-1 rounded-full bg-emerald-600" />
+                                            <div className="h-1 w-1 rounded-full bg-primary" />
                                             Control access levels (View Only or Limited)
                                         </li>
                                     </ul>
                                 </div>
 
-                                <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <div className="p-5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-border">
                                     <h4 className="font-semibold text-sm mb-2">Enable Inactivity Monitoring</h4>
                                     <p className="text-xs text-muted-foreground mb-3">
                                         Automated system to alert nominees if you haven't logged in for a specified period.
@@ -206,13 +206,13 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                     )}
                 </AnimatePresence>
 
-                <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex justify-between items-center pt-6 mt-6 border-t border-border">
                     <div className="flex gap-1.5">
                         {[1, 2, 3].map((i) => (
                             <div
                                 key={i}
                                 className={`h-1.5 w-8 rounded-full transition-colors ${i === step
-                                    ? 'bg-emerald-600'
+                                    ? 'bg-primary'
                                     : i < step
                                         ? 'bg-emerald-300'
                                         : 'bg-slate-200 dark:bg-slate-700'
@@ -225,7 +225,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                         <Button variant="ghost" onClick={handleSkip} className="text-muted-foreground">
                             Skip for now
                         </Button>
-                        <Button onClick={handleNext} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+                        <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-white gap-2">
                             {step === 3 ? 'Get Started' : 'Continue'}
                             <ArrowRight className="h-4 w-4" />
                         </Button>

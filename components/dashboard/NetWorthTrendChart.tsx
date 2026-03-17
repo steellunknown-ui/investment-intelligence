@@ -224,7 +224,7 @@ export function NetWorthTrendChart() {
                     <div className="flex items-center gap-3">
                         {/* Trend Badge */}
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${trend === "up"
-                                ? "bg-emerald-500/20 text-emerald-400"
+                                ? "bg-primary/20 text-accent"
                                 : trend === "down"
                                     ? "bg-red-500/20 text-red-400"
                                     : "bg-white/10 text-white/60"

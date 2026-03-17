@@ -4,44 +4,39 @@
 
 @layer base {
   :root {
-    /* Premium Finance Theme - Charcoal + Emerald */
-    --background: 210 20% 98%;
-    /* slate-50 */
-    --foreground: 215.4 16.3% 15%;
-    /* slate-900 */
-    --card: 0 0% 100%;
-    /* white */
-    --card-foreground: 215.4 16.3% 15%;
-    /* slate-900 */
-    --popover: 0 0% 100%;
-    --popover-foreground: 215.4 16.3% 15%;
-    --primary: 160 84% 39%;
-    /* emerald-600 */
-    --primary-foreground: 0 0% 100%;
-    /* white */
-    --secondary: 210 40% 96.1%;
-    /* slate-100 */
-    --secondary-foreground: 215.4 16.3% 46.9%;
-    /* slate-600 */
-    --muted: 210 40% 96.1%;
-    /* slate-100 */
-    --muted-foreground: 215.4 16.3% 46.9%;
-    /* slate-600 */
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 215.4 16.3% 15%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%;
-    /* slate-200 */
-    --input: 220 13% 91%;
-    --ring: 160 84% 39%;
-    /* emerald-600 */
-    --radius: 1rem;
-    /* rounded-2xl default */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
-    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      "Helvetica Neue", Arial, sans-serif;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 210 20% 40%;
+
+    --border: 210 30% 90%;
+    --input: 210 30% 90%;
+    --ring: 160 84% 39%;
+    
+    /* Default Section Gradient Backdrops (Emerald Growth / Navy default) */
+    --section-bg: linear-gradient(135deg, #020617 0%, #0A192F 55%, #10b981 100%);
+    --section-text: 0 0% 100%; /* White text default */
+    --footer-bg: var(--section-bg);
+    
+    /* Summary Card Backdrops (Dashboard & Modules) */
+    --summary-card-bg: linear-gradient(135deg, #059669, #065f46);
+    --summary-card-text: 0 0% 100%; /* White text default */
+    
+    --radius: 1rem;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
+
+  /* Custom themes moved to bottom for proper precedence outside @layer base */
 
   .dark {
     --background: 222.2 84% 4.9%;
@@ -63,6 +58,23 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 142.1 70.6% 45.3%;
+  }
+
+  /* Dark mode overrides for custom themes */
+  .dark.theme-infinix {
+    --primary: 217.2 32.6% 17.5%; /* Adjusting primary for dark if default feels weird, but lets keep Lime accent pop */
+    --ring: 87 77% 71%;
+  }
+
+  .dark.theme-royal {
+    --primary: 224 76% 43%; /* Slightly lighter for dark background */
+    --accent: 38 92% 50%;
+  }
+
+  .dark.theme-midnight {
+    --background: 240 10% 4%; /* Near ink-black */
+    --card: 240 10% 4%;
+    --primary: 259 84% 65%;
   }
 
   * {
@@ -119,11 +131,11 @@
 
 @layer components {
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 focus:ring-offset-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
   }
 
   .focus-ring-inset {
-    @apply focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-inset;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset;
   }
 
   /* Premium Card System */
@@ -141,11 +153,11 @@
 
   /* Icon Container */
   .icon-container {
-    @apply h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center;
+    @apply h-9 w-9 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center;
   }
 
   .icon-emerald {
-    @apply text-emerald-600 dark:text-emerald-400;
+    @apply text-primary;
   }
 
   /* Page Spacing */
@@ -215,8 +227,8 @@
 /* Grid Pattern - Enhanced smaller boxes with better visibility */
 .grid-pattern {
   background-image:
-    linear-gradient(rgba(16, 185, 129, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.15) 1px, transparent 1px);
+    linear-gradient(hsl(var(--primary) / 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.15) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -228,11 +240,11 @@
   pointer-events: none;
   background:
     linear-gradient(135deg,
-      rgba(16, 185, 129, 0.03) 0%,
-      rgba(5, 150, 105, 0.06) 25%,
-      rgba(16, 185, 129, 0.03) 50%,
-      rgba(52, 211, 153, 0.05) 75%,
-      rgba(16, 185, 129, 0.03) 100%);
+      hsl(var(--primary) / 0.03) 0%,
+      hsl(var(--primary) / 0.06) 25%,
+      hsl(var(--primary) / 0.03) 50%,
+      hsl(var(--primary) / 0.05) 75%,
+      hsl(var(--primary) / 0.03) 100%);
 }
 
 .grid-pattern-full::before {
@@ -240,8 +252,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(16, 185, 129, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.12) 1px, transparent 1px);
+    linear-gradient(hsl(var(--primary) / 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.12) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -253,7 +265,7 @@
   background: linear-gradient(120deg,
       transparent 0%,
       transparent 40%,
-      rgba(16, 185, 129, 0.08) 50%,
+      hsl(var(--primary) / 0.08) 50%,
       transparent 60%,
       transparent 100%);
   background-size: 200% 100%;
@@ -277,8 +289,8 @@
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+    linear-gradient(hsl(var(--primary) / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -294,4 +306,145 @@
       transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 8s ease-in-out infinite;
+}
+
+/* -------------------------------------------------- */
+/* DYNAMIC THEME SYSTEM (Precedence Overrides)        */
+/* -------------------------------------------------- */
+
+html.theme-infinix {
+  --background: 220 33% 98%;
+  --foreground: 220 48% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 48% 15%;
+  --primary: 220 48% 26%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 87 77% 71%;
+  --accent-foreground: 220 48% 15%;
+  --muted: 220 40% 96%;
+  --muted-foreground: 220 20% 40%;
+  --border: 220 30% 90%;
+  --input: 220 30% 90%;
+  --ring: 220 48% 26%;
+
+  /* Infinix Orange Summary Card Overrides */
+  --summary-card-bg: #BBF078;
+  --summary-card-text: 222 47% 11%; /* Dark slate for contrast on lime */
+}
+
+html.theme-royal {
+  --background: 40 20% 98%;
+  --foreground: 224 76% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 76% 15%;
+  --primary: 224 76% 33%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 100%;
+  --muted: 40 30% 96%;
+  --muted-foreground: 40 20% 40%;
+  --border: 40 20% 90%;
+  --input: 40 20% 90%;
+  --ring: 224 76% 33%;
+
+  /* Royal Navy-Orange Blend Section Layouts */
+  --section-bg: linear-gradient(135deg, #020617 0%, #0A192F 55%, hsl(var(--accent)) 100%);
+  --section-text: 0 0% 100%; /* White text */
+
+  /* Royal Orange Summary Card Overrides */
+  --summary-card-bg: #FF9800;
+  --summary-card-text: 222 47% 11%; /* Dark slate for contrast on orange */
+}
+
+html.theme-midnight {
+  --background: 259 20% 98%;
+  --foreground: 259 84% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 259 84% 15%;
+  --primary: 259 84% 59%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 259 84% 59%;
+  --accent-foreground: 0 0% 100%;
+  --muted: 259 30% 96%;
+  --muted-foreground: 259 20% 40%;
+  --border: 259 20% 90%;
+  --input: 259 20% 90%;
+  --ring: 259 84% 59%;
+
+  /* Midnight Aurora Purple Gradient Summary Card */
+  --summary-card-bg: linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #A21CAF 100%);
+  --summary-card-text: 0 0% 100%;
+
+  /* Midnight Aurora Purple Section Layouts */
+  --section-bg: linear-gradient(135deg, #0d041c 0%, #1c093a 55%, #7c3aed 100%);
+  --section-text: 0 0% 100%;
+}
+
+/* Dark Mode Overrides for Custom Themes */
+html.dark.theme-infinix {
+  --primary: 217.2 32.6% 17.5%;
+  --ring: 87 77% 71%;
+
+  /* Infinix Lime Summary Card Overrides */
+  --summary-card-bg: #BBF078;
+  --summary-card-text: 222 47% 11%; /* Dark slate for contrast on lime */
+}
+
+html.dark.theme-royal {
+  --primary: 224 76% 43%;
+  --accent: 38 92% 50%;
+
+  /* Royal Navy-Orange Blend Section Layouts */
+  --section-bg: linear-gradient(135deg, #020617 0%, #0A192F 55%, hsl(var(--accent)) 100%);
+  --section-text: 0 0% 100%; /* White text */
+
+  /* Royal Orange Summary Card Overrides */
+  --summary-card-bg: #FF9800;
+  --summary-card-text: 222 47% 11%; /* Dark slate for contrast on orange */
+}
+
+html.dark.theme-midnight {
+  --background: 240 10% 4%;
+  --card: 240 10% 4%;
+  --primary: 259 84% 65%;
+  
+  /* Midnight Aurora Purple Gradient Summary Card */
+  --summary-card-bg: linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #A21CAF 100%);
+  --summary-card-text: 0 0% 100%;
+
+  /* Midnight Aurora Purple Section Layouts (Dark Mode) */
+  --section-bg: linear-gradient(135deg, #080212 0%, #120624 55%, #6d28d9 100%);
+  --section-text: 0 0% 100%;
+}
+
+/* Custom Infinix v2 Theme */
+html.theme-infinix-2 {
+  --background: 220 33% 98%;
+  --foreground: 220 48% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 48% 15%;
+  --primary: 220 48% 26%; /* Navy */
+  --primary-foreground: 0 0% 100%;
+  --accent: 87 77% 71%; /* Lime */
+  --accent-foreground: 220 48% 15%;
+  --muted: 220 40% 96%;
+  --muted-foreground: 220 20% 40%;
+  --border: 220 30% 90%;
+  --input: 220 30% 90%;
+  --ring: 220 48% 26%;
+  
+  /* Custom section gradient provided by user */
+  --section-bg: linear-gradient(180deg, #C3D9F0 0%, #CFDAEC 40%, #D6E1EC 70%, #E3ECCF 100%);
+  --section-text: 0 0% 0%; /* Pure Black for light gradient backdrop */
+  --footer-bg: var(--section-bg); /* Use same gradient style for Footer to enforce symmetry */
+
+  /* Dashboard Cards Custom Overrides */
+  --summary-card-bg: #E0EAD6;
+  --summary-card-text: 220 48% 15%; /* Dark text to contrast light green */
+}
+
+/* Custom Emerald Growth Theme */
+html.theme-emerald {
+  --summary-card-bg: linear-gradient(135deg, #059669, #065f46);
+  --summary-card-text: 0 0% 100%; /* White text default */
 }

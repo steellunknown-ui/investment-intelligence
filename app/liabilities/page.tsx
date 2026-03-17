@@ -38,6 +38,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { liabilityTypes, lenderTypes, liabilityStatus } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { GridTable } from "@/components/ui/GridTable";
+import { GridDocUpload } from "@/components/ui/GridDocUpload";
 
 // Constants
 const LOAN_TYPES = [
@@ -69,6 +72,7 @@ export default function LiabilitiesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("active");
     const [filterType, setFilterType] = useState<string>("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
     // QuickPick State
     const [showLoanTypePick, setShowLoanTypePick] = useState(false);
@@ -273,17 +277,17 @@ export default function LiabilitiesPage() {
                 {/* Stats */}
                 {liabilities.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-emerald-600 dark:bg-emerald-700 rounded-xl p-4 text-white shadow-lg">
-                            <p className="text-emerald-100 text-xs font-medium uppercase tracking-wider mb-1">Total Outstanding</p>
+                        <div className="rounded-xl p-4 shadow-lg" style={{ background: 'var(--summary-card-bg)', color: 'hsl(var(--summary-card-text))' }}>
+                            <p className="opacity-80 text-xs font-medium uppercase tracking-wider mb-1">Total Outstanding</p>
                             <h2 className="text-2xl font-bold">{formatCurrency(totalOutstanding)}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Monthly EMI Commitment</p>
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalMonthlyEMI)}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{formatCurrency(totalMonthlyEMI)}</h2>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
                             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Active Loans</p>
-                            <h2 className="text-2xl font-bold text-emerald-600">{activeLiabilities.length}</h2>
+                            <h2 className="text-2xl font-bold text-primary">{activeLiabilities.length}</h2>
                         </div>
                     </div>
                 )}
@@ -295,7 +299,7 @@ export default function LiabilitiesPage() {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search loans..."
-                                className="pl-9 bg-white dark:bg-slate-800"
+                                className="pl-9 bg-card"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -313,16 +317,19 @@ export default function LiabilitiesPage() {
                             className="w-[150px]"
                         />
                     </div>
-                    <Button
-                        onClick={() => {
-                            resetForm();
-                            setIsModalOpen(true);
-                        }}
-                        className="w-full sm:w-auto gap-2 bg-red-600 hover:bg-red-700 text-white"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Liability
-                    </Button>
+                    <div className="flex gap-2">
+                        <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+                        <Button
+                            onClick={() => {
+                                resetForm();
+                                setIsModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add Liability
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -349,104 +356,139 @@ export default function LiabilitiesPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredLiabilities.map((liability) => {
-                            const Icon = getIcon(liability.loan_type);
-                            return (
-                                <Card key={liability.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div className="icon-container bg-red-50 dark:bg-red-900/20">
-                                                <Icon className="h-5 w-5 text-red-600 dark:text-red-400" />
-                                            </div>
-                                            <Badge variant={liability.status === 'active' ? 'destructive' : 'secondary'} className="capitalize">
-                                                {liability.status}
-                                            </Badge>
-                                        </div>
-                                        <div className="mt-4">
-                                            <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                                {liability.loan_name || liability.taken_from}
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
-                                                    {liability.loan_type.replace(/_/g, ' ')}
-                                                </p>
-                                                {liability.is_secured && <Badge variant="outline" className="text-[10px] h-5 px-1">SECURED</Badge>}
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pb-3 space-y-4">
-                                        <div>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
-                                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                                {formatCurrency(liability.outstanding_amount)}
-                                            </p>
-                                            <div className="w-full bg-slate-100 h-1.5 mt-2 rounded-full overflow-hidden">
-                                                <div
-                                                    className="bg-red-500 h-full rounded-full"
-                                                    style={{ width: `${Math.min((liability.outstanding_amount / liability.principal_amount) * 100, 100)}%` }}
-                                                />
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 mt-1 text-right">
-                                                {Math.round((liability.outstanding_amount / liability.principal_amount) * 100)}% remain
-                                            </p>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
-                                            <div>
-                                                <span className="text-slate-400 block mb-1">EMI</span>
-                                                <span className="font-medium text-slate-900 dark:text-white">{liability.emi_amount ? formatCurrency(liability.emi_amount) : '-'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block mb-1">Lender</span>
-                                                <span className="font-medium truncate">{liability.taken_from}</span>
-                                            </div>
-                                            {liability.emi_due_day && (
-                                                <div className="col-span-2 flex items-center gap-1 text-amber-600 mt-1">
-                                                    <Calendar className="h-3 w-3" />
-                                                    Due on day {liability.emi_due_day} of month
+                    viewMode === "card" ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredLiabilities.map((liability) => {
+                                const Icon = getIcon(liability.loan_type);
+                                return (
+                                    <Card key={liability.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="icon-container bg-red-50 dark:bg-red-900/20">
+                                                    <Icon className="h-5 w-5 text-red-600 dark:text-red-400" />
                                                 </div>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="pt-0 space-y-2">
-                                        <div className="flex justify-between gap-2">
-                                            <div className="flex gap-2 flex-1">
-                                                <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => openPayments(liability)}>
+                                                <Badge variant={liability.status === 'active' ? 'destructive' : 'secondary'} className="capitalize">
+                                                    {liability.status}
+                                                </Badge>
+                                            </div>
+                                            <div className="mt-4">
+                                                <h3 className="font-semibold text-foreground line-clamp-1">
+                                                    {liability.loan_name || liability.taken_from}
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-sm text-muted-foreground capitalize">
+                                                        {liability.loan_type.replace(/_/g, ' ')}
+                                                    </p>
+                                                    {liability.is_secured && <Badge variant="outline" className="text-[10px] h-5 px-1">SECURED</Badge>}
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pb-3 space-y-4">
+                                            <div>
+                                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
+                                                <p className="text-2xl font-bold text-foreground">
+                                                    {formatCurrency(liability.outstanding_amount)}
+                                                </p>
+                                                <div className="w-full bg-slate-100 h-1.5 mt-2 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="bg-red-500 h-full rounded-full"
+                                                        style={{ width: `${Math.min((liability.outstanding_amount / liability.principal_amount) * 100, 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1 text-right">
+                                                    {Math.round((liability.outstanding_amount / liability.principal_amount) * 100)}% remain
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground border-t border-border pt-3">
+                                                <div>
+                                                    <span className="text-slate-400 block mb-1">EMI</span>
+                                                    <span className="font-medium text-foreground">{liability.emi_amount ? formatCurrency(liability.emi_amount) : '-'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block mb-1">Lender</span>
+                                                    <span className="font-medium truncate">{liability.taken_from}</span>
+                                                </div>
+                                                {liability.emi_due_day && (
+                                                    <div className="col-span-2 flex items-center gap-1 text-amber-600 mt-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        Due on day {liability.emi_due_day} of month
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {formatUpdatedAt(liability.updated_at || liability.created_at)}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button variant="outline" size="sm" className="h-8 px-2 text-xs mr-1" onClick={() => openPayments(liability)}>
                                                     <Wallet className="h-3 w-3 mr-1" /> Payments
                                                 </Button>
                                                 <EntityDocumentsBadge
                                                     entityType="liability"
                                                     entityId={liability.id}
                                                 />
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(liability)}
-                                                    className="h-8 w-8 p-0"
-                                                >
+                                                <GridDocUpload
+                                                    entityType="liability"
+                                                    entityId={liability.id}
+                                                />
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)} className="h-8 w-8 p-0">
                                                     <Edit2 className="h-4 w-4 text-slate-500" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(liability.id)}
-                                                    className="h-8 w-8 p-0 hover:text-red-600"
-                                                >
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)} className="h-8 w-8 p-0 hover:text-red-600">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
+                                        </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <GridTable
+                            items={filteredLiabilities}
+                            columns={[
+                                {
+                                    key: 'loan_name', label: 'Loan', render: (l) => (
+                                        <div>
+                                            <span className="font-medium text-foreground">{l.loan_name || l.taken_from}</span>
+                                            <span className="block text-xs text-slate-500 capitalize">{l.loan_type.replace(/_/g, ' ')}</span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {formatUpdatedAt(liability.updated_at || liability.created_at)}
-                                        </div>
-                                    </CardFooter>
-                                </Card>
-                            );
-                        })}
-                    </div>
+                                    )
+                                },
+                                {
+                                    key: 'outstanding_amount', label: 'Outstanding', render: (l) => (
+                                        <span className="font-semibold text-foreground">{formatCurrency(l.outstanding_amount)}</span>
+                                    )
+                                },
+                                {
+                                    key: 'emi_amount', label: 'EMI', render: (l) => (
+                                        <span>{l.emi_amount ? formatCurrency(l.emi_amount) : '—'}</span>
+                                    )
+                                },
+                                { key: 'taken_from', label: 'Lender', hideMobile: true },
+                                {
+                                    key: 'status', label: 'Status', render: (l) => (
+                                        <Badge variant={l.status === 'active' ? 'destructive' : 'secondary'} className="text-xs capitalize">{l.status}</Badge>
+                                    ), hideMobile: true
+                                },
+                            ]}
+                            onEdit={handleEdit}
+                            onDelete={(l) => handleDelete(l.id)}
+                            renderDocBadge={(l) => (
+                                <EntityDocumentsBadge entityType="liability" entityId={l.id} />
+                            )}
+                            renderDocUpload={(l) => (
+                                <GridDocUpload entityType="liability" entityId={l.id} />
+                            )}
+                            renderExtraActions={(l) => (
+                                <Button variant="ghost" size="sm" onClick={() => openPayments(l)} className="h-8 px-2 text-xs gap-1">
+                                    <Wallet className="h-3 w-3" /> Pay
+                                </Button>
+                            )}
+                        />
+                    )
                 )}
 
                 {/* Add/Edit Modal */}
@@ -463,7 +505,7 @@ export default function LiabilitiesPage() {
                                 <div className="space-y-6">
                                     {/* Section: Basic Info */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <Landmark className="h-4 w-4" /> Loan Details
                                         </h4>
                                         <div>
@@ -523,7 +565,7 @@ export default function LiabilitiesPage() {
 
                                     {/* Section: Amounts */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <Wallet className="h-4 w-4" /> Amounts & EMI
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -567,7 +609,7 @@ export default function LiabilitiesPage() {
 
                                     {/* Section: Linked Asset & Other */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2 border-b pb-2">
+                                        <h4 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                                             <Briefcase className="h-4 w-4" /> Additional Info
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -642,11 +684,11 @@ export default function LiabilitiesPage() {
                                 />
                             )}
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white" disabled={submitting}>
+                                <Button type="submit" className="bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10" disabled={submitting}>
                                     {submitting ? "Saving..." : editingId ? "Update Liability" : "Save Liability"}
                                 </Button>
                             </div>

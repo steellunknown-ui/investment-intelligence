@@ -139,9 +139,21 @@ RESPONSE FORMAT (Strict JSON):
  * Generate insights without user message
  */
 export async function generateInsights(context: Record<string, any>): Promise<AIInsight[]> {
-    const response = await callOpenRouter(
-        'Analyze my portfolio and provide the top 3 most important insights.',
-        context
-    );
-    return response.insights;
+    try {
+        const response = await callOpenRouter(
+            'Analyze my portfolio and provide the top 3 most important insights.',
+            context
+        );
+        return response.insights;
+    } catch (error) {
+        console.warn("AI Insights failed/rate-limited:", error);
+        return [
+            {
+                type: 'info',
+                title: 'AI Insights Temporarily Unavailable',
+                detail: 'The AI analysis service is experiencing high traffic. Please check back later.',
+                action: { label: 'Refresh Dashboard', href: '/dashboard' }
+            }
+        ];
+    }
 }

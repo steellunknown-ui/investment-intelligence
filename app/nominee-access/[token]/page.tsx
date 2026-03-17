@@ -120,7 +120,7 @@ export default function NomineeAccessPage() {
             <header className="border-b border-white/10 bg-white/5 backdrop-blur-xl">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
                             <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <span className="text-xl font-bold text-white">Investment Intelligence</span>
@@ -244,7 +244,7 @@ export default function NomineeAccessPage() {
                 <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
                     <div className="px-6 py-4 border-b border-white/10">
                         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                            <Users className="h-5 w-5 text-emerald-400" />
+                            <Users className="h-5 w-5 text-accent" />
                             Registered Nominees
                         </h2>
                     </div>
@@ -261,7 +261,7 @@ export default function NomineeAccessPage() {
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-                                            <span className="text-emerald-400 font-semibold">
+                                            <span className="text-accent font-semibold">
                                                 {nominee.name.charAt(0).toUpperCase()}
                                             </span>
                                         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { createAlert } from '@/lib/alerts'
 
 export async function GET(
     request: Request,
@@ -165,6 +166,14 @@ export async function POST(
             .from('insurance_policies')
             .update({ next_premium_due: nextDueDateStr })
             .eq('id', policyId)
+
+        // Create notification alert
+        await createAlert(supabase, {
+            userId: user.id,
+            type: 'success',
+            title: 'Payment Recorded',
+            message: `A payment of ₹${amount} for policy ${policy.policy_number} has been recorded.`
+        });
 
         return NextResponse.json({ payment }, { status: 201 })
     } catch (error) {

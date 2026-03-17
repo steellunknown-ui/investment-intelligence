@@ -14,11 +14,12 @@ interface UploadedDoc {
 
 interface EntityDocumentUploadProps {
     entityType: 'insurance_policy' | 'bank_account' | 'asset' | 'liability' | 'receivable' | 'belonging';
-    entityId: string;
+    entityId?: string;
     onUploadComplete?: () => void;
+    onDocUploaded?: (docId: string) => void;
 }
 
-export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }: EntityDocumentUploadProps) {
+export function EntityDocumentUpload({ entityType, entityId, onUploadComplete, onDocUploaded }: EntityDocumentUploadProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [linkedDocs, setLinkedDocs] = useState<UploadedDoc[]>([]);
@@ -26,6 +27,7 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
 
     // Fetch existing linked documents
     const fetchLinkedDocs = useCallback(async () => {
+        if (!entityId) return;
         try {
             const res = await fetch(`/api/document-links?entity_type=${entityType}&entity_id=${entityId}`);
             if (res.ok) {
@@ -106,24 +108,35 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
             }
 
             const { document } = await uploadRes.json();
+            
+            // Notify parent even if not linked yet
+            onDocUploaded?.(document.id);
 
-            // 2. Link to entity
-            const linkRes = await fetch('/api/document-links', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_id: document.id,
-                    entity_type: entityType,
-                    entity_id: entityId,
-                }),
-            });
+            // 2. Link to entity (ONLY IF entityId exists)
+            if (entityId) {
+                const linkRes = await fetch('/api/document-links', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        document_id: document.id,
+                        entity_type: entityType,
+                        entity_id: entityId,
+                    }),
+                });
 
-            if (!linkRes.ok) {
-                throw new Error('Failed to link document');
+                if (!linkRes.ok) {
+                    throw new Error('Failed to link document');
+                }
+
+                // Refresh list
+                await fetchLinkedDocs();
+            } else {
+                // If no entityId, show in a temporary "pending" list maybe?
+                // For now, let the parent handle displaying the pending docs if it wants.
+                // We'll add the doc to linkedDocs state manually so user sees it's "uploaded"
+                setLinkedDocs(prev => [...prev, document]);
             }
-
-            // Refresh list
-            await fetchLinkedDocs();
+            
             onUploadComplete?.();
         } catch (err: any) {
             setError(err.message || 'Upload failed');
@@ -183,12 +196,10 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
 
     const getFileIcon = (mimeType: string) => {
         if (mimeType?.startsWith('image/')) {
-            return <Image className="h-5 w-5 text-emerald-500" />;
+            return <Image className="h-5 w-5 text-primary" />;
         }
         return <FileText className="h-5 w-5 text-blue-500" />;
     };
-
-    if (!entityId) return null;
 
     return (
         <div className="mt-4 border-t pt-4">
@@ -222,7 +233,7 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
                                 <button
                                     type="button"
                                     onClick={() => handleDownload(doc.id, doc.file_name)}
-                                    className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
+                                    className="p-1 text-primary hover:text-primary hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
                                     title="Download"
                                 >
                                     <Download className="h-4 w-4" />
@@ -248,7 +259,7 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
                 onDrop={handleDrop}
                 className={`
                     relative border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer
-                    ${isDragOver ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-slate-300 dark:border-slate-700'}
+                    ${isDragOver ? 'border-primary bg-primary/10 dark:bg-emerald-900/20' : 'border-slate-300 dark:border-slate-700'}
                     ${uploading ? 'opacity-50 pointer-events-none' : ''}
                 `}
             >
@@ -262,7 +273,7 @@ export function EntityDocumentUpload({ entityType, entityId, onUploadComplete }:
 
                 {uploading ? (
                     <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
                         <span className="text-sm text-muted-foreground">Uploading...</span>
                     </div>
                 ) : (

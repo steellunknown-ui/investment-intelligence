@@ -8,8 +8,9 @@ interface MotionCardProps {
     children: ReactNode;
     className?: string;
     padding?: "none" | "sm" | "md" | "lg";
-    onClick?: () => void;
+    onClick?: (e: any) => void;
     delay?: number;
+    style?: React.CSSProperties;
 }
 
 export function MotionCard({
@@ -17,7 +18,8 @@ export function MotionCard({
     className = "",
     padding = "md",
     onClick,
-    delay = 0
+    delay = 0,
+    style
 }: MotionCardProps) {
     return (
         <motion.div
@@ -30,7 +32,7 @@ export function MotionCard({
                 ease: [0.21, 0.47, 0.32, 0.98]
             }}
         >
-            <Card className={className} padding={padding} onClick={onClick}>
+            <Card className={className} padding={padding} onClick={onClick} style={style}>
                 {children}
             </Card>
         </motion.div>
