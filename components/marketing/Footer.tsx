@@ -101,9 +101,7 @@ export function Footer() {
             © 2024 Investment Intelligence. All rights reserved.
           </p>
 
-          <div className="flex flex-col items-center gap-1 my-4 sm:my-0 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
-            <span className="text-sm opacity-80 font-medium tracking-wide">Powered By Infinx Technology Solutions Pvt Ltd</span>
-          </div>
+
 
           <div className="flex items-center gap-6">
             <span className="text-xs opacity-80">

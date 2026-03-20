@@ -279,15 +279,12 @@ export default function SettingsPage() {
                       : "border-border hover:border-slate-200 dark:hover:border-slate-700"
                   }`}
                 >
-                  <div className="flex -space-x-2 mb-3">
+                  <div className="flex -space-x-2">
                     <div className={`h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 ${themeItem.primary}`} />
                     {themeItem.accent && (
                       <div className={`h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 ${themeItem.accent}`} />
                     )}
                   </div>
-                  <span className="text-sm font-medium text-foreground">
-                    {themeItem.label}
-                  </span>
                 </button>
               ))}
             </div>
