@@ -137,6 +137,25 @@ export default function BelongingsPage() {
         setQueuedDocIds([]);
     };
 
+    const handleQuickPick = (value: string, category?: string) => {
+        setFormData(prev => {
+            const updates: any = { ...prev };
+            if (category === "Category") {
+                updates.category = value;
+            } else if (category === "Status") {
+                updates.status = value;
+            } else if (category === "Storage") {
+                updates.storage_location = value;
+            } else if (category === "Notes") {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter((n: string) => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    updates.notes = [...currentNotes, value].join('\n');
+                }
+            }
+            return updates;
+        });
+    };
+
     const fetchBelongings = useCallback(async () => {
         try {
             setLoading(true);
@@ -201,22 +220,8 @@ export default function BelongingsPage() {
         }
     };
 
-    const handleQuickPick = (value: string) => {
-        const categoryItem = belongingCategories.find(cat => cat.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-        const statusItem = belongingStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-        const storageItem = storageLocations.find(loc => loc === value);
-        const noteItem = belongingNotes.find(n => n === value);
 
-        if (categoryItem) {
-            setFormData(p => ({ ...p, category: value }));
-        } else if (statusItem) {
-            setFormData(p => ({ ...p, status: value }));
-        } else if (storageItem) {
-            setFormData(p => ({ ...p, storage_location: value }));
-        } else if (noteItem) {
-            setFormData(p => ({ ...p, notes: value }));
-        }
-    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

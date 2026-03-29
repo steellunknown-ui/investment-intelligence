@@ -126,20 +126,32 @@ export default function InsurancePage() {
         setFieldErrors({});
     };
 
-    const handleQuickPick = (field: string, value: string) => {
+    const handleQuickPick = (value: string, category?: string) => {
         setFormData(prev => {
-            const next = { ...prev, [field]: value };
-            // Validation for policy number if provider changes
-            if (field === "provider_name" && next.policy_number) {
-                const val = validateInsurancePolicyNumber(value, next.policy_number);
-                if (!val.isValid) {
-                    setFieldErrors(prevErrs => ({ ...prevErrs, policy_number: val.error! }));
-                } else {
-                    setFieldErrors(prevErrs => {
-                        const errs = { ...prevErrs };
-                        delete errs.policy_number;
-                        return errs;
-                    });
+            const next = { ...prev };
+            if (category === "Provider") {
+                next.provider_name = value;
+                // Validation for policy number if provider changes
+                if (next.policy_number) {
+                    const val = validateInsurancePolicyNumber(value, next.policy_number);
+                    if (!val.isValid) {
+                        setFieldErrors(prevErrs => ({ ...prevErrs, policy_number: val.error! }));
+                    } else {
+                        setFieldErrors(prevErrs => {
+                            const errs = { ...prevErrs };
+                            delete errs.policy_number;
+                            return errs;
+                        });
+                    }
+                }
+            } else if (category === "Policy Type") {
+                next.policy_type = value;
+            } else if (category === "Status") {
+                next.status = value;
+            } else if (category === "Common Notes") {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter((n: string) => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    next.notes = [...currentNotes, value].join('\n');
                 }
             }
             return next;
@@ -696,7 +708,7 @@ export default function InsurancePage() {
                                                             label: n,
                                                             category: "Common Notes"
                                                         }))}
-                                                        onSelect={(value) => handleQuickPick("notes", value)}
+                                                        onSelect={(value, category) => handleQuickPick(value, category)}
                                                     />
                                                 </SheetContent>
                                             </Sheet>
@@ -720,17 +732,7 @@ export default function InsurancePage() {
                                             ...insuranceNotes.map((note) => ({ label: `📝 ${note}`, value: note, category: "Common Notes" })),
                                             ...STATUS_OPTIONS.map((status) => ({ label: `📊 ${status.label}`, value: status.value, category: "Status" }))
                                         ]}
-                                        onSelect={(value) => {
-                                            if (insuranceProviders.includes(value)) {
-                                                handleQuickPick("provider_name", value);
-                                            } else if (POLICY_TYPES.some(t => t.value === value)) {
-                                                handleQuickPick("policy_type", value);
-                                            } else if (insuranceNotes.includes(value)) {
-                                                handleQuickPick("notes", value);
-                                            } else if (STATUS_OPTIONS.some(s => s.value === value)) {
-                                                handleQuickPick("status", value);
-                                            }
-                                        }}
+                                        onSelect={(value, category) => handleQuickPick(value, category)}
                                     />
                                 </div>
                             </div>

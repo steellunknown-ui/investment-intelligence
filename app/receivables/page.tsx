@@ -144,8 +144,24 @@ export default function ReceivablesPage() {
         setInterestPreview(null);
     };
 
-    const handleQuickPick = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+    const handleQuickPick = (value: string, category?: string) => {
+        if (category === "Relationship") {
+            setFormData(prev => ({ ...prev, relationship: value }));
+        } else if (category === "Purpose") {
+            setFormData(prev => ({ ...prev, purpose: value }));
+        } else if (category === "Status") {
+            setFormData(prev => ({ ...prev, status: value }));
+        } else if (category === "Interest") {
+            setFormData(prev => ({ ...prev, interest_type: value }));
+        } else if (category === "Common Notes") {
+            setFormData(prev => {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter((n: string) => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    return { ...prev, notes: [...currentNotes, value].join('\n') };
+                }
+                return prev;
+            });
+        }
         // Close all sheets
         setShowRelationshipPick(false);
         setShowPurposePick(false);
@@ -1025,25 +1041,7 @@ export default function ReceivablesPage() {
                                             ...interestTypes.map(type => ({ value: type.toLowerCase(), label: `💰 ${type} Interest`, category: 'Interest' })),
                                             ...receivableNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' })),
                                         ]}
-                                        onSelect={(value) => {
-                                            const relationshipItem = receivableRelationships.find(rel => rel === value);
-                                            const purposeItem = receivablePurposes.find(purpose => purpose === value);
-                                            const statusItem = STATUS_OPTIONS.find(s => s.value === value);
-                                            const interestItem = interestTypes.find(type => type.toLowerCase() === value);
-                                            const noteItem = receivableNotes.find(note => note === value);
-
-                                            if (relationshipItem) {
-                                                handleQuickPick("relationship", value);
-                                            } else if (purposeItem) {
-                                                handleQuickPick("purpose", value);
-                                            } else if (statusItem) {
-                                                handleQuickPick("status", value);
-                                            } else if (interestItem) {
-                                                handleQuickPick("interest_type", value);
-                                            } else if (noteItem) {
-                                                handleQuickPick("notes", value);
-                                            }
-                                        }}
+                                        onSelect={(value, category) => handleQuickPick(value, category)}
                                     />
                                 </div>
                             </div>

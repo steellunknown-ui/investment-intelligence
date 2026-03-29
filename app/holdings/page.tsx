@@ -68,11 +68,15 @@ export default function HoldingsPage() {
     setError(null);
   };
 
-  const handleQuickPick = (field: string, value: string) => {
-    switch (field) {
-      case "symbol": setSymbol(value); break;
-      case "asset_type": setAssetType(value.toLowerCase()); break;
-      case "notes": setNotes(value); break;
+  const handleQuickPick = (value: string, category?: string) => {
+    if (category === "Exchange") {
+      setSymbol(value);
+    } else if (category === "Type") {
+      setAssetType(value.toLowerCase());
+    } else if (category === "Broker") {
+      setNotes(prev => prev ? `${prev}\nBroker: ${value}` : `Broker: ${value}`);
+    } else if (category === "Common Notes") {
+      setNotes(prev => prev ? `${prev}\n${value}` : value);
     }
     // Close all sheets
     setShowStockPick(false);
@@ -181,22 +185,7 @@ export default function HoldingsPage() {
                             ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' })),
                             ...holdingNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' }))
                           ]}
-                          onSelect={(value) => {
-                            const exchangeItem = tradingExchanges.find(ex => ex === value);
-                            const typeItem = investmentTypes.find(type => type === value);
-                            const brokerItem = popularBrokersIndia.find(broker => broker === value);
-                            const noteItem = holdingNotes.find(note => note === value);
-                            
-                            if (exchangeItem) {
-                              handleQuickPick("symbol", value);
-                            } else if (typeItem) {
-                              handleQuickPick("asset_type", value);
-                            } else if (brokerItem) {
-                              handleQuickPick("notes", `Broker: ${value}`);
-                            } else if (noteItem) {
-                              handleQuickPick("notes", value);
-                            }
-                          }}
+                          onSelect={(value, category) => handleQuickPick(value, category)}
                         />
                       </SheetContent>
                     </Sheet>
@@ -266,7 +255,7 @@ export default function HoldingsPage() {
                             label: n,
                             category: "Common Notes"
                           }))}
-                          onSelect={(value) => handleQuickPick("notes", value)}
+                          onSelect={(value, category) => handleQuickPick(value, category)}
                         />
                       </SheetContent>
                     </Sheet>
@@ -291,22 +280,7 @@ export default function HoldingsPage() {
                     ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' })),
                     ...holdingNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' }))
                   ]}
-                  onSelect={(value) => {
-                    const exchangeItem = tradingExchanges.find(ex => ex === value);
-                    const typeItem = investmentTypes.find(type => type === value);
-                    const brokerItem = popularBrokersIndia.find(broker => broker === value);
-                    const noteItem = holdingNotes.find(note => note === value);
-                    
-                    if (exchangeItem) {
-                      handleQuickPick("symbol", value);
-                    } else if (typeItem) {
-                      handleQuickPick("asset_type", value);
-                    } else if (brokerItem) {
-                      handleQuickPick("notes", `Broker: ${value}`);
-                    } else if (noteItem) {
-                      handleQuickPick("notes", value);
-                    }
-                  }}
+                  onSelect={(value, category) => handleQuickPick(value, category)}
                 />
               </div>
             </div>
