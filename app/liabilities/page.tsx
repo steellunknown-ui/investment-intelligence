@@ -35,7 +35,7 @@ import type { Liability, Asset } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { liabilityTypes, lenderTypes, liabilityStatus } from "@/src/lib/presets";
+import { liabilityTypes, lenderTypes, liabilityStatus, liabilityNotes } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
@@ -97,6 +97,36 @@ export default function LiabilitiesPage() {
         linked_asset_id: "",
         notes: "",
     });
+
+    const handleQuickPick = (value: string, category?: string) => {
+        setFormData(prev => {
+            const updates: any = { ...prev };
+            const lowerVal = value.toLowerCase();
+
+            if (category === "Loan Type") {
+                updates.loan_type = lowerVal.replace(/[^a-z0-9]/g, '_');
+            } else if (category === "Lender Type") {
+                updates.taken_from = value;
+            } else if (category === "Status") {
+                updates.status = lowerVal;
+            } else if (category === "Notes") {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter(n => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    updates.notes = [...currentNotes, value].join('\n');
+                }
+            } else {
+                // Fallback
+                const isType = liabilityTypes.some(t => t.toLowerCase().replace(/[^a-z0-9]/g, '_') === lowerVal.replace(/[^a-z0-9]/g, '_'));
+                const isLender = lenderTypes.some(l => l.toLowerCase() === lowerVal);
+                const isStat = liabilityStatus.some(s => s.toLowerCase() === lowerVal);
+
+                if (isType) updates.loan_type = lowerVal.replace(/[^a-z0-9]/g, '_');
+                else if (isLender) updates.taken_from = value;
+                else if (isStat) updates.status = lowerVal;
+            }
+            return updates;
+        });
+    };
 
     const resetForm = () => {
         setFormData({
@@ -525,11 +555,16 @@ export default function LiabilitiesPage() {
                                                     </SheetTrigger>
                                                     <SheetContent side="bottom" className="h-[80vh]">
                                                         <QuickPickPanel
-                                                            title="Select Loan Type"
-                                                            subtitle="Common loan types"
-                                                            items={liabilityTypes.map(type => ({ value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: type }))}
-                                                            onSelect={(value) => {
-                                                                setFormData((p) => ({ ...p, loan_type: value }));
+                                                            title="Liability Selections"
+                                                            subtitle="Quick fill loan details"
+                                                            items={[
+                                                                ...liabilityTypes.map(type => ({ value: type, label: type, category: 'Loan Type' })),
+                                                                ...lenderTypes.map(l => ({ value: l, label: l, category: 'Lender Type' })),
+                                                                ...liabilityStatus.map(s => ({ value: s, label: s, category: 'Status' })),
+                                                                ...liabilityNotes.map(n => ({ value: n, label: n, category: 'Notes' }))
+                                                            ]}
+                                                            onSelect={(value, category) => {
+                                                                handleQuickPick(value, category);
                                                                 setShowLoanTypePick(false);
                                                             }}
                                                         />
@@ -651,27 +686,17 @@ export default function LiabilitiesPage() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <div className="hidden md:block">
                                     <QuickPickPanel
-                                        title="Quick Liability Selection"
-                                        subtitle="Common loan types and lenders"
+                                        title={editingId ? "Quick Updates" : "Quick Selection"}
+                                        subtitle="Standardized liability presets"
                                         items={[
-                                            ...liabilityTypes.map(type => ({ value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: `💳 ${type}`, category: 'Loan Type' })),
-                                            ...lenderTypes.map(type => ({ value: type.toLowerCase(), label: `🏦 ${type}`, category: 'Lender Type' })),
-                                            ...liabilityStatus.map(status => ({ value: status.toLowerCase(), label: `📊 ${status}`, category: 'Status' }))
+                                            ...liabilityTypes.map(type => ({ value: type, label: type, category: 'Loan Type' })),
+                                            ...lenderTypes.map(l => ({ value: l, label: l, category: 'Lender Type' })),
+                                            ...liabilityStatus.map(s => ({ value: s, label: s, category: 'Status' })),
+                                            ...liabilityNotes.map(n => ({ value: n, label: n, category: 'Notes' }))
                                         ]}
-                                        onSelect={(value) => {
-                                            const loanType = liabilityTypes.find(type => type.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-                                            const lenderType = lenderTypes.find(type => type.toLowerCase() === value);
-                                            const statusType = liabilityStatus.find(status => status.toLowerCase() === value);
-
-                                            if (loanType) {
-                                                setFormData(p => ({ ...p, loan_type: value }));
-                                            } else if (statusType) {
-                                                setFormData(p => ({ ...p, status: value }));
-                                            }
-                                        }}
+                                        onSelect={handleQuickPick}
                                     />
                                 </div>
                             </div>
@@ -695,6 +720,7 @@ export default function LiabilitiesPage() {
                         </form>
                     </DialogContent>
                 </Dialog>
+
 
                 {/* Payments Modal */}
                 <PaymentsDialog

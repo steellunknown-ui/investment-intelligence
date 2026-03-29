@@ -33,7 +33,7 @@ import { formatUpdatedLabel, formatDateTime } from "@/src/lib/time";
 import { PaymentsDialog } from "@/components/insurance/PaymentsDialog";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { insuranceProviders } from "@/src/lib/presets";
+import { insuranceProviders, insuranceNotes, ownershipTypes } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
@@ -83,6 +83,7 @@ export default function InsurancePage() {
 
     // QuickPick State
     const [showProviderPick, setShowProviderPick] = useState(false);
+    const [showNotesPick, setShowNotesPick] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -123,6 +124,30 @@ export default function InsurancePage() {
         });
         setEditingId(null);
         setFieldErrors({});
+    };
+
+    const handleQuickPick = (field: string, value: string) => {
+        setFormData(prev => {
+            const next = { ...prev, [field]: value };
+            // Validation for policy number if provider changes
+            if (field === "provider_name" && next.policy_number) {
+                const val = validateInsurancePolicyNumber(value, next.policy_number);
+                if (!val.isValid) {
+                    setFieldErrors(prevErrs => ({ ...prevErrs, policy_number: val.error! }));
+                } else {
+                    setFieldErrors(prevErrs => {
+                        const errs = { ...prevErrs };
+                        delete errs.policy_number;
+                        return errs;
+                    });
+                }
+            }
+            return next;
+        });
+
+        // Close all sheets
+        setShowProviderPick(false);
+        setShowNotesPick(false);
     };
 
     const handlePolicyNumberChange = (value: string) => {
@@ -533,25 +558,19 @@ export default function InsurancePage() {
                                                     <QuickPickPanel
                                                         title="Select Insurance Provider"
                                                         subtitle="Popular Indian insurers"
-                                                        items={insuranceProviders.map((name) => ({ label: name, value: name }))}
+                                                        items={[
+                                                            ...insuranceProviders.map((name) => ({ label: name, value: name, category: "Provider" })),
+                                                            ...insuranceNotes.map((note) => ({ label: note, value: note, category: "Common Notes" })),
+                                                            ...POLICY_TYPES.map((type) => ({ label: type.label, value: type.value, category: "Policy Type" }))
+                                                        ]}
                                                         onSelect={(value) => {
-                                                            setFormData((p) => {
-                                                                const n = { ...p, provider_name: value };
-                                                                if (n.policy_number) {
-                                                                    const val = validateInsurancePolicyNumber(n.provider_name, n.policy_number);
-                                                                    if (!val.isValid) {
-                                                                        setFieldErrors(prev => ({ ...prev, policy_number: val.error! }));
-                                                                    } else {
-                                                                        setFieldErrors(prev => {
-                                                                            const errs = { ...prev };
-                                                                            delete errs.policy_number;
-                                                                            return errs;
-                                                                        });
-                                                                    }
-                                                                }
-                                                                return n;
-                                                            });
-                                                            setShowProviderPick(false);
+                                                            if (insuranceProviders.includes(value)) {
+                                                                handleQuickPick("provider_name", value);
+                                                            } else if (insuranceNotes.includes(value)) {
+                                                                handleQuickPick("notes", value);
+                                                            } else if (POLICY_TYPES.some(t => t.value === value)) {
+                                                                handleQuickPick("policy_type", value);
+                                                            }
                                                         }}
                                                     />
                                                 </SheetContent>
@@ -653,20 +672,65 @@ export default function InsurancePage() {
                                         value={formData.insured_relationship}
                                         onChange={(e) => setFormData({ ...formData, insured_relationship: e.target.value })}
                                     />
-                                    <Input
-                                        label="Notes"
-                                        placeholder="Agent details, policy features..."
-                                        value={formData.notes}
-                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    />
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+                                            <Sheet open={showNotesPick} onOpenChange={setShowNotesPick}>
+                                                <SheetTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="md:hidden h-6 text-xs gap-1"
+                                                    >
+                                                        <Sparkles className="h-3 w-3" />
+                                                        Quick Select
+                                                    </Button>
+                                                </SheetTrigger>
+                                                <SheetContent side="bottom" className="h-[80vh]">
+                                                    <QuickPickPanel
+                                                        title="Select Note"
+                                                        subtitle="Common insurance notes"
+                                                        items={insuranceNotes.map(n => ({
+                                                            value: n,
+                                                            label: n,
+                                                            category: "Common Notes"
+                                                        }))}
+                                                        onSelect={(value) => handleQuickPick("notes", value)}
+                                                    />
+                                                </SheetContent>
+                                            </Sheet>
+                                        </div>
+                                        <textarea
+                                            placeholder="Agent details, policy features..."
+                                            value={formData.notes}
+                                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                            className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background text-sm"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="hidden md:block">
                                     <QuickPickPanel
                                         title="Select Provider"
-                                        subtitle="Popular Indian insurers"
-                                        items={insuranceProviders.map((name) => ({ label: name, value: name }))}
-                                        onSelect={(value) => setFormData((p) => ({ ...p, provider_name: value }))}
+                                        subtitle="Popular Indian insurers & types"
+                                        items={[
+                                            ...insuranceProviders.map((name) => ({ label: `🛡️ ${name}`, value: name, category: "Provider" })),
+                                            ...POLICY_TYPES.map((type) => ({ label: `📋 ${type.label}`, value: type.value, category: "Policy Type" })),
+                                            ...insuranceNotes.map((note) => ({ label: `📝 ${note}`, value: note, category: "Common Notes" })),
+                                            ...STATUS_OPTIONS.map((status) => ({ label: `📊 ${status.label}`, value: status.value, category: "Status" }))
+                                        ]}
+                                        onSelect={(value) => {
+                                            if (insuranceProviders.includes(value)) {
+                                                handleQuickPick("provider_name", value);
+                                            } else if (POLICY_TYPES.some(t => t.value === value)) {
+                                                handleQuickPick("policy_type", value);
+                                            } else if (insuranceNotes.includes(value)) {
+                                                handleQuickPick("notes", value);
+                                            } else if (STATUS_OPTIONS.some(s => s.value === value)) {
+                                                handleQuickPick("status", value);
+                                            }
+                                        }}
                                     />
                                 </div>
                             </div>

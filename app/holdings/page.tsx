@@ -17,7 +17,7 @@ import { ASSET_TYPES } from "@/lib/constants";
 import type { Holding } from "@/lib/types";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { tradingExchanges, investmentTypes, popularBrokersIndia } from "@/src/lib/presets";
+import { tradingExchanges, investmentTypes, popularBrokersIndia, holdingNotes } from "@/src/lib/presets";
 import { Sparkles } from "lucide-react";
 
 export default function HoldingsPage() {
@@ -37,6 +37,7 @@ export default function HoldingsPage() {
 
   // QuickPick State
   const [showStockPick, setShowStockPick] = useState(false);
+  const [showNotesPick, setShowNotesPick] = useState(false);
 
   const fetchHoldings = useCallback(async () => {
     try {
@@ -65,6 +66,17 @@ export default function HoldingsPage() {
     setAvgBuyPrice("");
     setNotes("");
     setError(null);
+  };
+
+  const handleQuickPick = (field: string, value: string) => {
+    switch (field) {
+      case "symbol": setSymbol(value); break;
+      case "asset_type": setAssetType(value.toLowerCase()); break;
+      case "notes": setNotes(value); break;
+    }
+    // Close all sheets
+    setShowStockPick(false);
+    setShowNotesPick(false);
   };
 
   const handleAddHolding = () => {
@@ -166,21 +178,24 @@ export default function HoldingsPage() {
                           items={[
                             ...tradingExchanges.map(ex => ({ value: ex, label: `📈 ${ex}`, category: 'Exchange' })),
                             ...investmentTypes.map(type => ({ value: type, label: `💼 ${type}`, category: 'Type' })),
-                            ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' }))
+                            ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' })),
+                            ...holdingNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' }))
                           ]}
                           onSelect={(value) => {
                             const exchangeItem = tradingExchanges.find(ex => ex === value);
                             const typeItem = investmentTypes.find(type => type === value);
                             const brokerItem = popularBrokersIndia.find(broker => broker === value);
+                            const noteItem = holdingNotes.find(note => note === value);
                             
                             if (exchangeItem) {
-                              setSymbol(value);
+                              handleQuickPick("symbol", value);
                             } else if (typeItem) {
-                              setAssetType(value.toLowerCase());
+                              handleQuickPick("asset_type", value);
                             } else if (brokerItem) {
-                              setNotes(`Broker: ${value}`);
+                              handleQuickPick("notes", `Broker: ${value}`);
+                            } else if (noteItem) {
+                              handleQuickPick("notes", value);
                             }
-                            setShowStockPick(false);
                           }}
                         />
                       </SheetContent>
@@ -227,14 +242,43 @@ export default function HoldingsPage() {
                   onChange={(e) => setAvgBuyPrice(e.target.value)}
                   hint="Optional"
                 />
-                <Input
-                  label="Notes"
-                  placeholder="Any additional notes..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  hint="Optional"
-                  error={error || undefined}
-                />
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+                    <Sheet open={showNotesPick} onOpenChange={setShowNotesPick}>
+                      <SheetTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="md:hidden h-6 text-xs gap-1"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Quick Select
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="h-[80vh]">
+                        <QuickPickPanel
+                          title="Select Note"
+                          subtitle="Common holding notes"
+                          items={holdingNotes.map(n => ({
+                            value: n,
+                            label: n,
+                            category: "Common Notes"
+                          }))}
+                          onSelect={(value) => handleQuickPick("notes", value)}
+                        />
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+                  <textarea
+                    placeholder="Any additional notes..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background text-sm"
+                  />
+                  {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+                </div>
               </div>
 
               <div className="hidden md:block">
@@ -244,19 +288,23 @@ export default function HoldingsPage() {
                   items={[
                     ...tradingExchanges.map(ex => ({ value: ex, label: `📈 ${ex}`, category: 'Exchange' })),
                     ...investmentTypes.map(type => ({ value: type, label: `💼 ${type}`, category: 'Type' })),
-                    ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' }))
+                    ...popularBrokersIndia.map(broker => ({ value: broker, label: `🏦 ${broker}`, category: 'Broker' })),
+                    ...holdingNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' }))
                   ]}
                   onSelect={(value) => {
                     const exchangeItem = tradingExchanges.find(ex => ex === value);
                     const typeItem = investmentTypes.find(type => type === value);
                     const brokerItem = popularBrokersIndia.find(broker => broker === value);
+                    const noteItem = holdingNotes.find(note => note === value);
                     
                     if (exchangeItem) {
-                      setSymbol(value);
+                      handleQuickPick("symbol", value);
                     } else if (typeItem) {
-                      setAssetType(value.toLowerCase());
+                      handleQuickPick("asset_type", value);
                     } else if (brokerItem) {
-                      setNotes(`Broker: ${value}`);
+                      handleQuickPick("notes", `Broker: ${value}`);
+                    } else if (noteItem) {
+                      handleQuickPick("notes", value);
                     }
                   }}
                 />

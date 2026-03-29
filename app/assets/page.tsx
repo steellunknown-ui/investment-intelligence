@@ -34,7 +34,7 @@ import type { Asset } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { assetCategories, assetTypes, ownershipTypes, assetStatus } from "@/src/lib/presets";
+import { assetCategories, assetTypes, ownershipTypes, assetStatus, assetNotes } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
@@ -81,7 +81,6 @@ export default function AssetsPage() {
     const [showOwnershipTypePick, setShowOwnershipTypePick] = useState(false);
     const [showStatusPick, setShowStatusPick] = useState(false);
 
-    // Form State
     const [formData, setFormData] = useState({
         asset_category: "movable",
         asset_type: "other",
@@ -112,6 +111,47 @@ export default function AssetsPage() {
         location: "",
         notes: "",
     });
+
+    const handleQuickPick = (value: string, category?: string) => {
+        setFormData(prev => {
+            const updates: any = { ...prev };
+            const lowerVal = value.toLowerCase();
+            const typeKey = lowerVal.replace(/[^a-z0-9]/g, '_');
+
+            if (category === "Type") {
+                updates.asset_type = typeKey;
+                const isImmovable = IMMOVABLE_TYPES.includes(typeKey);
+                updates.asset_category = isImmovable ? 'immovable' : 'movable';
+            } else if (category === "Category") {
+                updates.asset_category = lowerVal;
+            } else if (category === "Status") {
+                updates.status = lowerVal;
+            } else if (category === "Ownership") {
+                updates.ownership_type = lowerVal;
+            } else if (category === "Notes") {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter(n => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    updates.notes = [...currentNotes, value].join('\n');
+                }
+            } else {
+                // Fallback for unlabeled/legacy
+                const isCat = assetCategories.some(c => c.toLowerCase() === lowerVal);
+                const isType = assetTypes.some(t => t.toLowerCase() === lowerVal || t.toLowerCase().replace(/[^a-z0-9]/g, '_') === typeKey);
+                const isOwn = ownershipTypes.some(o => o.toLowerCase() === lowerVal);
+                const isStat = assetStatus.some(s => s.toLowerCase() === lowerVal);
+
+                if (isCat) updates.asset_category = lowerVal;
+                else if (isType) {
+                    updates.asset_type = typeKey;
+                    const isImmovable = IMMOVABLE_TYPES.includes(typeKey);
+                    updates.asset_category = isImmovable ? 'immovable' : 'movable';
+                }
+                else if (isOwn) updates.ownership_type = lowerVal;
+                else if (isStat) updates.status = lowerVal;
+            }
+            return updates;
+        });
+    };
 
     const resetForm = () => {
         setFormData({
@@ -546,16 +586,17 @@ export default function AssetsPage() {
                                                     </SheetTrigger>
                                                     <SheetContent side="bottom" className="h-[80vh]">
                                                         <QuickPickPanel
-                                                            title="Select Asset Type"
-                                                            subtitle="Popular asset types"
-                                                            items={assetTypes.map(type => ({ value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: type }))}
-                                                            onSelect={(value) => {
-                                                                 const isImmovable = IMMOVABLE_TYPES.includes(value);
-                                                                 setFormData(p => ({
-                                                                     ...p,
-                                                                     asset_type: value,
-                                                                     asset_category: isImmovable ? 'immovable' : 'movable'
-                                                                 }));
+                                                            title="Asset Selections"
+                                                            subtitle="Quick fill asset details"
+                                                            items={[
+                                                                ...assetTypes.map(type => ({ value: type, label: type, category: 'Type' })),
+                                                                ...assetCategories.map(cat => ({ value: cat, label: cat, category: 'Category' })),
+                                                                ...assetStatus.map(s => ({ value: s, label: s, category: 'Status' })),
+                                                                ...ownershipTypes.map(o => ({ value: o, label: o, category: 'Ownership' })),
+                                                                ...assetNotes.map(n => ({ value: n, label: n, category: 'Notes' }))
+                                                            ]}
+                                                            onSelect={(value, category) => {
+                                                                 handleQuickPick(value, category);
                                                                  setShowAssetTypePick(false);
                                                              }}
                                                          />
@@ -775,42 +816,20 @@ export default function AssetsPage() {
 
                                 <div className="hidden md:block">
                                     <QuickPickPanel
-                                        title="Quick Asset Selection"
-                                        subtitle="Popular asset types and categories"
+                                        title={editingId ? "Quick Updates" : "Quick Selection"}
+                                        subtitle="Standardized asset presets"
                                         items={[
-                                            ...assetCategories.map(cat => ({ value: cat.toLowerCase(), label: `📂 ${cat}`, category: 'Category' })),
-                                            ...assetTypes.slice(0, 15).map(type => ({ value: type.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: `🏷️ ${type}`, category: 'Type' })),
-                                            ...ownershipTypes.map(type => ({ value: type.toLowerCase(), label: `👥 ${type}`, category: 'Ownership' })),
-                                            ...assetStatus.map(status => ({ value: status.toLowerCase(), label: `📊 ${status}`, category: 'Status' }))
+                                            ...assetTypes.map(type => ({ value: type, label: type, category: 'Type' })),
+                                            ...assetCategories.map(cat => ({ value: cat, label: cat, category: 'Category' })),
+                                            ...assetStatus.map(s => ({ value: s, label: s, category: 'Status' })),
+                                            ...ownershipTypes.map(o => ({ value: o, label: o, category: 'Ownership' })),
+                                            ...assetNotes.map(n => ({ value: n, label: n, category: 'Notes' }))
                                         ]}
-                                        onSelect={(value) => {
-                                            const categoryItem = assetCategories.find(cat => cat.toLowerCase() === value);
-                                            const typeItem = assetTypes.find(type => type.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-                                            const ownershipItem = ownershipTypes.find(type => type.toLowerCase() === value);
-                                            const statusItem = assetStatus.find(status => status.toLowerCase() === value);
-
-
-
-
-
-
-                                            if (categoryItem) {
-                                                setFormData(p => ({ ...p, asset_category: value }));
-                                            } else if (typeItem) {
-                                                const isImmovable = IMMOVABLE_TYPES.includes(value);
-                                                setFormData(p => ({ 
-                                                    ...p, 
-                                                    asset_type: value,
-                                                    asset_category: isImmovable ? "immovable" : "movable"
-                                                }));
-                                            } else if (ownershipItem) {
-                                                setFormData(p => ({ ...p, ownership_type: value }));
-                                            } else if (statusItem) {
-                                                setFormData(p => ({ ...p, status: value }));
-                                            }
-                                        }}
+                                        onSelect={handleQuickPick}
                                     />
                                 </div>
+
+
                             </div>
 
                             {/* Document Upload - only when editing */}

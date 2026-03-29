@@ -37,15 +37,11 @@ import { formatUpdatedLabel, formatDateTime } from "@/src/lib/time";
 import { TransactionsDialog } from "@/components/banking/TransactionsDialog";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { bankNames } from "@/src/lib/presets";
-import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
-import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
-import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
-import { GridTable } from "@/components/ui/GridTable";
 import { GridDocUpload } from "@/components/ui/GridDocUpload";
-import { fetchBankDetailsByIFSC } from "@/src/lib/ifsc";
+import { getIFSCDetails } from "@/src/lib/ifsc-service";
 import { IFSC_REGEX, validateBankAccountNumber } from "@/src/lib/financialValidationRules";
 import { Loader2, AlertCircle as AlertCircleIcon } from "lucide-react";
+import { bankNames, bankingNotes } from "@/src/lib/presets";
 
 // Constants
 const ACCOUNT_TYPES = [
@@ -115,6 +111,39 @@ export default function BankingPage() {
     const [ifscLoaded, setIfscLoaded] = useState(false);
     const [detectedBank, setDetectedBank] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    const handleQuickPick = (value: string, category?: string) => {
+        setFormData(prev => {
+            const updates: any = { ...prev };
+            if (category === "Bank") updates.bank_name = value;
+            else if (category === "Account Type") updates.account_type = value.toLowerCase().replace(/ /g, "_");
+            else if (category === "Status") updates.status = value.toLowerCase();
+            else if (category === "Notes") {
+                const currentNotes = prev.notes ? prev.notes.split('\n').filter(n => n.trim()) : [];
+                if (!currentNotes.includes(value)) {
+                    updates.notes = [...currentNotes, value].join('\n');
+                }
+            } else {
+                // Fallback for unlabeled/legacy
+                updates.bank_name = value;
+            }
+            return updates;
+        });
+
+        // Trigger validation if bank changed
+        if (category === "Bank" || !category) {
+            const val = validateBankAccountNumber(value, formData.account_number);
+            if (formData.account_number && !val.isValid) {
+                setFieldErrors(prev => ({ ...prev, account_number: val.error! }));
+            } else {
+                setFieldErrors(prev => {
+                    const n = { ...prev };
+                    delete n.account_number;
+                    return n;
+                });
+            }
+        }
+    };
 
     const resetForm = () => {
         setFormData({
@@ -281,7 +310,7 @@ export default function BankingPage() {
         if (IFSC_REGEX.test(upValue)) {
             setIsFetchingIFSC(true);
             try {
-                const details = await fetchBankDetailsByIFSC(upValue);
+                const details = await getIFSCDetails(upValue);
                 if (details) {
                     const matchedBank = bankNames.find(b => 
                         b.toLowerCase().includes(details.BANK.toLowerCase()) || 
@@ -996,10 +1025,15 @@ export default function BankingPage() {
 
                                 <div className="hidden md:block">
                                     <QuickPickPanel
-                                        title="Select Bank"
-                                        subtitle="Popular Indian banks"
-                                        items={bankNames.map((name) => ({ label: name, value: name }))}
-                                        onSelect={(value) => setFormData((p) => ({ ...p, bank_name: value }))}
+                                        title="Account Presets"
+                                        subtitle="Quick fill bank, account type, or status"
+                                        items={[
+                                            ...bankNames.map(b => ({ label: b, value: b, category: "Bank" })),
+                                            ...ACCOUNT_TYPES.map(t => ({ label: t.label, value: t.label, category: "Account Type" })),
+                                            ...STATUS_OPTIONS.map(s => ({ label: s.label, value: s.label, category: "Status" })),
+                                            ...bankingNotes.map(n => ({ label: n, value: n, category: "Notes" }))
+                                        ]}
+                                        onSelect={handleQuickPick}
                                     />
                                 </div>
                             </div>

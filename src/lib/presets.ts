@@ -124,3 +124,13 @@ export const insuranceProviders = [
   "Acko General Insurance","Care Health Insurance","Star Health and Allied Insurance",
   "Niva Bupa Health Insurance","Manipal Cigna Health Insurance","Aditya Birla Health Insurance"
 ];
+
+// Common Note Presets for Categorization
+export const assetNotes = ["Owned", "Gifted", "Inherited", "In Spouse Name", "Under Dispute", "Sold - Pending Registration", "Transferred"];
+export const liabilityNotes = ["Automatic Debit", "Manual Payment", "Principal Pending", "Interest Only Payment", "Top-up Loan Eligible", "Secured", "Unsecured"];
+export const belongingNotes = ["In Home Safe", "In Bank Locker", "At Parent's Place", "With Relative", "Daily Use", "Investment Only", "Damaged"];
+export const receivableNotes = ["Interest Free", "Monthly Interest", "Quarterly Interest", "Due Date Fixed", "Verbal Agreement", "Written Agreement", "Partial Recovery"];
+export const holdingNotes = ["Long Term Hold", "Short Term Trade", "Swing Trade", "IPO Allotment", "Employee Stock Option (ESOP)", "Dividend Payout", "Bonus Shares"];
+export const insuranceNotes = ["Annual Premium", "Half Yearly Premium", "Quarterly Premium", "Monthly Premium", "Single Premium", "Cashback Plan", "Tax Saving"];
+export const bankingNotes = ["Primary Salary Account", "Secondary Savings", "Emergency Fund", "Business Account", "Joint Account", "Minimum Balance Required", "No Balance Required"];
+

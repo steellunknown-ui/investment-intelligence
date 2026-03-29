@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { IFSC_REGEX, validateBankAccountNumber } from '@/src/lib/financialValidationRules'
-import { fetchBankDetailsByIFSC } from '@/src/lib/ifsc'
+import { getIFSCDetails } from '@/src/lib/ifsc-service'
 import { createAlert } from '@/lib/alerts'
 
 export async function GET() {
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid IFSC format' }, { status: 400 })
         }
         
-        const details = await fetchBankDetailsByIFSC(ifsc_code)
+        const details = await getIFSCDetails(ifsc_code)
         if (!details) {
             return NextResponse.json({ error: 'Invalid IFSC Code' }, { status: 400 })
         }

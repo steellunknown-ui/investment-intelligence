@@ -41,7 +41,7 @@ import {
 import type { Receivable } from "@/lib/types";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { receivableRelationships, receivablePurposes, receivableStatus, interestTypes } from "@/src/lib/presets";
+import { receivableRelationships, receivablePurposes, receivableStatus, interestTypes, receivableNotes } from "@/src/lib/presets";
 import { getInterestPreview } from "@/lib/interest";
 import { openWhatsApp, openSMS, copyReminder, getReminderModes, type ReminderMode } from "@/lib/reminders";
 import { formatUpdatedAt } from "@/lib/dateUtils";
@@ -93,6 +93,7 @@ export default function ReceivablesPage() {
     const [showPurposePick, setShowPurposePick] = useState(false);
     const [showStatusPick, setShowStatusPick] = useState(false);
     const [showInterestTypePick, setShowInterestTypePick] = useState(false);
+    const [showNotesPick, setShowNotesPick] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -141,6 +142,16 @@ export default function ReceivablesPage() {
         });
         setEditingId(null);
         setInterestPreview(null);
+    };
+
+    const handleQuickPick = (field: string, value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        // Close all sheets
+        setShowRelationshipPick(false);
+        setShowPurposePick(false);
+        setShowStatusPick(false);
+        setShowInterestTypePick(false);
+        setShowNotesPick(false);
     };
 
     // Calculate interest preview when relevant fields change
@@ -769,11 +780,12 @@ export default function ReceivablesPage() {
                                                         <QuickPickPanel
                                                             title="Select Relationship"
                                                             subtitle="Common relationships"
-                                                            items={receivableRelationships.map(rel => ({ value: rel, label: rel }))}
-                                                            onSelect={(value) => {
-                                                                setFormData((p) => ({ ...p, relationship: value }));
-                                                                setShowRelationshipPick(false);
-                                                            }}
+                                                            items={receivableRelationships.map(rel => ({
+                                                                value: rel,
+                                                                label: rel,
+                                                                category: "Relationship"
+                                                            }))}
+                                                            onSelect={(value) => handleQuickPick("relationship", value)}
                                                         />
                                                     </SheetContent>
                                                 </Sheet>
@@ -919,11 +931,12 @@ export default function ReceivablesPage() {
                                                             <QuickPickPanel
                                                                 title="Select Purpose"
                                                                 subtitle="Common purposes for lending"
-                                                                items={receivablePurposes.map(purpose => ({ value: purpose, label: purpose }))}
-                                                                onSelect={(value) => {
-                                                                    setFormData((p) => ({ ...p, purpose: value }));
-                                                                    setShowPurposePick(false);
-                                                                }}
+                                                                items={receivablePurposes.map(purpose => ({
+                                                                    value: purpose,
+                                                                    label: purpose,
+                                                                    category: "Purpose"
+                                                                }))}
+                                                                onSelect={(value) => handleQuickPick("purpose", value)}
                                                             />
                                                         </SheetContent>
                                                     </Sheet>
@@ -962,11 +975,42 @@ export default function ReceivablesPage() {
                                                 </label>
                                             </div>
                                         </div>
-                                        <Input
-                                            label="Notes"
-                                            value={formData.notes}
-                                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                        />
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+                                                <Sheet open={showNotesPick} onOpenChange={setShowNotesPick}>
+                                                    <SheetTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="md:hidden h-6 text-xs gap-1"
+                                                        >
+                                                            <Sparkles className="h-3 w-3" />
+                                                            Quick Select
+                                                        </Button>
+                                                    </SheetTrigger>
+                                                    <SheetContent side="bottom" className="h-[80vh]">
+                                                        <QuickPickPanel
+                                                            title="Select Note"
+                                                            subtitle="Common receivable notes"
+                                                            items={receivableNotes.map(n => ({
+                                                                value: n,
+                                                                label: n,
+                                                                category: "Common Notes"
+                                                            }))}
+                                                            onSelect={(value) => handleQuickPick("notes", value)}
+                                                        />
+                                                    </SheetContent>
+                                                </Sheet>
+                                            </div>
+                                            <textarea
+                                                placeholder="Additional details..."
+                                                value={formData.notes}
+                                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                                className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -977,23 +1021,27 @@ export default function ReceivablesPage() {
                                         items={[
                                             ...receivableRelationships.map(rel => ({ value: rel, label: `👥 ${rel}`, category: 'Relationship' })),
                                             ...receivablePurposes.map(purpose => ({ value: purpose, label: `🏷️ ${purpose}`, category: 'Purpose' })),
-                                            ...receivableStatus.map(status => ({ value: status.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: `📊 ${status}`, category: 'Status' })),
-                                            ...interestTypes.map(type => ({ value: type.toLowerCase(), label: `💰 ${type} Interest`, category: 'Interest' }))
+                                            ...STATUS_OPTIONS.map(s => ({ value: s.value, label: `📊 ${s.label}`, category: 'Status' })),
+                                            ...interestTypes.map(type => ({ value: type.toLowerCase(), label: `💰 ${type} Interest`, category: 'Interest' })),
+                                            ...receivableNotes.map(note => ({ value: note, label: `📝 ${note}`, category: 'Common Notes' })),
                                         ]}
                                         onSelect={(value) => {
                                             const relationshipItem = receivableRelationships.find(rel => rel === value);
                                             const purposeItem = receivablePurposes.find(purpose => purpose === value);
-                                            const statusItem = receivableStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
+                                            const statusItem = STATUS_OPTIONS.find(s => s.value === value);
                                             const interestItem = interestTypes.find(type => type.toLowerCase() === value);
+                                            const noteItem = receivableNotes.find(note => note === value);
 
                                             if (relationshipItem) {
-                                                setFormData(p => ({ ...p, relationship: value }));
+                                                handleQuickPick("relationship", value);
                                             } else if (purposeItem) {
-                                                setFormData(p => ({ ...p, purpose: value }));
+                                                handleQuickPick("purpose", value);
                                             } else if (statusItem) {
-                                                setFormData(p => ({ ...p, status: value }));
+                                                handleQuickPick("status", value);
                                             } else if (interestItem) {
-                                                setFormData(p => ({ ...p, interest_type: value as "simple" | "compound" }));
+                                                handleQuickPick("interest_type", value);
+                                            } else if (noteItem) {
+                                                handleQuickPick("notes", value);
                                             }
                                         }}
                                     />

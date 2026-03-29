@@ -38,7 +38,7 @@ import type { Belonging } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { belongingCategories, belongingStatus, storageLocations } from "@/src/lib/presets";
+import { belongingCategories, belongingStatus, storageLocations, belongingNotes } from "@/src/lib/presets";
 import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
 import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
 import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
@@ -198,6 +198,23 @@ export default function BelongingsPage() {
             }
         } catch (error) {
             console.error("Delete error:", error);
+        }
+    };
+
+    const handleQuickPick = (value: string) => {
+        const categoryItem = belongingCategories.find(cat => cat.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
+        const statusItem = belongingStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
+        const storageItem = storageLocations.find(loc => loc === value);
+        const noteItem = belongingNotes.find(n => n === value);
+
+        if (categoryItem) {
+            setFormData(p => ({ ...p, category: value }));
+        } else if (statusItem) {
+            setFormData(p => ({ ...p, status: value }));
+        } else if (storageItem) {
+            setFormData(p => ({ ...p, storage_location: value }));
+        } else if (noteItem) {
+            setFormData(p => ({ ...p, notes: value }));
         }
     };
 
@@ -852,26 +869,15 @@ export default function BelongingsPage() {
 
                                 <div className="hidden md:block">
                                     <QuickPickPanel
-                                        title="Quick Belonging Selection"
-                                        subtitle="Categories, status, and storage options"
+                                        title={editingId ? "Quick Updates" : "Quick Selection"}
+                                        subtitle="Standardized belonging presets"
                                         items={[
-                                            ...belongingCategories.map(cat => ({ value: cat.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: `📆 ${cat}`, category: 'Category' })),
-                                            ...belongingStatus.map(status => ({ value: status.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: `📊 ${status}`, category: 'Status' })),
-                                            ...storageLocations.map(loc => ({ value: loc, label: `📍 ${loc}`, category: 'Storage' }))
+                                            ...belongingCategories.map(cat => ({ value: cat.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: cat, category: 'Category' })),
+                                            ...belongingStatus.map(status => ({ value: status.toLowerCase().replace(/[^a-z0-9]/g, '_'), label: status, category: 'Status' })),
+                                            ...storageLocations.map(loc => ({ value: loc, label: loc, category: 'Storage' })),
+                                            ...belongingNotes.map(n => ({ value: n, label: n, category: 'Notes' }))
                                         ]}
-                                        onSelect={(value) => {
-                                            const categoryItem = belongingCategories.find(cat => cat.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-                                            const statusItem = belongingStatus.find(status => status.toLowerCase().replace(/[^a-z0-9]/g, '_') === value);
-                                            const storageItem = storageLocations.find(loc => loc === value);
-
-                                            if (categoryItem) {
-                                                setFormData(p => ({ ...p, category: value }));
-                                            } else if (statusItem) {
-                                                setFormData(p => ({ ...p, status: value }));
-                                            } else if (storageItem) {
-                                                setFormData(p => ({ ...p, storage_location: value }));
-                                            }
-                                        }}
+                                        onSelect={handleQuickPick}
                                     />
                                 </div>
                             </div>
