@@ -154,9 +154,7 @@ export async function POST(request: Request) {
                 linked_mobile,
                 net_banking_enabled: !!net_banking_enabled,
                 debit_card_number,
-                notes,
-                city,
-                state
+                notes
             })
             .select()
             .single()
