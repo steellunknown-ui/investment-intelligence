@@ -16,7 +16,7 @@ interface QuickPickPanelProps {
     title: string;
     subtitle?: string;
     items: QuickPickItem[];
-    onSelect: (value: string) => void;
+    onSelect: (value: string, category?: string) => void;
     currentValue?: string;
 }
 
@@ -84,7 +84,7 @@ export function QuickPickPanel({ title, subtitle, items, onSelect, currentValue 
                                     <button
                                         key={`${category}-${index}`}
                                         type="button"
-                                        onClick={() => onSelect(item.value)}
+                                        onClick={() => onSelect(item.value, item.category)}
                                         className={`
                                             flex flex-col items-start p-3 rounded-xl text-left transition-all border
                                             ${currentValue === item.value
