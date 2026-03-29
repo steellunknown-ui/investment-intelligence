@@ -152,7 +152,7 @@ export default function ReceivablesPage() {
         } else if (category === "Status") {
             setFormData(prev => ({ ...prev, status: value }));
         } else if (category === "Interest") {
-            setFormData(prev => ({ ...prev, interest_type: value }));
+            setFormData(prev => ({ ...prev, interest_type: value as "simple" | "compound" }));
         } else if (category === "Common Notes") {
             setFormData(prev => {
                 const currentNotes = prev.notes ? prev.notes.split('\n').filter((n: string) => n.trim()) : [];
