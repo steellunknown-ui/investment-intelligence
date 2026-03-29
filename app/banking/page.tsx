@@ -42,6 +42,10 @@ import { getIFSCDetails } from "@/src/lib/ifsc-service";
 import { IFSC_REGEX, validateBankAccountNumber } from "@/src/lib/financialValidationRules";
 import { Loader2, AlertCircle as AlertCircleIcon } from "lucide-react";
 import { bankNames, bankingNotes } from "@/src/lib/presets";
+import { ViewToggle, type ViewMode } from "@/components/ui/ViewToggle";
+import { EntityDocumentsBadge } from "@/components/ui/EntityDocumentsBadge";
+import { EntityDocumentUpload } from "@/components/ui/EntityDocumentUpload";
+import { GridTable } from "@/components/ui/GridTable";
 
 // Constants
 const ACCOUNT_TYPES = [
