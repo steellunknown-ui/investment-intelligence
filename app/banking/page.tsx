@@ -314,8 +314,10 @@ export default function BankingPage() {
         if (IFSC_REGEX.test(upValue)) {
             setIsFetchingIFSC(true);
             try {
-                const details = await getIFSCDetails(upValue);
-                if (details) {
+                // Use internal API proxy to avoid CORS issues
+                const response = await fetch(`/api/banking/ifsc/${upValue}`);
+                if (response.ok) {
+                    const details = await response.json();
                     const matchedBank = bankNames.find(b => 
                         b.toLowerCase().includes(details.BANK.toLowerCase()) || 
                         details.BANK.toLowerCase().includes(b.split(' (')[0].toLowerCase())
