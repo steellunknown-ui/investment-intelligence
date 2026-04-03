@@ -167,9 +167,9 @@ export function LiabilitiesTrendCard() {
         fetchData();
     }, []);
 
-    const hasData = data.length > 0;
+    const hasData = data.length > 0 && data.some(d => d.value > 0);
 
-    const trend = data.length >= 2 ?
+    const trend = (data.length >= 2 && data[0].value > 0) ?
         ((data[data.length - 1].value - data[0].value) / data[0].value * 100).toFixed(1) : "0";
 
     const generateInsights = () => {
@@ -209,14 +209,13 @@ export function LiabilitiesTrendCard() {
                 ) : (
                     <>
                         <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                Liabilities Trend
-                            </p>
-                            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
-                                ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
-                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                }`}>
-                                {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                            <div className="flex items-center gap-2">
+                                <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
+                                    ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
+                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    }`}>
+                                    {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 mb-2">
