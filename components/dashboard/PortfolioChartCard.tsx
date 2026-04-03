@@ -44,29 +44,44 @@ function formatCurrency(value: number): string {
 }
 
 export function PortfolioChartCard({ totalValue }: PortfolioChartCardProps) {
-    const data = useMemo(() => generateMockData(totalValue), [totalValue]);
+    const hasData = totalValue > 0;
 
-    const firstValue = data[0]?.value ?? 0;
-    const lastValue = data[data.length - 1]?.value ?? 0;
-    const growth = firstValue > 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
-    const isPositive = growth >= 0;
+    if (!hasData) {
+        return (
+            <Card>
+                <CardHeader
+                    title="Portfolio Performance"
+                    description="6-month growth trend"
+                />
+                <CardContent>
+                    <div className="h-64 w-full flex flex-col items-center justify-center text-center px-6">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                            <TrendingUp className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">No performance data</h3>
+                        <p className="text-xs text-slate-500 max-w-[200px] mt-1">
+                            Add holdings to track your portfolio performance over time.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Use totalValue for the current data point
+    const data = [
+        { month: "Today", value: totalValue }
+    ];
 
     return (
         <Card className="overflow-hidden">
             <CardHeader
                 title="Portfolio Performance"
-                description="6-month growth trend"
+                description="Live portfolio value"
                 action={
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium ${isPositive
-                            ? "bg-primary/10 text-primary"
-                            : "bg-red-50 text-red-600"
-                        }`}>
-                        {isPositive ? (
-                            <TrendingUp className="h-4 w-4" />
-                        ) : (
-                            <TrendingDown className="h-4 w-4" />
-                        )}
-                        {isPositive ? "+" : ""}{growth.toFixed(1)}%
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium bg-primary/10 text-primary">
+                        <TrendingUp className="h-4 w-4" />
+                        Active
                     </div>
                 }
             />
@@ -111,7 +126,7 @@ export function PortfolioChartCard({ totalValue }: PortfolioChartCardProps) {
                                                     {formatCurrency(payload[0].value as number)}
                                                 </p>
                                                 <p className="text-xs text-slate-500">
-                                                    {payload[0].payload.month} 2026
+                                                    Current Value
                                                 </p>
                                             </div>
                                         );

@@ -54,28 +54,36 @@ export function AssetsTrendCard() {
                         { name: "Bank", value: Number(result.bankBalanceTotal) || 0 },
                     ].filter(d => d.value > 0);
 
-                    setPieData(data.length > 0 ? data : [
-                        { name: "Assets", value: 120000 },
-                        { name: "Belongings", value: 30000 },
-                    ]);
-                    setTotal(data.reduce((sum, d) => sum + d.value, 0));
+                    const hasAnyValue = data.length > 0;
+                    setPieData(hasAnyValue ? data : []);
+                    setTotal(hasAnyValue ? data.reduce((sum, d) => sum + d.value, 0) : 0);
                 }
             } catch {
-                setPieData([
-                    { name: "Assets", value: 120000 },
-                    { name: "Belongings", value: 30000 },
-                ]);
-                setTotal(150000);
+                setPieData([]);
+                setTotal(0);
             }
         }
         fetchData();
     }, []);
+
+    const hasData = pieData.length > 0;
 
     return (
         <MotionCard className="vault-card p-4" delay={0.1}>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                 Assets Breakdown
             </p>
+            {!hasData ? (
+                <div className="h-[140px] w-full flex flex-col items-center justify-center text-center">
+                    <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                        <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                        </svg>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium">No assets recorded</p>
+                </div>
+            ) : (
             <div className="h-[140px] w-full flex items-center">
                 <div className="w-1/2 h-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -126,6 +134,7 @@ export function AssetsTrendCard() {
                     </div>
                 </div>
             </div>
+            )}
         </MotionCard>
     );
 }
@@ -146,32 +155,19 @@ export function LiabilitiesTrendCard() {
                         label: new Date(s.snapshot_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
                         value: Number(s.total_liabilities) || 0,
                     }));
-                    const finalData = chartData.length > 0 ? chartData : [
-                        { label: "Jan", value: 85000 },
-                        { label: "Feb", value: 80000 },
-                        { label: "Mar", value: 75000 },
-                        { label: "Apr", value: 70000 },
-                        { label: "May", value: 65000 },
-                        { label: "Jun", value: 60000 },
-                    ];
+                    const finalData = chartData;
                     setData(finalData);
-                    setLatestValue(finalData[finalData.length - 1]?.value || 0);
+                    setLatestValue(finalData.length > 0 ? finalData[finalData.length - 1]?.value : 0);
                 }
             } catch {
-                const fallback = [
-                    { label: "Jan", value: 85000 },
-                    { label: "Feb", value: 80000 },
-                    { label: "Mar", value: 75000 },
-                    { label: "Apr", value: 70000 },
-                    { label: "May", value: 65000 },
-                    { label: "Jun", value: 60000 },
-                ];
-                setData(fallback);
-                setLatestValue(60000);
+                setData([]);
+                setLatestValue(0);
             }
         }
         fetchData();
     }, []);
+
+    const hasData = data.length > 0;
 
     const trend = data.length >= 2 ?
         ((data[data.length - 1].value - data[0].value) / data[0].value * 100).toFixed(1) : "0";
@@ -198,50 +194,66 @@ export function LiabilitiesTrendCard() {
                     if (e.detail === 2) setIsModalOpen(true);
                 }}
             >
-                <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Liabilities Trend
-                    </p>
-                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
-                        ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        }`}>
-                        {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Liabilities Trend
+                </p>
+                {!hasData ? (
+                    <div className="h-[110px] w-full flex flex-col items-center justify-center text-center">
+                        <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                            <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                            </svg>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground font-medium">No liability data yet</p>
                     </div>
-                </div>
-                <div className="flex items-center gap-3 mb-2">
-                    <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
-                    <span className="text-[10px] text-muted-foreground">current</span>
-                </div>
-                <div className="h-[90px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                            <XAxis
-                                dataKey="label"
-                                tick={{ fontSize: 9, fill: "#94a3b8" }}
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={LIABILITY_COLORS[index % LIABILITY_COLORS.length]} />
-                                ))}
-                            </Bar>
-                            <Tooltip
-                                formatter={(value) => [formatCompact(Number(value)), "Liabilities"]}
-                                contentStyle={{
-                                    backgroundColor: "#fff",
-                                    border: "1px solid #e2e8f0",
-                                    borderRadius: "8px",
-                                    fontSize: "11px",
-                                    color: "#1e293b",
-                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                                }}
-                                labelStyle={{ color: "#64748b", fontWeight: 500 }}
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                Liabilities Trend
+                            </p>
+                            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
+                                ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                }`}>
+                                {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
+                            <span className="text-[10px] text-muted-foreground">current</span>
+                        </div>
+                        <div className="h-[90px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                                    <XAxis
+                                        dataKey="label"
+                                        tick={{ fontSize: 9, fill: "#94a3b8" }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                        {data.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={LIABILITY_COLORS[index % LIABILITY_COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                    <Tooltip
+                                        formatter={(value) => [formatCompact(Number(value)), "Liabilities"]}
+                                        contentStyle={{
+                                            backgroundColor: "#fff",
+                                            border: "1px solid #e2e8f0",
+                                            borderRadius: "8px",
+                                            fontSize: "11px",
+                                            color: "#1e293b",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                                        }}
+                                        labelStyle={{ color: "#64748b", fontWeight: 500 }}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </>
+                )}
             </MotionCard>
 
             <ChartExplanationModal
@@ -272,22 +284,16 @@ export function NetWorthTrendCard() {
                         { name: "Receivables", value: Number(result.receivablesOutstandingTotal) || 0 },
                     ].filter(d => d.value > 0);
 
-                    setData(pieData.length > 0 ? pieData : [
-                        { name: "Bank", value: 50000 },
-                        { name: "Assets", value: 120000 },
-                        { name: "Belongings", value: 30000 },
-                    ]);
+                    setData(pieData);
                 }
             } catch {
-                setData([
-                    { name: "Bank", value: 50000 },
-                    { name: "Assets", value: 120000 },
-                    { name: "Belongings", value: 30000 },
-                ]);
+                setData([]);
             }
         }
         fetchData();
     }, []);
+
+    const hasData = data.length > 0;
 
     const total = data.reduce((sum, d) => sum + d.value, 0);
 
@@ -316,6 +322,17 @@ export function NetWorthTrendCard() {
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                     Net Worth Breakdown
                 </p>
+                {!hasData ? (
+                    <div className="h-[140px] w-full flex flex-col items-center justify-center text-center">
+                        <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                            <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                            </svg>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground font-medium">No net worth data</p>
+                    </div>
+                ) : (
                 <div className="h-[140px] w-full flex items-center">
                     <div className="w-1/2 h-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -366,6 +383,7 @@ export function NetWorthTrendCard() {
                         </div>
                     </div>
                 </div>
+                )}
             </MotionCard>
 
             <ChartExplanationModal

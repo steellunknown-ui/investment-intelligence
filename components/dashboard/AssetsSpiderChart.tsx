@@ -28,6 +28,7 @@ function formatCompact(value: number): string {
 
 export function AssetsSpiderChart() {
     const [data, setData] = useState<ChartDataPoint[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
@@ -43,22 +44,22 @@ export function AssetsSpiderChart() {
                         { subject: "Bank", value: Number(result.bankBalanceTotal) || 0 },
                     ];
 
-                    const maxValue = Math.max(...rawData.map(d => d.value)) || 100000;
-
-                    const chartData = rawData.map(d => ({
-                        ...d,
-                        fullMark: maxValue
-                    }));
-
-                    setData(chartData);
+                    const hasAnyValue = rawData.some(d => d.value > 0);
+                    if (hasAnyValue) {
+                        const maxValue = Math.max(...rawData.map(d => d.value)) || 100000;
+                        const chartData = rawData.map(d => ({
+                            ...d,
+                            fullMark: maxValue
+                        }));
+                        setData(chartData);
+                    } else {
+                        setData([]);
+                    }
                 }
             } catch {
-                setData([
-                    { subject: "Real Assets", value: 120000, fullMark: 150000 },
-                    { subject: "Belongings", value: 30000, fullMark: 150000 },
-                    { subject: "Receivables", value: 0, fullMark: 150000 },
-                    { subject: "Bank", value: 0, fullMark: 150000 },
-                ]);
+                setData([]);
+            } finally {
+                setLoading(false);
             }
         }
         fetchData();
@@ -82,13 +83,15 @@ export function AssetsSpiderChart() {
         return insights.length > 0 ? insights : ["No significant asset data to analyze yet."];
     };
 
+    const hasData = data.length > 0 && data.some(d => d.value > 0);
+
     return (
         <>
             <MotionCard
                 className="vault-card p-4 cursor-help select-none"
                 delay={0.1}
                 onClick={(e) => {
-                    if (e.detail === 2) setIsModalOpen(true);
+                    if (e.detail === 2 && hasData) setIsModalOpen(true);
                 }}
             >
                 <div className="flex items-center justify-between mb-2">
@@ -100,6 +103,22 @@ export function AssetsSpiderChart() {
                     </span>
                 </div>
 
+                {loading ? (
+                    <div className="h-[140px] w-full flex items-center justify-center">
+                        <div className="h-20 w-20 rounded-full border-2 border-slate-200 dark:border-slate-700 animate-pulse" />
+                    </div>
+                ) : !hasData ? (
+                    <div className="h-[140px] w-full flex flex-col items-center justify-center text-center">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                            </svg>
+                        </div>
+                        <p className="text-xs text-muted-foreground">No asset data yet</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Add assets to see breakdown</p>
+                    </div>
+                ) : (
                 <div className="h-[140px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
@@ -131,6 +150,7 @@ export function AssetsSpiderChart() {
                         </RadarChart>
                     </ResponsiveContainer>
                 </div>
+                )}
             </MotionCard>
 
             <ChartExplanationModal
