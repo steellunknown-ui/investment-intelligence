@@ -147,6 +147,11 @@ export function LiabilitiesTrendCard() {
     useEffect(() => {
         async function fetchData() {
             try {
+                // First, refresh today's snapshot with current live data
+                // This ensures deleted items are reflected immediately
+                await fetch("/api/dashboard/net-worth-history", { method: "POST" });
+
+                // Then fetch the updated history
                 const res = await fetch("/api/dashboard/net-worth-history");
                 if (res.ok) {
                     const result = await res.json();
