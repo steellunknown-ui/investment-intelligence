@@ -171,14 +171,17 @@ export default function ActivityPage() {
                   <input
                     type="number"
                     min="20"
-                    max="365"
+                    max="100"
                     value={inactivityDays}
-                    onChange={(e) => setInactivityDays(e.target.value)}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(20, Number(e.target.value)));
+                      setInactivityDays(String(val));
+                    }}
                     disabled={!enabled}
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 bg-background"
                     placeholder="e.g. 80"
                   />
-                  <p className="text-xs text-neutral-500">Minimum 20 days</p>
+                  <p className="text-xs text-neutral-500">Min 20 days — Max 100 days</p>
                 </div>
 
                 {/* Dynamic Stage Preview */}

@@ -74,7 +74,7 @@ export async function PUT(request: Request) {
             .from('inactivity_config')
             .upsert({
                 user_id: user.id,
-                inactivity_days: inactivity_days ?? 15,
+                inactivity_days: Math.min(100, Math.max(20, inactivity_days ?? 80)),
                 enabled: enabled ?? true,
                 updated_at: new Date().toISOString(),
             }, {
