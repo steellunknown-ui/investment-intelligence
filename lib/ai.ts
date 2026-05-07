@@ -68,7 +68,8 @@ export async function callOpenRouter(
         }
 
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
+        const message = data.choices?.[0]?.message;
+        const content = message?.content;
 
         if (!content) {
             throw new Error('No content in API response');

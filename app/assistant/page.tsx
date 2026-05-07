@@ -161,10 +161,11 @@ export default function AssistantPage() {
                                                 {msg.content}
                                             </p>
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-1 px-1">
-                                            {msg.timestamp.toLocaleTimeString([], {
+                                        <p className="text-xs text-slate-500 mt-1 px-1" suppressHydrationWarning>
+                                            {msg.timestamp.toLocaleTimeString("en-IN", {
                                                 hour: "2-digit",
                                                 minute: "2-digit",
+                                                hour12: true,
                                             })}
                                         </p>
                                     </div>
