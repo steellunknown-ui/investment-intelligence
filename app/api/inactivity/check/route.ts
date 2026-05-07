@@ -109,24 +109,31 @@ export async function GET(request: Request) {
                 inactiveTime = Math.floor(diffMs / (1000 * 60 * 60 * 24))
             }
 
-            // Check per-user custom settings
+        // Check per-user custom settings from inactivity_config
             let userStages = { s1: stage1, s2: stage2, s3: stage3, s4: stage4 }
 
             const { data: userSettings } = await supabase
-                .from('user_inactivity_settings')
-                .select('*')
+                .from('inactivity_config')
+                .select('inactivity_days, enabled')
                 .eq('user_id', tracker.user_id)
                 .single()
 
-            if (userSettings?.use_custom && userSettings.total_period) {
-                // Auto-divide into 4 equal stages
-                const quarter = Math.floor(userSettings.total_period / 4)
+            if (userSettings?.enabled && userSettings.inactivity_days >= 20) {
+                const total = userSettings.inactivity_days;
+                const stages = Math.floor(total / 20);
+                const interval = Math.floor(total / stages);
+                // Build dynamic stages array
+                const stageValues = Array.from({ length: stages }, (_, i) => interval * (i + 1));
                 userStages = {
-                    s1: quarter,
-                    s2: quarter * 2,
-                    s3: quarter * 3,
-                    s4: userSettings.total_period,
+                    s1: stageValues[0],
+                    s2: stageValues[Math.floor(stages * 0.5)] ?? stageValues[stageValues.length - 1],
+                    s3: stageValues[Math.floor(stages * 0.75)] ?? stageValues[stageValues.length - 1],
+                    s4: stageValues[stageValues.length - 1],
                 }
+            } else if (userSettings && !userSettings.enabled) {
+                // Skip this user — inactivity detection disabled
+                results.push({ user_id: tracker.user_id, inactive_time: inactiveTime, unit: timeUnit, stage_triggered: null })
+                continue;
             }
 
             let stageTriggered: string | null = null

@@ -18,12 +18,6 @@ import {
 } from "lucide-react";
 import type { Alert, InactivityConfig } from "@/lib/types";
 
-const INACTIVITY_DAYS_OPTIONS = [
-  { value: "15", label: "15 days" },
-  { value: "30", label: "30 days" },
-  { value: "45", label: "45 days" },
-];
-
 export default function ActivityPage() {
   const [config, setConfig] = useState<InactivityConfig | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -32,7 +26,7 @@ export default function ActivityPage() {
   const [saving, setSaving] = useState(false);
 
   // Form state
-  const [inactivityDays, setInactivityDays] = useState("15");
+  const [inactivityDays, setInactivityDays] = useState("80");
   const [enabled, setEnabled] = useState(true);
 
   const fetchConfig = useCallback(async () => {
@@ -171,14 +165,44 @@ export default function ActivityPage() {
                   />
                 </div>
 
-                {/* Days Selection */}
-                <Select
-                  label="Inactivity Period"
-                  options={INACTIVITY_DAYS_OPTIONS}
-                  value={inactivityDays}
-                  onChange={(e) => setInactivityDays(e.target.value)}
-                  disabled={!enabled}
-                />
+                {/* Days Input */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-neutral-700">Inactivity Period (days)</label>
+                  <input
+                    type="number"
+                    min="20"
+                    max="365"
+                    value={inactivityDays}
+                    onChange={(e) => setInactivityDays(e.target.value)}
+                    disabled={!enabled}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 bg-background"
+                    placeholder="e.g. 80"
+                  />
+                  <p className="text-xs text-neutral-500">Minimum 20 days</p>
+                </div>
+
+                {/* Dynamic Stage Preview */}
+                {enabled && Number(inactivityDays) >= 20 && (() => {
+                  const total = Number(inactivityDays);
+                  const stages = Math.floor(total / 20);
+                  const interval = Math.floor(total / stages);
+                  return (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-border space-y-2">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Auto-divided stages ({stages} reminders):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: stages }).map((_, i) => (
+                          <span key={i} className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            i === stages - 1
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          }`}>
+                            Day {interval * (i + 1)}{i === stages - 1 ? ' 🔓 Nominee Access' : ' 📧 Reminder'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Status Indicator */}
                 {config && (
