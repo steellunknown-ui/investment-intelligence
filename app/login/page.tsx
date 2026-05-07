@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
@@ -16,20 +16,23 @@ import {
     Sparkles
 } from "lucide-react";
 
+function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        if (searchParams.get('reason') === 'timeout') {
+            setError('Your session has expired after 12 hours. Please sign in again.');
+        }
+    }, [searchParams, setError]);
+    return null;
+}
+
 export default function LoginPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (searchParams.get('reason') === 'timeout') {
-            setError('Your session has expired after 12 hours. Please sign in again.');
-        }
-    }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,6 +81,9 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex">
+            <Suspense fallback={null}>
+                <TimeoutMessage setError={setError} />
+            </Suspense>
             {/* Left Panel - Branding */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
                 {/* Subtle emerald glow */}
