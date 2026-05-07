@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
     try {
         const supabase = createSupabaseServerClient()

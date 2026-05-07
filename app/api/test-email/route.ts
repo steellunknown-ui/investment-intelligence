@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { sendEmail } from '@/src/lib/resend'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const supabase = createSupabaseServerClient()
