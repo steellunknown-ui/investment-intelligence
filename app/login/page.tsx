@@ -69,110 +69,26 @@ export default function LoginPage() {
         try {
             const supabase = createSupabaseBrowserClient();
             const PROD_URL = 'https://investment-intellegince.vercel.app';
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-            if (isCapacitorNative()) {
-                // ── CAPACITOR (Android/iOS) ──────────────────────────────────
-                // Google blocks OAuth inside WebViews. We must:
-                // 1. Open OAuth URL in Chrome Custom Tabs via @capacitor/browser
-                // 2. Redirect back to the app using a deep link
-                // 3. Exchange the code inside the WebView context
-                const { Browser } = await import('@capacitor/browser');
+            // Always redirect to the production callback URL
+            // (works in WebView, desktop browser, and mobile browser)
+            const redirectTo = origin.includes('localhost')
+                ? `${origin}/auth/callback`
+                : `${PROD_URL}/auth/callback`;
 
-                const { data, error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: `${PROD_URL}/auth/callback`,
-                        skipBrowserRedirect: true, // We handle the redirect manually
-                        queryParams: {
-                            access_type: 'offline',
-                            prompt: 'consent',
-                        },
-                    },
-                });
-
-                if (error || !data.url) {
-                    setError('Failed to start Google sign-in');
-                    return;
-                }
-
-                // Open in Chrome Custom Tabs (proper OAuth browser, not WebView)
-                await Browser.open({
-                    url: data.url,
-                    windowName: '_self',
-                });
-            } else {
-                // ── WEB BROWSER (Desktop/Mobile web) ─────────────────────────
-                const origin = window.location.origin;
-                const redirectTo = origin.includes('localhost')
-                    ? `${origin}/auth/callback`
-                    : `${PROD_URL}/auth/callback`;
-
-                await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo,
-                        skipBrowserRedirect: false,
-                    },
-                });
-            }
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo,
+                    skipBrowserRedirect: false,
+                },
+            });
         } catch (err) {
             console.error('Google login error:', err);
             setError('Failed to initialize Google login');
         }
     };
-
-    // ── Deep link listener for Capacitor OAuth callback ───────────────────────
-    // When Chrome Custom Tabs redirects back to the app after Google auth,
-    // this listener catches the URL and exchanges the code for a session.
-    useEffect(() => {
-        let appListener: any = null;
-
-        const setupDeepLinkListener = async () => {
-            if (!isCapacitorNative()) return;
-
-            try {
-                const { App } = await import('@capacitor/app');
-                const { Browser } = await import('@capacitor/browser');
-
-                appListener = await App.addListener('appUrlOpen', async ({ url }) => {
-                    if (!url.includes('/auth/callback')) return;
-
-                    try {
-                        // Close the Chrome Custom Tabs browser
-                        await Browser.close();
-
-                        const supabase = createSupabaseBrowserClient();
-                        const urlObj = new URL(url);
-                        const code = urlObj.searchParams.get('code');
-
-                        if (code) {
-                            const { error } = await supabase.auth.exchangeCodeForSession(code);
-                            if (!error) {
-                                router.push('/dashboard');
-                                router.refresh();
-                            } else {
-                                setError('Sign-in failed. Please try again.');
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Deep link handling error:', e);
-                        setError('Sign-in failed. Please try again.');
-                    }
-                });
-            } catch (e) {
-                console.error('Failed to setup deep link listener:', e);
-            }
-        };
-
-        setupDeepLinkListener();
-
-        // Cleanup listener on unmount
-        return () => {
-            if (appListener) {
-                appListener.remove();
-            }
-        };
-    }, [router]);
 
     return (
         <div className="min-h-screen flex">
