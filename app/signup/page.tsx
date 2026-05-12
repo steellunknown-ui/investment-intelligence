@@ -68,18 +68,38 @@ export default function SignupPage() {
     const handleGoogleLogin = async () => {
         try {
             const supabase = createSupabaseBrowserClient();
-            const origin = window.location.origin;
-            const isLocal = origin.includes('localhost');
-            const redirectBase = isLocal ? origin : 'https://investment-intellegince.vercel.app';
+            const PROD_URL = 'https://investment-intellegince.vercel.app';
 
-            await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: {
-                    redirectTo: `${redirectBase}/auth/callback`,
-                },
-            });
-        } catch (error) {
-            console.error("Google login error:", error);
+            // Detect Capacitor native environment
+            const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+
+            if (isNative) {
+                const { Browser } = await import('@capacitor/browser');
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${PROD_URL}/auth/callback`,
+                        skipBrowserRedirect: true,
+                    },
+                });
+                if (error || !data.url) {
+                    setError('Failed to start Google sign-up');
+                    return;
+                }
+                await Browser.open({ url: data.url, windowName: '_self' });
+            } else {
+                const origin = window.location.origin;
+                const redirectTo = origin.includes('localhost')
+                    ? `${origin}/auth/callback`
+                    : `${PROD_URL}/auth/callback`;
+
+                await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo },
+                });
+            }
+        } catch (err) {
+            console.error("Google login error:", err);
             setError("Failed to initialize Google login");
         }
     };

@@ -1,6 +1,6 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { trackLoginActivity } from "@/src/lib/login-tracker";
 
 export const dynamic = 'force-dynamic';
@@ -9,118 +9,116 @@ export async function GET(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://investment-intellegince.vercel.app";
 
     try {
-        // Step 1: Parse URL
-        let code: string | null = null;
-        let next = "/dashboard";
-
-        try {
-            const { searchParams } = new URL(request.url);
-            code = searchParams.get("code");
-            next = searchParams.get("next") ?? "/dashboard";
-        } catch (urlError) {
-            console.error('URL parsing error:', urlError);
-            return NextResponse.redirect(`${siteUrl}/login?error=url_parse_failed`);
-        }
+        const { searchParams } = new URL(request.url);
+        const code = searchParams.get("code");
+        const next = searchParams.get("next") ?? "/dashboard";
 
         if (!code) {
             console.error('No auth code provided');
             return NextResponse.redirect(`${siteUrl}/login?error=no_code`);
         }
 
-        // Step 2: Get cookies
-        let cookieStore;
-        try {
-            cookieStore = cookies();
-        } catch (cookieError) {
-            console.error('Cookie access error:', cookieError);
-            return NextResponse.redirect(`${siteUrl}/login?error=cookie_access_failed`);
-        }
-
-        // Step 3: Check environment variables
         if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
             console.error('Missing Supabase environment variables');
             return NextResponse.redirect(`${siteUrl}/login?error=missing_env_vars`);
         }
 
-        // Step 4: Create Supabase client
-        let supabase;
-        try {
-            supabase = createServerClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-                {
-                    cookies: {
-                        get(name: string) {
-                            return cookieStore.get(name)?.value;
-                        },
-                        set(name: string, value: string, options: CookieOptions) {
-                            cookieStore.set({ name, value, ...options });
-                        },
-                        remove(name: string, options: CookieOptions) {
-                            cookieStore.delete({ name, ...options });
-                        },
-                    },
-                }
-            );
-        } catch (clientError) {
-            console.error('Supabase client creation error:', clientError);
-            return NextResponse.redirect(`${siteUrl}/login?error=client_creation_failed`);
-        }
+        // ──────────────────────────────────────────────────────────────────
+        // KEY FIX: Collect cookies that Supabase sets during code exchange,
+        // then write them DIRECTLY onto the redirect NextResponse.
+        //
+        // Previously, we used cookies().set() which writes to a different
+        // response context that does NOT reliably merge with the returned
+        // NextResponse.redirect(). This caused the session tokens to be
+        // silently lost, so the user arrives at /dashboard with no session
+        // and gets bounced right back to /login.
+        // ──────────────────────────────────────────────────────────────────
 
-        // Step 5: Exchange code for session
-        let data, error;
-        try {
-            const result = await supabase.auth.exchangeCodeForSession(code);
-            data = result.data;
-            error = result.error;
-        } catch (exchangeError) {
-            console.error('Code exchange exception:', exchangeError);
-            return NextResponse.redirect(`${siteUrl}/login?error=exchange_exception`);
-        }
+        const cookieStore = cookies();
+
+        // Accumulate all cookies Supabase wants to set during exchangeCodeForSession
+        const cookiesToSet: { name: string; value: string; options: any }[] = [];
+
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            {
+                cookies: {
+                    getAll() {
+                        return cookieStore.getAll();
+                    },
+                    setAll(cookies) {
+                        cookies.forEach(({ name, value, options }) => {
+                            cookiesToSet.push({ name, value, options });
+                        });
+
+                        // Also try to set via cookieStore as fallback
+                        try {
+                            cookies.forEach(({ name, value, options }) => {
+                                cookieStore.set(name, value, options);
+                            });
+                        } catch {
+                            // Will be set on response below
+                        }
+                    },
+                },
+            }
+        );
+
+        // Exchange code for session — this triggers setAll() above
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
             console.error('Auth exchange error:', error.message);
             return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
         }
 
-        if (data?.user) {
-            // Step 6: Upsert profile (non-critical)
-            try {
-                const metadata = data.user.user_metadata || {};
-                const full_name = metadata.full_name || metadata.name;
-                const avatar_url = metadata.avatar_url || metadata.picture;
-                const email = metadata.email || data.user.email;
-
-                await supabase
-                    .from("profiles")
-                    .upsert({
-                        id: data.user.id,
-                        full_name: full_name || null,
-                        avatar_url: avatar_url || null,
-                        email: email,
-                        updated_at: new Date().toISOString(),
-                    }, { onConflict: "id" });
-            } catch (profileErr) {
-                console.error('Profile upsert failed (non-critical):', profileErr);
-            }
-
-            // Step 7: Track login for inactivity monitoring (non-critical)
-            try {
-                await trackLoginActivity(supabase, data.user.id);
-            } catch (trackErr) {
-                console.error('Login tracking failed (non-critical):', trackErr);
-            }
-
-            console.log('Auth successful, redirecting to:', `${siteUrl}${next}`);
-            return NextResponse.redirect(`${siteUrl}${next}`);
+        if (!data?.user) {
+            console.error('No user data after auth');
+            return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
         }
 
-        console.error('No user data after auth');
-        return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
+        // Create the redirect response
+        const redirectUrl = `${siteUrl}${next}`;
+        const response = NextResponse.redirect(redirectUrl);
+
+        // CRITICAL: Write ALL accumulated session cookies onto this response
+        for (const cookie of cookiesToSet) {
+            response.cookies.set(cookie.name, cookie.value, cookie.options);
+        }
+
+        // Non-critical: Upsert profile
+        try {
+            const metadata = data.user.user_metadata || {};
+            const full_name = metadata.full_name || metadata.name;
+            const avatar_url = metadata.avatar_url || metadata.picture;
+            const email = metadata.email || data.user.email;
+
+            await supabase
+                .from("profiles")
+                .upsert({
+                    id: data.user.id,
+                    full_name: full_name || null,
+                    avatar_url: avatar_url || null,
+                    email: email,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: "id" });
+        } catch (profileErr) {
+            console.error('Profile upsert failed (non-critical):', profileErr);
+        }
+
+        // Non-critical: Track login
+        try {
+            await trackLoginActivity(supabase, data.user.id);
+        } catch (trackErr) {
+            console.error('Login tracking failed (non-critical):', trackErr);
+        }
+
+        console.log('Auth successful, redirecting to:', redirectUrl, 'cookies set:', cookiesToSet.length);
+        return response;
 
     } catch (error) {
         console.error('Auth callback fatal error:', error);
         return NextResponse.redirect(`${siteUrl}/login?error=fatal_error`);
     }
 }
-
