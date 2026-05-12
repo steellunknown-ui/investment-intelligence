@@ -19,6 +19,7 @@ import {
   Gem,
   FileText,
   Sparkles,
+  Home,
   UsersRound
 } from "lucide-react";
 import {
@@ -29,9 +30,10 @@ import {
 } from "@/components/ui/Sheet";
 
 // Navigation order:
-// Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
+// Home (desktop only), Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
 // Holdings, Documents, AI Assistant, Family Hub, Nominee, Activity & Alerts, Settings
 const navigation = [
+  { name: "Home", href: "/", icon: Home, hideOnMobile: true },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
@@ -54,12 +56,13 @@ interface SidebarProps {
 }
 
 // Navigation content - shared between desktop and mobile
-function NavigationContent({ expanded, onClose }: { expanded?: boolean; onClose?: () => void }) {
+function NavigationContent({ expanded, onClose, isMobile }: { expanded?: boolean; onClose?: () => void; isMobile?: boolean }) {
   const pathname = usePathname();
+  const items = isMobile ? navigation.filter(item => !item.hideOnMobile) : navigation;
 
   return (
     <nav className={cn("flex flex-col gap-0.5", expanded ? "p-3" : "p-2")}>
-      {navigation.map((item) => {
+      {items.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
@@ -219,9 +222,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Logo collapsed={false} />
           </SheetHeader>
 
-          {/* Navigation - Always expanded on mobile */}
+          {/* Navigation - Always expanded on mobile, Home hidden */}
           <div className="relative h-[calc(100vh-4rem)] overflow-y-auto">
-            <NavigationContent expanded={true} onClose={onClose} />
+            <NavigationContent expanded={true} onClose={onClose} isMobile={true} />
 
             {/* Footer */}
             <SidebarFooter collapsed={false} />
