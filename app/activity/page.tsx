@@ -131,15 +131,15 @@ export default function ActivityPage() {
       title="Activity & Alerts"
       description="Monitor your account activity and configure alerts"
     >
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column - Inactivity Configuration */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2">
+        {/* Inactivity Configuration */}
         <Card>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
                 Inactivity Detection
               </h3>
-              <p className="text-sm text-neutral-500 mt-1">
+              <p className="text-xs text-neutral-500 mt-1">
                 Configure when to notify your nominees about extended inactivity.
               </p>
             </div>
@@ -154,8 +154,8 @@ export default function ActivityPage() {
                 {/* Enable/Disable Toggle */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-neutral-900">Enable Detection</p>
-                    <p className="text-sm text-neutral-500">
+                    <p className="font-medium text-neutral-900 dark:text-white text-sm">Enable Detection</p>
+                    <p className="text-xs text-neutral-500">
                       Notify nominees after period of inactivity
                     </p>
                   </div>
@@ -166,8 +166,8 @@ export default function ActivityPage() {
                 </div>
 
                 {/* Days Input */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-700">Inactivity Period (days)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Inactivity Period (days)</label>
                   <input
                     type="number"
                     min="20"
@@ -178,7 +178,7 @@ export default function ActivityPage() {
                       setInactivityDays(String(val));
                     }}
                     disabled={!enabled}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 bg-background"
+                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 bg-background"
                     placeholder="e.g. 80"
                   />
                   <p className="text-xs text-neutral-500">Min 20 days — Max 100 days</p>
@@ -192,14 +192,14 @@ export default function ActivityPage() {
                   return (
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-border space-y-2">
                       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Auto-divided stages ({stages} reminders):</p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {Array.from({ length: stages }).map((_, i) => (
                           <span key={i} className={`text-xs px-2 py-1 rounded-full font-medium ${
                             i === stages - 1
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                               : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                           }`}>
-                            Day {interval * (i + 1)}{i === stages - 1 ? ' 🔓 Nominee Access' : ' 📧 Reminder'}
+                            Day {interval * (i + 1)}{i === stages - 1 ? ' 🔓' : ' 📧'}
                           </span>
                         ))}
                       </div>
@@ -209,10 +209,10 @@ export default function ActivityPage() {
 
                 {/* Status Indicator */}
                 {config && (
-                  <div className="p-4 bg-neutral-50 rounded-xl">
+                  <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-neutral-700">
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <span className="text-xs text-neutral-700 dark:text-neutral-300">
                         Last activity:{" "}
                         {config.last_activity_at
                           ? new Date(config.last_activity_at).toLocaleDateString()
@@ -222,12 +222,7 @@ export default function ActivityPage() {
                   </div>
                 )}
 
-                {/* Save Button */}
-                <Button
-                  onClick={handleSaveConfig}
-                  disabled={saving}
-                  className="w-full"
-                >
+                <Button onClick={handleSaveConfig} disabled={saving} className="w-full">
                   {saving ? "Saving..." : "Save Configuration"}
                 </Button>
               </div>
