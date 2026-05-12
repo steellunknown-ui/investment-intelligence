@@ -206,8 +206,14 @@ export default function HomePage() {
   // Wait for check before rendering anything
   if (!checked) return null;
 
-  if (isMobileApp && !onboardingDone) {
-    return <OnboardingSlides />;
+  // Mobile app — show onboarding or go to login directly
+  if (isMobileApp) {
+    if (!onboardingDone) {
+      return <OnboardingSlides />;
+    } else {
+      router.replace("/login");
+      return null;
+    }
   }
   return (
     <div className="min-h-screen bg-background text-foreground">
