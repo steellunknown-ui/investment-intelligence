@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/marketing/Navbar";
 import { Footer } from "@/components/marketing/Footer";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
+import { OnboardingSlides } from "@/components/OnboardingSlides";
 import {
   TrendingUp,
   Shield,
@@ -189,6 +191,19 @@ const staggerContainer = {
 
 export default function HomePage() {
   const router = useRouter();
+  const [isMobileApp, setIsMobileApp] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(true);
+
+  useEffect(() => {
+    const isCapacitor = !!(window as any).Capacitor;
+    const done = localStorage.getItem("onboarding_done") === "true";
+    setIsMobileApp(isCapacitor);
+    setOnboardingDone(done);
+  }, []);
+
+  if (isMobileApp && !onboardingDone) {
+    return <OnboardingSlides />;
+  }
   
   return (
     <div className="min-h-screen bg-background text-foreground">
