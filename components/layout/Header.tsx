@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Search, User, Menu, LogOut, Home, Settings, Info, Shield, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Bell, Search, User, Menu, LogOut, Home, Settings, Info, Shield, Clock, AlertTriangle, CheckCircle, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
@@ -188,13 +188,13 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
-        {/* Custom Action - hidden on mobile */}
+        {/* Custom Action - desktop only */}
         {action && <div className="hidden sm:block mr-1">{action}</div>}
 
         {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* Global Smart Search - hidden on mobile */}
+        {/* Global Smart Search - desktop only */}
         <form onSubmit={handleSearch} className="hidden lg:flex relative items-center ml-2 mr-2 group">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input
@@ -205,6 +205,35 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
             className="h-9 w-48 lg:w-64 rounded-full border border-border bg-background pr-4 pl-9 text-sm outline-none transition-all placeholder:text-slate-400 focus:w-64 lg:focus:w-80 focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </form>
+
+        {/* Mobile 3-dot menu */}
+        {(action) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {action && (
+                <div className="px-2 py-1.5">{action}</div>
+              )}
+              <DropdownMenuSeparator />
+              <form onSubmit={handleSearch} className="px-2 py-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 w-full rounded-lg border border-border bg-background pr-3 pl-8 text-xs outline-none focus:border-primary"
+                  />
+                </div>
+              </form>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Notifications */}
         <DropdownMenu>
