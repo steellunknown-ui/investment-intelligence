@@ -19,7 +19,6 @@ import {
   Gem,
   FileText,
   Sparkles,
-  Home,
   UsersRound
 } from "lucide-react";
 import {
@@ -30,10 +29,9 @@ import {
 } from "@/components/ui/Sheet";
 
 // Navigation order:
-// Home, Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
+// Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
 // Holdings, Documents, AI Assistant, Family Hub, Nominee, Activity & Alerts, Settings
 const navigation = [
-  { name: "Home", href: "/", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
