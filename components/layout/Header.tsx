@@ -119,6 +119,9 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
   const handleLogout = async () => {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
+    // Note: onboarding_done is intentionally NOT cleared.
+    // Onboarding is a first-install experience only.
+    // After logout, users go straight to /login (not onboarding).
     router.push("/login");
     router.refresh();
   };
