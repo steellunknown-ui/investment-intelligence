@@ -169,44 +169,37 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-slate-900/80 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 sm:px-6 lg:px-8 w-full">
+      <div className="flex items-center gap-2 min-w-0">
         <Button
           variant="ghost"
           size="icon"
           onClick={onMenuClick}
-          className="lg:hidden h-9 w-9"
+          className="lg:hidden h-8 w-8 flex-shrink-0"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
         </Button>
-        <div className="space-y-0.5">
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-base font-semibold tracking-tight text-foreground truncate">{title}</h1>
           {description && (
-            <p className="text-[13px] text-muted-foreground hidden sm:block">{description}</p>
+            <p className="text-[11px] text-muted-foreground hidden sm:block truncate">{description}</p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Custom Action */}
-        {action && <div className="mr-2">{action}</div>}
-
-        {/* Home Button */}
-        <Link href="/">
-          <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 dark:text-slate-300 dark:hover:bg-slate-800" title="Go to Homepage">
-            <Home className="h-5 w-5" />
-          </Button>
-        </Link>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Custom Action - hidden on mobile */}
+        {action && <div className="hidden sm:block mr-1">{action}</div>}
 
         {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* Global Smart Search */}
-        <form onSubmit={handleSearch} className="hidden sm:flex relative items-center ml-2 mr-2 group">
+        {/* Global Smart Search - hidden on mobile */}
+        <form onSubmit={handleSearch} className="hidden lg:flex relative items-center ml-2 mr-2 group">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search modules (e.g. loans)..."
+            placeholder="Search modules..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-9 w-48 lg:w-64 rounded-full border border-border bg-background pr-4 pl-9 text-sm outline-none transition-all placeholder:text-slate-400 focus:w-64 lg:focus:w-80 focus:border-primary focus:ring-1 focus:ring-primary"
