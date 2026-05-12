@@ -21,41 +21,62 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  if (!isPublic) {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name) { return request.cookies.get(name)?.value },
-          set() {},
-          remove() {},
+  // Build the response early so we can attach refreshed cookies to it
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) { return request.cookies.get(name)?.value },
+        // IMPORTANT: These must write to the response so the refreshed
+        // session token is forwarded to the browser on every request.
+        set(name, value, options) {
+          request.cookies.set({ name, value, ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value, ...options })
         },
-      }
-    )
+        remove(name, options) {
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value: '', ...options })
+        },
+      },
+    }
+  )
 
-    const { data: { session } } = await supabase.auth.getSession()
+  // Always call getUser (not getSession) — this refreshes the token if needed
+  const { data: { user } } = await supabase.auth.getUser()
 
-    // No session → redirect to login
-    if (!session) {
+  if (!isPublic) {
+    // No user → redirect to login
+    if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Check 12 hour timeout from last sign in
-    const lastSignIn = new Date(session.user.last_sign_in_at ?? 0).getTime()
-    const now = Date.now()
+    // Check 12-hour timeout from last sign in
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      const lastSignIn = new Date(session.user.last_sign_in_at ?? 0).getTime()
+      const now = Date.now()
 
-    if (now - lastSignIn > SESSION_TIMEOUT_MS) {
-      const response = NextResponse.redirect(new URL('/login?reason=timeout', request.url))
-      // Clear session cookies
-      response.cookies.delete('sb-access-token')
-      response.cookies.delete('sb-refresh-token')
-      return response
+      if (now - lastSignIn > SESSION_TIMEOUT_MS) {
+        const timeoutResponse = NextResponse.redirect(new URL('/login?reason=timeout', request.url))
+        // Clear all supabase cookies (SSR uses sb-<project-ref>-auth-token pattern)
+        request.cookies.getAll().forEach(cookie => {
+          if (cookie.name.startsWith('sb-')) {
+            timeoutResponse.cookies.delete(cookie.name)
+          }
+        })
+        return timeoutResponse
+      }
     }
   }
 
   // Security headers
-  const response = NextResponse.next()
   response.headers.set(
     'Content-Security-Policy',
     "default-src 'self'; " +
