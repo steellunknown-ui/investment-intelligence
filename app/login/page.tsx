@@ -65,12 +65,22 @@ export default function LoginPage() {
             const supabase = createSupabaseBrowserClient();
             const origin = window.location.origin;
             const isLocal = origin.includes('localhost');
-            const redirectBase = isLocal ? origin : 'https://investment-intellegince.vercel.app';
+            const isCapacitor = origin.includes('capacitor') || origin.startsWith('com.') || !origin.startsWith('http');
+            
+            let redirectTo: string;
+            if (isCapacitor) {
+                redirectTo = 'https://investment-intellegince.vercel.app/auth/callback';
+            } else if (isLocal) {
+                redirectTo = `${origin}/auth/callback`;
+            } else {
+                redirectTo = 'https://investment-intellegince.vercel.app/auth/callback';
+            }
 
             await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${redirectBase}/auth/callback`,
+                    redirectTo,
+                    skipBrowserRedirect: false,
                 },
             });
         } catch (error) {
