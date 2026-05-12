@@ -3,6 +3,7 @@
 import { ReactNode, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { BottomNav } from "./BottomNav";
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -29,10 +30,11 @@ export function DashboardShell({
           onMenuClick={() => setSidebarOpen(true)}
           action={action}
         />
-        <main className="page-padding">
+        <main className="page-padding pb-20 lg:pb-6">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }
