@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 
 const SESSION_TIMEOUT_MS = 12 * 60 * 60 * 1000 // 12 hours
 
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth', '/nominee-portal', '/nominee-access', '/api/health']
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/auth', '/nominee-portal', '/nominee-access', '/api/health', '/more']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
