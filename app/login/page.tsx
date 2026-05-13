@@ -197,16 +197,19 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         try {
+            alert("Button clicked! Starting Google Login...");
             const supabase = createSupabaseBrowserClient();
             const PROD_URL = 'https://investment-intellegince.vercel.app';
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
+                alert("Native environment detected!");
                 // ── CAPACITOR GOOGLE LOGIN ──
                 // Use the pure JS client so the PKCE verifier is written directly to SharedPreferences.
                 const capacitorAuth = createCapacitorAuthClient();
                 const { Browser } = await import('@capacitor/browser');
                 
+                alert("Client created, starting OAuth...");
                 const { data, error } = await capacitorAuth.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
@@ -215,12 +218,19 @@ export default function LoginPage() {
                     },
                 });
 
-                if (error) throw error;
+                if (error) {
+                    alert("OAuth Error: " + error.message);
+                    throw error;
+                }
 
                 if (data?.url) {
+                    alert("Opening browser tab...");
                     await Browser.open({ url: data.url, windowName: '_self' });
+                } else {
+                    alert("No URL returned from OAuth!");
                 }
             } else {
+                alert("Web environment detected!");
                 // ── WEB GOOGLE LOGIN ──
                 const redirectTo = origin.includes('localhost')
                     ? `${origin}/auth/callback`
@@ -234,7 +244,8 @@ export default function LoginPage() {
                     },
                 });
             }
-        } catch (err) {
+        } catch (err: any) {
+            alert("Fatal Error: " + err.message);
             console.error('[Login] Google login error:', err);
             setError('Failed to initialize Google login');
         }
