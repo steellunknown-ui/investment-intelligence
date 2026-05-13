@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -38,10 +39,13 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          {children}
+          <SessionGuard>
+            {children}
+          </SessionGuard>
           <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

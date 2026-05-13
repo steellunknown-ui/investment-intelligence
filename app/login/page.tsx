@@ -4,6 +4,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
+import {
+    recordSessionLogin,
+    isSessionValid,
+} from "@/src/lib/supabase/capacitor-storage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -38,56 +42,124 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [checkingSession, setCheckingSession] = useState(true);
 
-    // Capacitor Deep Link Listener
+    // ── On mount: Check for existing valid session ──
+    // If user has a valid session within 12 hours, skip login entirely
+    useEffect(() => {
+        const checkExistingSession = async () => {
+            try {
+                const supabase = createSupabaseBrowserClient();
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (session) {
+                    // Check 12-hour timeout
+                    const valid = await isSessionValid();
+                    if (valid) {
+                        // Session exists and is within 12 hours — go to dashboard
+                        router.replace('/dashboard');
+                        return;
+                    }
+                    // Session exists but 12-hour expired — sign out and show login
+                    await supabase.auth.signOut();
+                }
+            } catch (err) {
+                console.error('[Login] Session check error:', err);
+            } finally {
+                setCheckingSession(false);
+            }
+        };
+
+        checkExistingSession();
+    }, [router]);
+
+    // ── Capacitor Deep Link Listener ──
+    // Handles the OAuth callback when returning from Chrome Custom Tab
     useEffect(() => {
         let isMounted = true;
 
         const setupDeepLinkListener = async () => {
-            if (isCapacitorNative()) {
-                try {
-                    const { App } = await import('@capacitor/app');
+            if (!isCapacitorNative()) return;
 
-                    App.addListener('appUrlOpen', async (data: any) => {
-                        console.log('App opened with URL:', data.url);
+            try {
+                const { App } = await import('@capacitor/app');
+
+                App.addListener('appUrlOpen', async (data: any) => {
+                    console.log('[Login] App opened with URL:', data.url);
+
+                    try {
                         const url = new URL(data.url);
 
-                        // Check for our dedicated auth scheme
-                        if (url.protocol === 'com.investmentintelligence.auth:' || url.host === 'callback') {
-                            const code = url.searchParams.get('code');
+                        // Close the in-app browser
+                        try {
+                            const { Browser } = await import('@capacitor/browser');
+                            await Browser.close();
+                        } catch {}
 
-                            // Close the in-app browser if it's open
+                        // ── Handle token-based callback (from server-side exchange) ──
+                        const accessToken = url.searchParams.get('access_token');
+                        const refreshToken = url.searchParams.get('refresh_token');
+
+                        if (accessToken && refreshToken && isMounted) {
+                            setLoading(true);
                             try {
-                                const { Browser } = await import('@capacitor/browser');
-                                await Browser.close();
-                            } catch (e) {
-                                // Ignore if browser wasn't open
-                            }
+                                const supabase = createSupabaseBrowserClient();
+                                const { error } = await supabase.auth.setSession({
+                                    access_token: accessToken,
+                                    refresh_token: refreshToken,
+                                });
 
-                            if (code && isMounted) {
-                                setLoading(true);
-                                try {
-                                    const supabase = createSupabaseBrowserClient();
-                                    const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-                                    if (error) {
-                                        setError(error.message);
-                                    } else {
-                                        router.push('/dashboard');
-                                        router.refresh();
-                                    }
-                                } catch (err) {
-                                    console.error('Deep link auth error:', err);
-                                    setError('Failed to complete authentication');
-                                } finally {
-                                    if (isMounted) setLoading(false);
+                                if (error) {
+                                    console.error('[Login] setSession error:', error);
+                                    setError(error.message);
+                                } else {
+                                    // Record login time for 12-hour enforcement
+                                    await recordSessionLogin();
+                                    router.push('/dashboard');
+                                    router.refresh();
                                 }
+                            } catch (err) {
+                                console.error('[Login] Deep link auth error:', err);
+                                setError('Failed to complete authentication');
+                            } finally {
+                                if (isMounted) setLoading(false);
+                            }
+                            return;
+                        }
+
+                        // ── Fallback: Handle code-based callback ──
+                        const code = url.searchParams.get('code');
+                        if (code && isMounted) {
+                            setLoading(true);
+                            try {
+                                const supabase = createSupabaseBrowserClient();
+                                const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+                                if (error) {
+                                    // If PKCE error, show helpful message instead of raw error
+                                    if (error.message.includes('PKCE') || error.message.includes('code verifier')) {
+                                        setError('Authentication session expired. Please try signing in again.');
+                                    } else {
+                                        setError(error.message);
+                                    }
+                                } else {
+                                    await recordSessionLogin();
+                                    router.push('/dashboard');
+                                    router.refresh();
+                                }
+                            } catch (err) {
+                                console.error('[Login] Deep link code exchange error:', err);
+                                setError('Failed to complete authentication');
+                            } finally {
+                                if (isMounted) setLoading(false);
                             }
                         }
-                    });
-                } catch (err) {
-                    console.error('Failed to load Capacitor App plugin:', err);
-                }
+                    } catch (urlErr) {
+                        console.error('[Login] Failed to parse deep link URL:', urlErr);
+                    }
+                });
+            } catch (err) {
+                console.error('[Login] Failed to load Capacitor App plugin:', err);
             }
         };
 
@@ -115,6 +187,8 @@ export default function LoginPage() {
                 return;
             }
 
+            // Record login time for 12-hour enforcement
+            await recordSessionLogin();
             router.push("/dashboard");
             router.refresh();
         } catch {
@@ -130,12 +204,14 @@ export default function LoginPage() {
             const PROD_URL = 'https://investment-intellegince.vercel.app';
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-            // For Android app, we use a dedicated redirect scheme registered in Supabase
-            let redirectTo = isCapacitorNative()
-                ? 'com.investmentintelligence.auth://callback'
-                : (origin.includes('localhost') ? `${origin}/auth/callback` : `${PROD_URL}/auth/callback`);
-
             if (isCapacitorNative()) {
+                // ── CAPACITOR GOOGLE LOGIN ──
+                // Strategy: Use the server-side callback URL so the CODE EXCHANGE
+                // happens on the SERVER (where PKCE verifier isn't needed because
+                // the server uses its own cookie-based verifier management).
+                // The server callback then sends tokens back via deep link.
+                const redirectTo = `${PROD_URL}/auth/callback?platform=capacitor`;
+
                 const { Browser } = await import('@capacitor/browser');
 
                 const { data, error } = await supabase.auth.signInWithOAuth({
@@ -149,9 +225,15 @@ export default function LoginPage() {
                 if (error) throw error;
 
                 if (data?.url) {
+                    // Open Google OAuth in Chrome Custom Tab
                     await Browser.open({ url: data.url, windowName: '_self' });
                 }
             } else {
+                // ── WEB GOOGLE LOGIN ──
+                const redirectTo = origin.includes('localhost')
+                    ? `${origin}/auth/callback`
+                    : `${PROD_URL}/auth/callback`;
+
                 await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
@@ -161,10 +243,25 @@ export default function LoginPage() {
                 });
             }
         } catch (err) {
-            console.error('Google login error:', err);
+            console.error('[Login] Google login error:', err);
             setError('Failed to initialize Google login');
         }
     };
+
+    // Show a loading state while checking for existing session
+    if (checkingSession) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-3">
+                    <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <p className="text-sm text-muted-foreground">Checking session...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex">

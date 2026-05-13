@@ -71,50 +71,86 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('Auth exchange error:', error.message);
+
+            // For Capacitor: redirect back to app with error
+            if (platform === 'capacitor') {
+                const errorUrl = `com.investmentintelligence.auth://callback?error=${encodeURIComponent(error.message)}`;
+                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', error.message);
+            }
+
             return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
         }
 
-        if (!data?.user) {
-            console.error('No user data after auth');
+        if (!data?.user || !data?.session) {
+            console.error('No user/session data after auth');
+
+            if (platform === 'capacitor') {
+                const errorUrl = `com.investmentintelligence.auth://callback?error=no_session`;
+                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', 'No session data');
+            }
+
             return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
         }
 
-        // Create the redirect response
-        const redirectUrl = `${siteUrl}${next}`;
+        // ──────────────────────────────────────────────────────────────────
+        // CAPACITOR PATH: Send tokens back to the app via deep link.
+        //
+        // This is the PERMANENT fix for the PKCE error. Instead of the
+        // client exchanging the code (which needs the PKCE verifier from
+        // localStorage that may have been cleared), the SERVER exchanges
+        // the code here and sends the resulting access_token + refresh_token
+        // back to the Capacitor app via its custom URL scheme.
+        //
+        // The app's deep link handler (in login/page.tsx) picks up these
+        // tokens and calls supabase.auth.setSession() to establish the
+        // session on the client, then stores them in native storage.
+        // ──────────────────────────────────────────────────────────────────
+        if (platform === 'capacitor') {
+            // Build the deep link URL with session tokens
+            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
+            appCallbackUrl.searchParams.set('access_token', data.session.access_token);
+            appCallbackUrl.searchParams.set('refresh_token', data.session.refresh_token);
+            appCallbackUrl.searchParams.set('next', next);
 
-        // If the platform was explicitly passed or we are on the web callback
-        // but want to force return to app, we can use an HTML bridge.
-        // This is a "belt and suspenders" fix.
-        if (platform === 'android') {
-            const appRedirectUrl = `com.investmentintelligence.auth://callback?code=${code}&next=${encodeURIComponent(next)}`;
+            // Non-critical: Upsert profile
+            try {
+                const metadata = data.user.user_metadata || {};
+                const full_name = metadata.full_name || metadata.name;
+                const avatar_url = metadata.avatar_url || metadata.picture;
+                const email = metadata.email || data.user.email;
 
-            return new NextResponse(
-                `<html>
-                    <head>
-                        <meta name="viewport" content="width=device-width, initial-scale=1">
-                        <title>Authenticating...</title>
-                    </head>
-                    <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f8fafc;">
-                        <div style="text-align: center; padding: 20px;">
-                            <h2 style="color: #10b981;">Signing you in...</h2>
-                            <p>Redirecting you back to the app.</p>
-                            <a href="${appRedirectUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; border-radius: 8px; text-decoration: none; margin-top: 10px;">Click here if not redirected</a>
-                        </div>
-                        <script>
-                            window.onload = function() {
-                                setTimeout(function() {
-                                    window.location.href = "${appRedirectUrl}";
-                                }, 500);
-                            };
-                        </script>
-                    </body>
-                </html>`,
-                {
-                    headers: { 'Content-Type': 'text/html' },
-                }
+                await supabase
+                    .from("profiles")
+                    .upsert({
+                        id: data.user.id,
+                        full_name: full_name || null,
+                        avatar_url: avatar_url || null,
+                        email: email,
+                        updated_at: new Date().toISOString(),
+                    }, { onConflict: "id" });
+            } catch (profileErr) {
+                console.error('Profile upsert failed (non-critical):', profileErr);
+            }
+
+            // Non-critical: Track login
+            try {
+                await trackLoginActivity(supabase, data.user.id);
+            } catch (trackErr) {
+                console.error('Login tracking failed (non-critical):', trackErr);
+            }
+
+            console.log('Auth successful (Capacitor), redirecting via deep link');
+            return createCapacitorRedirectPage(
+                appCallbackUrl.toString(),
+                'Signing you in...',
+                'Redirecting you back to the app.'
             );
         }
 
+        // ──────────────────────────────────────────────────────────────────
+        // WEB PATH: Normal cookie-based redirect
+        // ──────────────────────────────────────────────────────────────────
+        const redirectUrl = `${siteUrl}${next}`;
         const response = NextResponse.redirect(redirectUrl);
 
         // CRITICAL: Write ALL accumulated session cookies onto this response
@@ -156,4 +192,74 @@ export async function GET(request: Request) {
         console.error('Auth callback fatal error:', error);
         return NextResponse.redirect(`${siteUrl}/login?error=fatal_error`);
     }
+}
+
+/**
+ * Creates an HTML page that redirects to the Capacitor app via its custom URL scheme.
+ * This is needed because you can't do a 302 redirect to a custom scheme.
+ * The page auto-redirects after a short delay and also provides a manual click button.
+ */
+function createCapacitorRedirectPage(url: string, title: string, subtitle: string) {
+    return new NextResponse(
+        `<!DOCTYPE html>
+        <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>${title}</title>
+                <style>
+                    body {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100vh;
+                        margin: 0;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        background: #f8fafc;
+                        color: #334155;
+                    }
+                    .container { text-align: center; padding: 20px; }
+                    h2 { color: #10b981; margin-bottom: 8px; }
+                    p { color: #64748b; margin-bottom: 16px; }
+                    .btn {
+                        display: inline-block;
+                        padding: 12px 24px;
+                        background: #10b981;
+                        color: white;
+                        border-radius: 8px;
+                        text-decoration: none;
+                        margin-top: 10px;
+                        font-weight: 500;
+                    }
+                    .spinner {
+                        width: 32px;
+                        height: 32px;
+                        border: 3px solid #e2e8f0;
+                        border-top: 3px solid #10b981;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 16px;
+                    }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="spinner"></div>
+                    <h2>${title}</h2>
+                    <p>${subtitle}</p>
+                    <a href="${url}" class="btn">Click here if not redirected</a>
+                </div>
+                <script>
+                    // Redirect after a short delay to ensure the page renders
+                    setTimeout(function() {
+                        window.location.href = "${url}";
+                    }, 300);
+                </script>
+            </body>
+        </html>`,
+        {
+            headers: { 'Content-Type': 'text/html' },
+        }
+    );
 }
