@@ -96,30 +96,32 @@ export default function LoginPage() {
                             await Browser.close();
                         } catch {}
 
-                        // ── Handle token-based callback (from server-side exchange) ──
-                        const accessToken = url.searchParams.get('access_token');
-                        const refreshToken = url.searchParams.get('refresh_token');
-
-                        if (accessToken && refreshToken && isMounted) {
+                        // ── Primary Capacitor Auth: Handle code-based callback ──
+                        const code = url.searchParams.get('code');
+                        if (code && isMounted) {
                             setLoading(true);
                             try {
+                                console.log('[Login] Exchanging code for session natively...');
                                 const supabase = createSupabaseBrowserClient();
-                                const { error } = await supabase.auth.setSession({
-                                    access_token: accessToken,
-                                    refresh_token: refreshToken,
-                                });
 
-                                if (error) {
-                                    console.error('[Login] setSession error:', error);
-                                    setError(error.message);
-                                } else {
-                                    // Record login time for 12-hour enforcement
+                                // This call will find the PKCE verifier in capacitorStorage
+                                const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+                                if (exchangeError) {
+                                    console.error('[Login] exchangeCodeForSession error:', exchangeError);
+                                    if (exchangeError.message.includes('PKCE') || exchangeError.message.includes('code verifier')) {
+                                        setError('Sign-in timeout. Please try again.');
+                                    } else {
+                                        setError(exchangeError.message);
+                                    }
+                                } else if (exchangeData.session) {
+                                    console.log('[Login] Native exchange successful');
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();
                                 }
                             } catch (err) {
-                                console.error('[Login] Deep link auth error:', err);
+                                console.error('[Login] Deep link code exchange exception:', err);
                                 setError('Failed to complete authentication');
                             } finally {
                                 if (isMounted) setLoading(false);
@@ -127,33 +129,11 @@ export default function LoginPage() {
                             return;
                         }
 
-                        // ── Fallback: Handle code-based callback ──
-                        const code = url.searchParams.get('code');
-                        if (code && isMounted) {
-                            setLoading(true);
-                            try {
-                                const supabase = createSupabaseBrowserClient();
-                                const { error } = await supabase.auth.exchangeCodeForSession(code);
+                        // ── Secondary/Legacy: Handle token-based callback ──
+                        const accessToken = url.searchParams.get('access_token');
+                        const refreshToken = url.searchParams.get('refresh_token');
 
-                                if (error) {
-                                    // If PKCE error, show helpful message instead of raw error
-                                    if (error.message.includes('PKCE') || error.message.includes('code verifier')) {
-                                        setError('Authentication session expired. Please try signing in again.');
-                                    } else {
-                                        setError(error.message);
-                                    }
-                                } else {
-                                    await recordSessionLogin();
-                                    router.push('/dashboard');
-                                    router.refresh();
-                                }
-                            } catch (err) {
-                                console.error('[Login] Deep link code exchange error:', err);
-                                setError('Failed to complete authentication');
-                            } finally {
-                                if (isMounted) setLoading(false);
-                            }
-                        }
+                        if (accessToken && refreshToken && isMounted) {
                     } catch (urlErr) {
                         console.error('[Login] Failed to parse deep link URL:', urlErr);
                     }

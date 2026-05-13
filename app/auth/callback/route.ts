@@ -35,9 +35,25 @@ export async function GET(request: Request) {
         // and gets bounced right back to /login.
         // ──────────────────────────────────────────────────────────────────
 
-        const cookieStore = cookies();
+        // ──────────────────────────────────────────────────────────────────
+        // CAPACITOR BYPASS: Let the app handle the code exchange
+        //
+        // This is the CRITICAL fix for the PKCE error. The server cannot
+        // see the PKCE verifier stored in the phone's native storage.
+        // We redirect the 'code' back to the app so the app can
+        // perform the exchange itself using its own local verifier.
+        // ──────────────────────────────────────────────────────────────────
+        if (platform === 'capacitor') {
+            const appCallbackUrl = `com.investmentintelligence.auth://callback?code=${code}&next=${encodeURIComponent(next)}`;
+            console.log('Capacitor detected, bypassing server exchange and returning code to app');
+            return createCapacitorRedirectPage(
+                appCallbackUrl,
+                'Authenticating...',
+                'Redirecting you back to the app to complete sign-in.'
+            );
+        }
 
-        // Accumulate all cookies Supabase wants to set during exchangeCodeForSession
+        const cookieStore = cookies();
         const cookiesToSet: { name: string; value: string; options: any }[] = [];
 
         const supabase = createServerClient(
