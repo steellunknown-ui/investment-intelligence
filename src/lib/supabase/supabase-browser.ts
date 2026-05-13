@@ -8,8 +8,6 @@ export function createSupabaseBrowserClient() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             auth: {
-                // Use localStorage on mobile to prevent PKCE state loss during app-switching
-                storage: isCapacitor ? window.localStorage : undefined,
                 persistSession: true,
                 detectSessionInUrl: true,
                 flowType: 'pkce',
