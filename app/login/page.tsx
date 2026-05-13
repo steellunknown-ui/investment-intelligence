@@ -39,6 +39,56 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Capacitor Deep Link Listener
+    useEffect(() => {
+        let isMounted = true;
+
+        const setupDeepLinkListener = async () => {
+            if (isCapacitorNative()) {
+                try {
+                    const { App } = await import('@capacitor/app');
+
+                    App.addListener('appUrlOpen', async (data: any) => {
+                        console.log('App opened with URL:', data.url);
+                        const url = new URL(data.url);
+
+                        // Check if it's our auth callback
+                        if (url.scheme === 'com.investmentintelligence.app' || url.host === 'auth') {
+                            const code = url.searchParams.get('code');
+                            if (code && isMounted) {
+                                setLoading(true);
+                                try {
+                                    const supabase = createSupabaseBrowserClient();
+                                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+                                    if (error) {
+                                        setError(error.message);
+                                    } else {
+                                        router.push('/dashboard');
+                                        router.refresh();
+                                    }
+                                } catch (err) {
+                                    console.error('Deep link auth error:', err);
+                                    setError('Failed to complete authentication');
+                                } finally {
+                                    if (isMounted) setLoading(false);
+                                }
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.error('Failed to load Capacitor App plugin:', err);
+                }
+            }
+        };
+
+        setupDeepLinkListener();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [router]);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
