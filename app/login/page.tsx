@@ -210,24 +210,29 @@ export default function LoginPage() {
                 const { Browser } = await import('@capacitor/browser');
                 
                 alert("Client created, starting OAuth...");
-                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
-                        skipBrowserRedirect: true,
-                    },
-                });
+                try {
+                    const { data, error } = await capacitorAuth.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
+                            skipBrowserRedirect: true,
+                        },
+                    });
 
-                if (error) {
-                    alert("OAuth Error: " + error.message);
-                    throw error;
-                }
+                    if (error) {
+                        alert("OAuth Error: " + error.message);
+                        throw error;
+                    }
 
-                if (data?.url) {
-                    alert("Opening browser tab...");
-                    await Browser.open({ url: data.url, windowName: '_self' });
-                } else {
-                    alert("No URL returned from OAuth!");
+                    if (data?.url) {
+                        alert("Opening browser tab...");
+                        await Browser.open({ url: data.url, windowName: '_self' });
+                    } else {
+                        alert("No URL returned from OAuth!");
+                    }
+                } catch (oauthErr: any) {
+                    alert("signInWithOAuth threw an error: " + String(oauthErr));
+                    throw oauthErr;
                 }
             } else {
                 alert("Web environment detected!");
