@@ -85,7 +85,8 @@ export default function LoginPage() {
                 const { App } = await import('@capacitor/app');
 
                 App.addListener('appUrlOpen', async (data: any) => {
-                    console.log('[Login] App opened with URL:', data.url);
+                    console.log('🚀 [DEEP LINK] Received URL:', data.url);
+                    alert('Debug: Deep link received: ' + data.url); // Temporary visible debug
 
                     try {
                         const url = new URL(data.url);
@@ -94,38 +95,51 @@ export default function LoginPage() {
                         try {
                             const { Browser } = await import('@capacitor/browser');
                             await Browser.close();
-                        } catch {}
+                            console.log('✅ [DEEP LINK] Browser closed');
+                        } catch (e) {
+                            console.log('⚠️ [DEEP LINK] Browser close error/ignored:', e);
+                        }
 
                         // ── Primary Capacitor Auth: Handle code-based callback ──
                         const code = url.searchParams.get('code');
+                        console.log('🔍 [DEEP LINK] Code extracted:', code ? 'YES (hidden for security)' : 'NO');
+
                         if (code && isMounted) {
                             setLoading(true);
                             try {
-                                console.log('[Login] Exchanging code for session natively...');
+                                console.log('🔄 [AUTH] Exchanging code for session natively...');
                                 const supabase = createSupabaseBrowserClient();
 
                                 // This call will find the PKCE verifier in capacitorStorage
                                 const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
                                 if (exchangeError) {
-                                    console.error('[Login] exchangeCodeForSession error:', exchangeError);
+                                    console.error('❌ [AUTH] exchangeCodeForSession error:', exchangeError);
                                     if (exchangeError.message.includes('PKCE') || exchangeError.message.includes('code verifier')) {
                                         setError('Sign-in timeout. Please try again.');
                                     } else {
                                         setError(exchangeError.message);
                                     }
                                 } else if (exchangeData.session) {
-                                    console.log('[Login] Native exchange successful');
+                                    console.log('✅ [AUTH] Native exchange successful! Redirecting...');
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();
                                 }
                             } catch (err) {
-                                console.error('[Login] Deep link code exchange exception:', err);
+                                console.error('❌ [AUTH] Deep link code exchange exception:', err);
                                 setError('Failed to complete authentication');
                             } finally {
                                 if (isMounted) setLoading(false);
                             }
+                            return;
+                        }
+
+                        const errorParam = url.searchParams.get('error');
+                        if (errorParam) {
+                            console.error('❌ [DEEP LINK] Error param found:', errorParam);
+                            setError(errorParam);
+                            setLoading(false);
                             return;
                         }
 
