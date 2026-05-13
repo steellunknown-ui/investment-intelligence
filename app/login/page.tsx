@@ -134,6 +134,29 @@ export default function LoginPage() {
                         const refreshToken = url.searchParams.get('refresh_token');
 
                         if (accessToken && refreshToken && isMounted) {
+                            setLoading(true);
+                            try {
+                                const supabase = createSupabaseBrowserClient();
+                                const { error } = await supabase.auth.setSession({
+                                    access_token: accessToken,
+                                    refresh_token: refreshToken,
+                                });
+
+                                if (error) {
+                                    console.error('[Login] setSession error:', error);
+                                    setError(error.message);
+                                } else {
+                                    await recordSessionLogin();
+                                    router.push('/dashboard');
+                                    router.refresh();
+                                }
+                            } catch (err) {
+                                console.error('[Login] Deep link auth error:', err);
+                                setError('Failed to complete authentication');
+                            } finally {
+                                if (isMounted) setLoading(false);
+                            }
+                        }
                     } catch (urlErr) {
                         console.error('[Login] Failed to parse deep link URL:', urlErr);
                     }
