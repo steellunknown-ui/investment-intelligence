@@ -101,7 +101,7 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
           schema: 'public',
           table: 'alerts',
         },
-        (payload) => {
+        (payload: any) => {
           setAlerts((prev) => [payload.new, ...prev].slice(0, 5));
           setUnreadCount((prev) => prev + 1);
           toast.info("New Notification", {
