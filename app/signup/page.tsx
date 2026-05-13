@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
+import { createCapacitorAuthClient } from '@/src/lib/supabase/capacitor-auth';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -74,9 +75,20 @@ export default function SignupPage() {
             const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 
             if (isNative) {
-                const loginUrl = `${PROD_URL}/auth/login?provider=google&platform=capacitor`;
+                const capacitorAuth = createCapacitorAuthClient();
                 const { Browser } = await import('@capacitor/browser');
-                await Browser.open({ url: loginUrl, windowName: '_self' });
+                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
+                        skipBrowserRedirect: true,
+                    },
+                });
+                if (error || !data.url) {
+                    setError('Failed to start Google sign-up');
+                    return;
+                }
+                await Browser.open({ url: data.url, windowName: '_self' });
             } else {
                 const origin = window.location.origin;
                 const redirectTo = origin.includes('localhost')

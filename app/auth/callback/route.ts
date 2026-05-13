@@ -52,70 +52,37 @@ export async function GET(request: Request) {
             }
         );
 
-        // Exchange code for session — this triggers setAll() above
+        // ──────────────────────────────────────────────────────────────────
+        // CAPACITOR PATH: Send code back to the app via deep link.
+        // The app will use the capacitor-auth pure JS client to exchange
+        // the code. This ensures the PKCE verifier is read securely from
+        // SharedPreferences, completely avoiding WebView cookie bugs.
+        // ──────────────────────────────────────────────────────────────────
+        if (platform === 'capacitor') {
+            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
+            appCallbackUrl.searchParams.set('code', code);
+            appCallbackUrl.searchParams.set('next', next);
+
+            return createCapacitorRedirectPage(
+                appCallbackUrl.toString(),
+                'Logging in...',
+                'Please wait while we complete your login.'
+            );
+        }
+
+        // Exchange code for session (WEB ONLY)
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
             console.error('Auth exchange error:', error.message);
-
-            if (platform === 'capacitor') {
-                const errorUrl = `com.investmentintelligence.auth://callback?error=${encodeURIComponent(error.message)}`;
-                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', error.message);
-            }
-
             return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
         }
 
         if (!data?.user || !data?.session) {
             console.error('No user/session data after auth');
-
-            if (platform === 'capacitor') {
-                const errorUrl = `com.investmentintelligence.auth://callback?error=no_session`;
-                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', 'No session data');
-            }
-
             return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
         }
 
-        // ──────────────────────────────────────────────────────────────────
-        // CAPACITOR PATH: Send tokens back to the app via deep link.
-        //
-        // This completely bypasses the client-side PKCE crash. The server
-        // exchanges the code safely, then hands the access and refresh tokens
-        // to the app, which uses supabase.auth.setSession().
-        // ──────────────────────────────────────────────────────────────────
-        if (platform === 'capacitor') {
-            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
-            appCallbackUrl.searchParams.set('access_token', data.session.access_token);
-            appCallbackUrl.searchParams.set('refresh_token', data.session.refresh_token);
-            appCallbackUrl.searchParams.set('next', next);
-
-            // Non-critical background tasks
-            try {
-                const metadata = data.user.user_metadata || {};
-                const full_name = metadata.full_name || metadata.name;
-                const avatar_url = metadata.avatar_url || metadata.picture;
-                const email = metadata.email || data.user.email;
-
-                await supabase.from("profiles").upsert({
-                    id: data.user.id,
-                    full_name: full_name || null,
-                    avatar_url: avatar_url || null,
-                    email: email,
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: "id" });
-                await trackLoginActivity(supabase, data.user.id);
-            } catch (e) {
-                console.error('Background task failed (non-critical):', e);
-            }
-
-            console.log('Auth successful (Capacitor), redirecting via deep link');
-            return createCapacitorRedirectPage(
-                appCallbackUrl.toString(),
-                'Signing you in...',
-                'Redirecting you back to the app.'
-            );
-        }
 
         // ──────────────────────────────────────────────────────────────────
         // WEB PATH: Normal cookie-based redirect

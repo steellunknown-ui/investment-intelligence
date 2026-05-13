@@ -8,6 +8,7 @@ import {
     recordSessionLogin,
     isSessionValid,
 } from "@/src/lib/supabase/capacitor-storage";
+import { createCapacitorAuthClient } from '@/src/lib/supabase/capacitor-auth';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -100,11 +101,10 @@ export default function LoginPage() {
                             console.log('⚠️ [DEEP LINK] Browser close error/ignored:', e);
                         }
 
-                        // ── Primary Capacitor Auth: Handle token-based callback ──
-                        const accessToken = url.searchParams.get('access_token');
-                        const refreshToken = url.searchParams.get('refresh_token');
+                        // ── Primary Capacitor Auth: Handle code-based callback ──
+                        const code = url.searchParams.get('code');
 
-                        if (accessToken && refreshToken && isMounted) {
+                        if (code && isMounted) {
                             setLoading(true);
                             // ── SET THE LOGIN LOCK ──
                             if (typeof window !== 'undefined') {
@@ -112,19 +112,23 @@ export default function LoginPage() {
                             }
 
                             try {
-                                console.log('🔄 [AUTH] Setting session natively from tokens...');
-                                const supabase = createSupabaseBrowserClient();
+                                console.log('🔄 [AUTH] Exchanging code securely via capacitorStorage...');
+                                // Use the pure JS client which correctly reads from capacitorStorage
+                                const capacitorAuth = createCapacitorAuthClient();
+                                const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
 
-                                const { error: sessionError } = await supabase.auth.setSession({
-                                    access_token: accessToken,
-                                    refresh_token: refreshToken,
-                                });
+                                if (exchangeError) {
+                                    console.error('❌ [AUTH] Code exchange error:', exchangeError);
+                                    setError(exchangeError.message);
+                                } else if (exchangeData.session) {
+                                    console.log('✅ [AUTH] Code exchanged! Syncing session...');
+                                    // Sync the session to the SSR client so the rest of the app works seamlessly
+                                    const ssrClient = createSupabaseBrowserClient();
+                                    await ssrClient.auth.setSession({
+                                        access_token: exchangeData.session.access_token,
+                                        refresh_token: exchangeData.session.refresh_token,
+                                    });
 
-                                if (sessionError) {
-                                    console.error('❌ [AUTH] setSession error:', sessionError);
-                                    setError(sessionError.message);
-                                } else {
-                                    console.log('✅ [AUTH] Native session set! Redirecting...');
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();
@@ -199,14 +203,23 @@ export default function LoginPage() {
 
             if (isCapacitorNative()) {
                 // ── CAPACITOR GOOGLE LOGIN ──
-                // Strategy: Initiate OAuth from the SERVER so that the PKCE
-                // verifier cookie is securely set inside the Chrome Custom Tab.
-                const loginUrl = `${PROD_URL}/auth/login?provider=google&platform=capacitor`;
-
+                // Use the pure JS client so the PKCE verifier is written directly to SharedPreferences.
+                const capacitorAuth = createCapacitorAuthClient();
                 const { Browser } = await import('@capacitor/browser');
                 
-                // Open our server route in the Custom Tab
-                await Browser.open({ url: loginUrl, windowName: '_self' });
+                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
+                        skipBrowserRedirect: true,
+                    },
+                });
+
+                if (error) throw error;
+
+                if (data?.url) {
+                    await Browser.open({ url: data.url, windowName: '_self' });
+                }
             } else {
                 // ── WEB GOOGLE LOGIN ──
                 const redirectTo = origin.includes('localhost')
