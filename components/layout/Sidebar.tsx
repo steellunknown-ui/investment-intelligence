@@ -123,7 +123,7 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
 
     // Listen for auth changes
     const supabase = createSupabaseBrowserClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setIsConnected(!!session?.user);
     });
 
