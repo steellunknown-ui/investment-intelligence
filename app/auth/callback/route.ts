@@ -25,17 +25,6 @@ export async function GET(request: Request) {
         }
 
         // ──────────────────────────────────────────────────────────────────
-        // KEY FIX: Collect cookies that Supabase sets during code exchange,
-        // then write them DIRECTLY onto the redirect NextResponse.
-        //
-        // Previously, we used cookies().set() which writes to a different
-        // response context that does NOT reliably merge with the returned
-        // NextResponse.redirect(). This caused the session tokens to be
-        // silently lost, so the user arrives at /dashboard with no session
-        // and gets bounced right back to /login.
-        // ──────────────────────────────────────────────────────────────────
-
-        // ──────────────────────────────────────────────────────────────────
         // CAPACITOR BYPASS: Let the app handle the code exchange
         //
         // This is the CRITICAL fix for the PKCE error. The server cannot
@@ -69,7 +58,6 @@ export async function GET(request: Request) {
                             cookiesToSet.push({ name, value, options });
                         });
 
-                        // Also try to set via cookieStore as fallback
                         try {
                             cookies.forEach(({ name, value, options }) => {
                                 cookieStore.set(name, value, options);
@@ -87,80 +75,12 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('Auth exchange error:', error.message);
-
-            // For Capacitor: redirect back to app with error
-            if (platform === 'capacitor') {
-                const errorUrl = `com.investmentintelligence.auth://callback?error=${encodeURIComponent(error.message)}`;
-                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', error.message);
-            }
-
             return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
         }
 
         if (!data?.user || !data?.session) {
             console.error('No user/session data after auth');
-
-            if (platform === 'capacitor') {
-                const errorUrl = `com.investmentintelligence.auth://callback?error=no_session`;
-                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', 'No session data');
-            }
-
             return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
-        }
-
-        // ──────────────────────────────────────────────────────────────────
-        // CAPACITOR PATH: Send tokens back to the app via deep link.
-        //
-        // This is the PERMANENT fix for the PKCE error. Instead of the
-        // client exchanging the code (which needs the PKCE verifier from
-        // localStorage that may have been cleared), the SERVER exchanges
-        // the code here and sends the resulting access_token + refresh_token
-        // back to the Capacitor app via its custom URL scheme.
-        //
-        // The app's deep link handler (in login/page.tsx) picks up these
-        // tokens and calls supabase.auth.setSession() to establish the
-        // session on the client, then stores them in native storage.
-        // ──────────────────────────────────────────────────────────────────
-        if (platform === 'capacitor') {
-            // Build the deep link URL with session tokens
-            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
-            appCallbackUrl.searchParams.set('access_token', data.session.access_token);
-            appCallbackUrl.searchParams.set('refresh_token', data.session.refresh_token);
-            appCallbackUrl.searchParams.set('next', next);
-
-            // Non-critical: Upsert profile
-            try {
-                const metadata = data.user.user_metadata || {};
-                const full_name = metadata.full_name || metadata.name;
-                const avatar_url = metadata.avatar_url || metadata.picture;
-                const email = metadata.email || data.user.email;
-
-                await supabase
-                    .from("profiles")
-                    .upsert({
-                        id: data.user.id,
-                        full_name: full_name || null,
-                        avatar_url: avatar_url || null,
-                        email: email,
-                        updated_at: new Date().toISOString(),
-                    }, { onConflict: "id" });
-            } catch (profileErr) {
-                console.error('Profile upsert failed (non-critical):', profileErr);
-            }
-
-            // Non-critical: Track login
-            try {
-                await trackLoginActivity(supabase, data.user.id);
-            } catch (trackErr) {
-                console.error('Login tracking failed (non-critical):', trackErr);
-            }
-
-            console.log('Auth successful (Capacitor), redirecting via deep link');
-            return createCapacitorRedirectPage(
-                appCallbackUrl.toString(),
-                'Signing you in...',
-                'Redirecting you back to the app.'
-            );
         }
 
         // ──────────────────────────────────────────────────────────────────
