@@ -74,19 +74,9 @@ export default function SignupPage() {
             const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 
             if (isNative) {
+                const loginUrl = `${PROD_URL}/auth/login?provider=google&platform=capacitor`;
                 const { Browser } = await import('@capacitor/browser');
-                const { data, error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: `${PROD_URL}/auth/callback`,
-                        skipBrowserRedirect: true,
-                    },
-                });
-                if (error || !data.url) {
-                    setError('Failed to start Google sign-up');
-                    return;
-                }
-                await Browser.open({ url: data.url, windowName: '_self' });
+                await Browser.open({ url: loginUrl, windowName: '_self' });
             } else {
                 const origin = window.location.origin;
                 const redirectTo = origin.includes('localhost')

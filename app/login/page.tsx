@@ -199,28 +199,14 @@ export default function LoginPage() {
 
             if (isCapacitorNative()) {
                 // ── CAPACITOR GOOGLE LOGIN ──
-                // Strategy: Use the server-side callback URL so the CODE EXCHANGE
-                // happens on the SERVER (where PKCE verifier isn't needed because
-                // the server uses its own cookie-based verifier management).
-                // The server callback then sends tokens back via deep link.
-                const redirectTo = `${PROD_URL}/auth/callback?platform=capacitor`;
+                // Strategy: Initiate OAuth from the SERVER so that the PKCE
+                // verifier cookie is securely set inside the Chrome Custom Tab.
+                const loginUrl = `${PROD_URL}/auth/login?provider=google&platform=capacitor`;
 
                 const { Browser } = await import('@capacitor/browser');
-
-                const { data, error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo,
-                        skipBrowserRedirect: true,
-                    },
-                });
-
-                if (error) throw error;
-
-                if (data?.url) {
-                    // Open Google OAuth in Chrome Custom Tab
-                    await Browser.open({ url: data.url, windowName: '_self' });
-                }
+                
+                // Open our server route in the Custom Tab
+                await Browser.open({ url: loginUrl, windowName: '_self' });
             } else {
                 // ── WEB GOOGLE LOGIN ──
                 const redirectTo = origin.includes('localhost')
