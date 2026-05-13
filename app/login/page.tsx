@@ -53,7 +53,7 @@ export default function LoginPage() {
                         const url = new URL(data.url);
 
                         // Check if it's our auth callback
-                        if (url.scheme === 'com.investmentintelligence.app' || url.host === 'auth') {
+                        if (url.protocol === 'com.investmentintelligence.app:' || url.host === 'auth') {
                             const code = url.searchParams.get('code');
                             if (code && isMounted) {
                                 setLoading(true);
