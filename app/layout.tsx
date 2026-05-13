@@ -29,7 +29,7 @@ export default function RootLayout({
           (function() {
             try {
               var theme = localStorage.getItem('theme') || 'light';
-              var colorTheme = localStorage.getItem('colorTheme') || 'emerald';
+              var colorTheme = localStorage.getItem('colorTheme') || 'infinix-2';
               if (theme === 'dark') document.documentElement.classList.add('dark');
               document.documentElement.classList.add('theme-' + colorTheme);
             } catch (e) {}

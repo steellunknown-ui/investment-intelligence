@@ -17,7 +17,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>("light");
-    const [colorTheme, setColorThemeState] = useState<ColorTheme>("emerald");
+    const [colorTheme, setColorThemeState] = useState<ColorTheme>("infinix-2");
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -27,12 +27,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         if (savedTheme) {
             setTheme(savedTheme);
-        } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-            setTheme("dark");
+        } else {
+            // Default to light regardless of system preference
+            setTheme("light");
         }
 
         if (savedColorTheme) {
             setColorThemeState(savedColorTheme);
+        } else {
+            // Default to infinix-2 (Lemon Green / Light Sky Blue)
+            setColorThemeState("infinix-2");
         }
     }, []);
 
