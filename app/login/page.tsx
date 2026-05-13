@@ -115,6 +115,7 @@ export default function LoginPage() {
 
                                 if (exchangeError) {
                                     console.error('❌ [AUTH] exchangeCodeForSession error:', exchangeError);
+                                    alert('❌ Auth Error: ' + exchangeError.message);
                                     if (exchangeError.message.includes('PKCE') || exchangeError.message.includes('code verifier')) {
                                         setError('Sign-in timeout. Please try again.');
                                     } else {
@@ -122,6 +123,7 @@ export default function LoginPage() {
                                     }
                                 } else if (exchangeData.session) {
                                     console.log('✅ [AUTH] Native exchange successful! Redirecting...');
+                                    alert('✅ Login Successful! Redirecting to Dashboard...');
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();

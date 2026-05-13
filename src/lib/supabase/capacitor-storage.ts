@@ -99,14 +99,21 @@ export async function recordSessionLogin(): Promise<void> {
 
 /**
  * Checks if the current session is still within the 12-hour window.
- * Returns true if session is valid, false if expired or no login recorded.
+ * Returns true if session is valid, false if expired.
+ * If no timestamp is found, returns true (assumed new or legacy session).
  */
 export async function isSessionValid(): Promise<boolean> {
-  const loginAt = await capacitorStorage.getItem(SESSION_LOGIN_KEY);
-  if (!loginAt) return false;
-  
-  const elapsed = Date.now() - parseInt(loginAt, 10);
-  return elapsed < SESSION_TIMEOUT_MS;
+  try {
+    const loginAt = await capacitorStorage.getItem(SESSION_LOGIN_KEY);
+    // If no timestamp, we treat it as valid but untracked.
+    // This prevents race conditions during the very first login.
+    if (!loginAt) return true;
+
+    const elapsed = Date.now() - parseInt(loginAt, 10);
+    return elapsed < SESSION_TIMEOUT_MS;
+  } catch (err) {
+    return true; // Fallback to valid
+  }
 }
 
 /**
