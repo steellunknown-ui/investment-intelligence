@@ -57,9 +57,15 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
     // ── 2. On mount: validate existing session ──
     const validateSession = async () => {
+      // ── CHECK THE LOGIN LOCK ──
+      // If the app is currently processing a deep link login,
+      // STOP the guard from redirecting.
+      if (typeof window !== 'undefined' && (window as any).isAuthenticating) {
+        console.log('[SessionGuard] Auth in progress, skipping guard');
+        return;
+      }
+
       // Skip for public paths
-      const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
-      if (isPublic) return;
 
       try {
         // Check if we have a valid session in Supabase

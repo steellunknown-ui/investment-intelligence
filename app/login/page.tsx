@@ -106,11 +106,16 @@ export default function LoginPage() {
 
                         if (code && isMounted) {
                             setLoading(true);
+                            // ── SET THE LOGIN LOCK ──
+                            if (typeof window !== 'undefined') {
+                                (window as any).isAuthenticating = true;
+                            }
+
                             try {
+                                alert('🔄 Handshake Starting...');
                                 console.log('🔄 [AUTH] Exchanging code for session natively...');
                                 const supabase = createSupabaseBrowserClient();
 
-                                // This call will find the PKCE verifier in capacitorStorage
                                 const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
                                 if (exchangeError) {
