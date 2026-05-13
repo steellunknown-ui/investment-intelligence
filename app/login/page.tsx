@@ -113,8 +113,22 @@ export default function LoginPage() {
 
                             try {
                                 console.log('🔄 [AUTH] Exchanging code securely via capacitorStorage...');
-                                // Use the pure JS client which correctly reads from capacitorStorage
+                                
+                                // ── RESTORE PKCE TO LOCAL STORAGE ──
+                                alert("Restoring PKCE from secure storage...");
+                                const { capacitorStorage } = await import('@/src/lib/supabase/capacitor-storage');
+                                const { Preferences } = await import('@capacitor/preferences');
+                                const { keys } = await Preferences.keys();
+                                for (const key of keys) {
+                                    if (key.startsWith('sb-')) {
+                                        const { value } = await Preferences.get({ key });
+                                        if (value) localStorage.setItem(key, value);
+                                    }
+                                }
+
+                                // Use the pure JS client
                                 const capacitorAuth = createCapacitorAuthClient();
+                                alert("Exchanging code for session...");
                                 const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
 
                                 if (exchangeError) {
@@ -222,6 +236,20 @@ export default function LoginPage() {
                     if (error) {
                         alert("OAuth Error: " + error.message);
                         throw error;
+                    }
+
+                    // ── BACKUP PKCE TO CAPACITOR STORAGE ──
+                    // Since capacitorStorage was hanging signInWithOAuth, we used localStorage.
+                    // But we MUST backup the PKCE verifier to SharedPreferences because 
+                    // localStorage gets wiped during the deep link transition.
+                    alert("Backing up PKCE to secure storage...");
+                    const { capacitorStorage } = await import('@/src/lib/supabase/capacitor-storage');
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('sb-')) {
+                            const val = localStorage.getItem(key);
+                            if (val) await capacitorStorage.setItem(key, val);
+                        }
                     }
 
                     if (data?.url) {

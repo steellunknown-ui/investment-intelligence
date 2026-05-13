@@ -18,7 +18,6 @@ export const createCapacitorAuthClient = () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        storage: capacitorStorage,
         flowType: 'pkce',
         detectSessionInUrl: false,
         autoRefreshToken: false, // We'll let the SSR client handle refreshes
