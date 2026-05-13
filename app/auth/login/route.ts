@@ -14,6 +14,8 @@ export async function GET(request: Request) {
     }
     
     const cookieStore = cookies();
+    const cookiesToSet: { name: string; value: string; options: any }[] = [];
+
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,12 +24,13 @@ export async function GET(request: Request) {
                 getAll() {
                     return cookieStore.getAll();
                 },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        );
-                    } catch {}
+                setAll(newCookies) {
+                    newCookies.forEach(({ name, value, options }) => {
+                        cookiesToSet.push({ name, value, options });
+                        try {
+                            cookieStore.set(name, value, options);
+                        } catch {}
+                    });
                 }
             }
         }
@@ -42,7 +45,7 @@ export async function GET(request: Request) {
         provider,
         options: {
             redirectTo: redirectUrl.toString(),
-            skipBrowserRedirect: true, // We will manually redirect below so cookies are applied properly by Next.js
+            skipBrowserRedirect: true,
         }
     });
 
@@ -52,8 +55,11 @@ export async function GET(request: Request) {
     }
     
     if (data?.url) {
-        // Return a redirect response so that the setAll() cookies are attached to the response headers
-        return NextResponse.redirect(data.url);
+        const response = NextResponse.redirect(data.url);
+        cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+        });
+        return response;
     }
     
     return NextResponse.redirect(new URL('/login', request.url));
