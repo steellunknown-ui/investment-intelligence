@@ -28,7 +28,7 @@ const isCapacitorNative = (): boolean => {
 };
 
 // Paths that don't need session validation
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth', '/nominee-portal', '/nominee-access', '/more'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/auth', '/nominee-portal', '/nominee-access', '/more'];
 
 interface SessionGuardProps {
   children: ReactNode;
