@@ -82,11 +82,37 @@ export async function GET(request: Request) {
         // Create the redirect response
         const redirectUrl = `${siteUrl}${next}`;
 
-        // If coming from Android app, we redirect to the custom scheme
+        // If the platform was explicitly passed or we are on the web callback
+        // but want to force return to app, we can use an HTML bridge.
+        // This is a "belt and suspenders" fix.
         if (platform === 'android') {
             const appRedirectUrl = `com.investmentintelligence.auth://callback?code=${code}&next=${encodeURIComponent(next)}`;
-            console.log('Android app detected, redirecting to scheme:', appRedirectUrl);
-            return NextResponse.redirect(appRedirectUrl);
+
+            return new NextResponse(
+                `<html>
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <title>Authenticating...</title>
+                    </head>
+                    <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f8fafc;">
+                        <div style="text-align: center; padding: 20px;">
+                            <h2 style="color: #10b981;">Signing you in...</h2>
+                            <p>Redirecting you back to the app.</p>
+                            <a href="${appRedirectUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; border-radius: 8px; text-decoration: none; margin-top: 10px;">Click here if not redirected</a>
+                        </div>
+                        <script>
+                            window.onload = function() {
+                                setTimeout(function() {
+                                    window.location.href = "${appRedirectUrl}";
+                                }, 500);
+                            };
+                        </script>
+                    </body>
+                </html>`,
+                {
+                    headers: { 'Content-Type': 'text/html' },
+                }
+            );
         }
 
         const response = NextResponse.redirect(redirectUrl);

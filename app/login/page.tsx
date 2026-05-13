@@ -55,6 +55,15 @@ export default function LoginPage() {
                         // Check for our dedicated auth scheme
                         if (url.protocol === 'com.investmentintelligence.auth:' || url.host === 'callback') {
                             const code = url.searchParams.get('code');
+
+                            // Close the in-app browser if it's open
+                            try {
+                                const { Browser } = await import('@capacitor/browser');
+                                await Browser.close();
+                            } catch (e) {
+                                // Ignore if browser wasn't open
+                            }
+
                             if (code && isMounted) {
                                 setLoading(true);
                                 try {
@@ -121,26 +130,36 @@ export default function LoginPage() {
             const PROD_URL = 'https://investment-intellegince.vercel.app';
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-            // Always redirect to the production callback URL
-            // (works in WebView, desktop browser, and mobile browser)
-            let redirectTo = origin.includes('localhost')
-                ? `${origin}/auth/callback`
-                : `${PROD_URL}/auth/callback`;
+            // For Android app, we use a dedicated redirect scheme registered in Supabase
+            let redirectTo = isCapacitorNative()
+                ? 'com.investmentintelligence.auth://callback'
+                : (origin.includes('localhost') ? `${origin}/auth/callback` : `${PROD_URL}/auth/callback`);
 
-            // Detect if running inside Capacitor (Android/iOS native app)
             if (isCapacitorNative()) {
-                // For Android app, we append platform=android to help the callback
-                // decide whether to redirect to the web or back to the app scheme.
-                redirectTo += (redirectTo.includes('?') ? '&' : '?') + 'platform=android';
-            }
+                const { Browser } = await import('@capacitor/browser');
 
-            await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo,
-                    skipBrowserRedirect: false,
-                },
-            });
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo,
+                        skipBrowserRedirect: true,
+                    },
+                });
+
+                if (error) throw error;
+
+                if (data?.url) {
+                    await Browser.open({ url: data.url, windowName: '_self' });
+                }
+            } else {
+                await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo,
+                        skipBrowserRedirect: false,
+                    },
+                });
+            }
         } catch (err) {
             console.error('Google login error:', err);
             setError('Failed to initialize Google login');
