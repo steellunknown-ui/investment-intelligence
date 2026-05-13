@@ -52,8 +52,8 @@ export default function LoginPage() {
                         console.log('App opened with URL:', data.url);
                         const url = new URL(data.url);
 
-                        // Check if it's our auth callback
-                        if (url.protocol === 'com.investmentintelligence.app:' || url.host === 'auth') {
+                        // Check for our dedicated auth scheme
+                        if (url.protocol === 'com.investmentintelligence.auth:' || url.host === 'callback') {
                             const code = url.searchParams.get('code');
                             if (code && isMounted) {
                                 setLoading(true);

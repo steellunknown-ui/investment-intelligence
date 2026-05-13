@@ -33,12 +33,12 @@
                     android:pathPrefix="/auth/callback" />
             </intent-filter>
 
-            <!-- Custom Scheme: provides a reliable way to return to the app from external browser -->
+            <!-- Custom Scheme for Auth: separate from main deep links for reliability -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.investmentintelligence.app" android:host="auth" android:pathPrefix="/callback" />
+                <data android:scheme="com.investmentintelligence.auth" android:host="callback" />
             </intent-filter>
 
         </activity>

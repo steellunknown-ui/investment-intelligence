@@ -84,7 +84,7 @@ export async function GET(request: Request) {
 
         // If coming from Android app, we redirect to the custom scheme
         if (platform === 'android') {
-            const appRedirectUrl = `com.investmentintelligence.app://auth/callback?code=${code}&next=${encodeURIComponent(next)}`;
+            const appRedirectUrl = `com.investmentintelligence.auth://callback?code=${code}&next=${encodeURIComponent(next)}`;
             console.log('Android app detected, redirecting to scheme:', appRedirectUrl);
             return NextResponse.redirect(appRedirectUrl);
         }
