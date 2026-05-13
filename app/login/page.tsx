@@ -87,7 +87,6 @@ export default function LoginPage() {
 
                 App.addListener('appUrlOpen', async (data: any) => {
                     console.log('🚀 [DEEP LINK] Received URL:', data.url);
-                    alert('Debug: Deep link received: ' + data.url); // Temporary visible debug
 
                     try {
                         const url = new URL(data.url);
@@ -112,23 +111,10 @@ export default function LoginPage() {
                             }
 
                             try {
-                                console.log('🔄 [AUTH] Exchanging code securely via capacitorStorage...');
+                                console.log('🔄 [AUTH] Exchanging code via Capacitor client...');
                                 
-                                // ── RESTORE PKCE TO LOCAL STORAGE ──
-                                alert("Restoring PKCE from secure storage...");
-                                const { capacitorStorage } = await import('@/src/lib/supabase/capacitor-storage');
-                                const { Preferences } = await import('@capacitor/preferences');
-                                const { keys } = await Preferences.keys();
-                                for (const key of keys) {
-                                    if (key.startsWith('sb-')) {
-                                        const { value } = await Preferences.get({ key });
-                                        if (value) localStorage.setItem(key, value);
-                                    }
-                                }
-
-                                // Use the pure JS client
+                                // Use the Capacitor client which has the PKCE verifier in native storage
                                 const capacitorAuth = createCapacitorAuthClient();
-                                alert("Exchanging code for session...");
                                 const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
 
                                 if (exchangeError) {
@@ -136,7 +122,8 @@ export default function LoginPage() {
                                     setError(exchangeError.message);
                                 } else if (exchangeData.session) {
                                     console.log('✅ [AUTH] Code exchanged! Syncing session...');
-                                    // Sync the session to the SSR client so the rest of the app works seamlessly
+
+                                    // Sync the session to the SSR client
                                     const ssrClient = createSupabaseBrowserClient();
                                     await ssrClient.auth.setSession({
                                         access_token: exchangeData.session.access_token,
@@ -163,8 +150,6 @@ export default function LoginPage() {
                             setLoading(false);
                             return;
                         }
-
-                        // End of token handling
                     } catch (urlErr) {
                         console.error('[Login] Failed to parse deep link URL:', urlErr);
                     }
@@ -211,60 +196,34 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         try {
-            alert("Button clicked! Starting Google Login...");
-            const supabase = createSupabaseBrowserClient();
+            console.log('Starting Google Login...');
+            setLoading(true);
+            setError(null);
+
             const PROD_URL = 'https://investment-intellegince.vercel.app';
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
-                alert("Native environment detected!");
                 // ── CAPACITOR GOOGLE LOGIN ──
-                // Use the pure JS client so the PKCE verifier is written directly to SharedPreferences.
                 const capacitorAuth = createCapacitorAuthClient();
                 const { Browser } = await import('@capacitor/browser');
                 
-                alert("Client created, starting OAuth...");
-                try {
-                    const { data, error } = await capacitorAuth.auth.signInWithOAuth({
-                        provider: 'google',
-                        options: {
-                            redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
-                            skipBrowserRedirect: true,
-                        },
-                    });
+                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
+                        skipBrowserRedirect: true,
+                    },
+                });
 
-                    if (error) {
-                        alert("OAuth Error: " + error.message);
-                        throw error;
-                    }
+                if (error) throw error;
 
-                    // ── BACKUP PKCE TO CAPACITOR STORAGE ──
-                    // Since capacitorStorage was hanging signInWithOAuth, we used localStorage.
-                    // But we MUST backup the PKCE verifier to SharedPreferences because 
-                    // localStorage gets wiped during the deep link transition.
-                    alert("Backing up PKCE to secure storage...");
-                    const { capacitorStorage } = await import('@/src/lib/supabase/capacitor-storage');
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && key.startsWith('sb-')) {
-                            const val = localStorage.getItem(key);
-                            if (val) await capacitorStorage.setItem(key, val);
-                        }
-                    }
-
-                    if (data?.url) {
-                        alert("Opening browser tab...");
-                        await Browser.open({ url: data.url, windowName: '_self' });
-                    } else {
-                        alert("No URL returned from OAuth!");
-                    }
-                } catch (oauthErr: any) {
-                    alert("signInWithOAuth threw an error: " + String(oauthErr));
-                    throw oauthErr;
+                if (data?.url) {
+                    await Browser.open({ url: data.url, windowName: '_self' });
                 }
             } else {
-                alert("Web environment detected!");
                 // ── WEB GOOGLE LOGIN ──
+                const supabase = createSupabaseBrowserClient();
                 const redirectTo = origin.includes('localhost')
                     ? `${origin}/auth/callback`
                     : `${PROD_URL}/auth/callback`;
@@ -278,9 +237,10 @@ export default function LoginPage() {
                 });
             }
         } catch (err: any) {
-            alert("Fatal Error: " + err.message);
             console.error('[Login] Google login error:', err);
-            setError('Failed to initialize Google login');
+            setError(err.message || 'Failed to initialize Google login');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -473,6 +433,7 @@ export default function LoginPage() {
                                 type="button"
                                 variant="outline"
                                 onClick={handleGoogleLogin}
+                                disabled={loading}
                                 className="w-full h-12 bg-card border-border hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-3"
                             >
                                 <svg className="h-5 w-5" viewBox="0 0 24 24">
