@@ -73,9 +73,16 @@ export default function LoginPage() {
 
             // Always redirect to the production callback URL
             // (works in WebView, desktop browser, and mobile browser)
-            const redirectTo = origin.includes('localhost')
+            let redirectTo = origin.includes('localhost')
                 ? `${origin}/auth/callback`
                 : `${PROD_URL}/auth/callback`;
+
+            // Detect if running inside Capacitor (Android/iOS native app)
+            if (isCapacitorNative()) {
+                // For Android app, we append platform=android to help the callback
+                // decide whether to redirect to the web or back to the app scheme.
+                redirectTo += (redirectTo.includes('?') ? '&' : '?') + 'platform=android';
+            }
 
             await supabase.auth.signInWithOAuth({
                 provider: 'google',

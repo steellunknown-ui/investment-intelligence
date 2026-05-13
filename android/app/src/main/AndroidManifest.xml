@@ -33,6 +33,14 @@
                     android:pathPrefix="/auth/callback" />
             </intent-filter>
 
+            <!-- Custom Scheme: provides a reliable way to return to the app from external browser -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.investmentintelligence.app" />
+            </intent-filter>
+
         </activity>
 
         <provider

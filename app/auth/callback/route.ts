@@ -12,6 +12,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const code = searchParams.get("code");
         const next = searchParams.get("next") ?? "/dashboard";
+        const platform = searchParams.get("platform");
 
         if (!code) {
             console.error('No auth code provided');
@@ -80,6 +81,14 @@ export async function GET(request: Request) {
 
         // Create the redirect response
         const redirectUrl = `${siteUrl}${next}`;
+
+        // If coming from Android app, we redirect to the custom scheme
+        if (platform === 'android') {
+            const appRedirectUrl = `com.investmentintelligence.app://auth/callback?code=${code}&next=${encodeURIComponent(next)}`;
+            console.log('Android app detected, redirecting to scheme:', appRedirectUrl);
+            return NextResponse.redirect(appRedirectUrl);
+        }
+
         const response = NextResponse.redirect(redirectUrl);
 
         // CRITICAL: Write ALL accumulated session cookies onto this response
