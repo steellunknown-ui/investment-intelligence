@@ -100,11 +100,11 @@ export default function LoginPage() {
                             console.log('⚠️ [DEEP LINK] Browser close error/ignored:', e);
                         }
 
-                        // ── Primary Capacitor Auth: Handle code-based callback ──
-                        const code = url.searchParams.get('code');
-                        console.log('🔍 [DEEP LINK] Code extracted:', code ? 'YES (hidden for security)' : 'NO');
+                        // ── Primary Capacitor Auth: Handle token-based callback ──
+                        const accessToken = url.searchParams.get('access_token');
+                        const refreshToken = url.searchParams.get('refresh_token');
 
-                        if (code && isMounted) {
+                        if (accessToken && refreshToken && isMounted) {
                             setLoading(true);
                             // ── SET THE LOGIN LOCK ──
                             if (typeof window !== 'undefined') {
@@ -112,29 +112,25 @@ export default function LoginPage() {
                             }
 
                             try {
-                                alert('🔄 Handshake Starting...');
-                                console.log('🔄 [AUTH] Exchanging code for session natively...');
+                                console.log('🔄 [AUTH] Setting session natively from tokens...');
                                 const supabase = createSupabaseBrowserClient();
 
-                                const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                                const { error: sessionError } = await supabase.auth.setSession({
+                                    access_token: accessToken,
+                                    refresh_token: refreshToken,
+                                });
 
-                                if (exchangeError) {
-                                    console.error('❌ [AUTH] exchangeCodeForSession error:', exchangeError);
-                                    alert('❌ Auth Error: ' + exchangeError.message);
-                                    if (exchangeError.message.includes('PKCE') || exchangeError.message.includes('code verifier')) {
-                                        setError('Sign-in timeout. Please try again.');
-                                    } else {
-                                        setError(exchangeError.message);
-                                    }
-                                } else if (exchangeData.session) {
-                                    console.log('✅ [AUTH] Native exchange successful! Redirecting...');
-                                    alert('✅ Login Successful! Redirecting to Dashboard...');
+                                if (sessionError) {
+                                    console.error('❌ [AUTH] setSession error:', sessionError);
+                                    setError(sessionError.message);
+                                } else {
+                                    console.log('✅ [AUTH] Native session set! Redirecting...');
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();
                                 }
                             } catch (err) {
-                                console.error('❌ [AUTH] Deep link code exchange exception:', err);
+                                console.error('❌ [AUTH] Deep link session exception:', err);
                                 setError('Failed to complete authentication');
                             } finally {
                                 if (isMounted) setLoading(false);
@@ -150,34 +146,7 @@ export default function LoginPage() {
                             return;
                         }
 
-                        // ── Secondary/Legacy: Handle token-based callback ──
-                        const accessToken = url.searchParams.get('access_token');
-                        const refreshToken = url.searchParams.get('refresh_token');
-
-                        if (accessToken && refreshToken && isMounted) {
-                            setLoading(true);
-                            try {
-                                const supabase = createSupabaseBrowserClient();
-                                const { error } = await supabase.auth.setSession({
-                                    access_token: accessToken,
-                                    refresh_token: refreshToken,
-                                });
-
-                                if (error) {
-                                    console.error('[Login] setSession error:', error);
-                                    setError(error.message);
-                                } else {
-                                    await recordSessionLogin();
-                                    router.push('/dashboard');
-                                    router.refresh();
-                                }
-                            } catch (err) {
-                                console.error('[Login] Deep link auth error:', err);
-                                setError('Failed to complete authentication');
-                            } finally {
-                                if (isMounted) setLoading(false);
-                            }
-                        }
+                        // End of token handling
                     } catch (urlErr) {
                         console.error('[Login] Failed to parse deep link URL:', urlErr);
                     }

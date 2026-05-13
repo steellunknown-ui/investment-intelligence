@@ -24,24 +24,6 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${siteUrl}/login?error=missing_env_vars`);
         }
 
-        // ──────────────────────────────────────────────────────────────────
-        // CAPACITOR BYPASS: Let the app handle the code exchange
-        //
-        // This is the CRITICAL fix for the PKCE error. The server cannot
-        // see the PKCE verifier stored in the phone's native storage.
-        // We redirect the 'code' back to the app so the app can
-        // perform the exchange itself using its own local verifier.
-        // ──────────────────────────────────────────────────────────────────
-        if (platform === 'capacitor') {
-            const appCallbackUrl = `com.investmentintelligence.auth://callback?code=${code}&next=${encodeURIComponent(next)}`;
-            console.log('Capacitor detected, bypassing server exchange and returning code to app');
-            return createCapacitorRedirectPage(
-                appCallbackUrl,
-                'Authenticating...',
-                'Redirecting you back to the app to complete sign-in.'
-            );
-        }
-
         const cookieStore = cookies();
         const cookiesToSet: { name: string; value: string; options: any }[] = [];
 
@@ -75,12 +57,64 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('Auth exchange error:', error.message);
+
+            if (platform === 'capacitor') {
+                const errorUrl = `com.investmentintelligence.auth://callback?error=${encodeURIComponent(error.message)}`;
+                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', error.message);
+            }
+
             return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
         }
 
         if (!data?.user || !data?.session) {
             console.error('No user/session data after auth');
+
+            if (platform === 'capacitor') {
+                const errorUrl = `com.investmentintelligence.auth://callback?error=no_session`;
+                return createCapacitorRedirectPage(errorUrl, 'Authentication failed', 'No session data');
+            }
+
             return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
+        }
+
+        // ──────────────────────────────────────────────────────────────────
+        // CAPACITOR PATH: Send tokens back to the app via deep link.
+        //
+        // This completely bypasses the client-side PKCE crash. The server
+        // exchanges the code safely, then hands the access and refresh tokens
+        // to the app, which uses supabase.auth.setSession().
+        // ──────────────────────────────────────────────────────────────────
+        if (platform === 'capacitor') {
+            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
+            appCallbackUrl.searchParams.set('access_token', data.session.access_token);
+            appCallbackUrl.searchParams.set('refresh_token', data.session.refresh_token);
+            appCallbackUrl.searchParams.set('next', next);
+
+            // Non-critical background tasks
+            try {
+                const metadata = data.user.user_metadata || {};
+                const full_name = metadata.full_name || metadata.name;
+                const avatar_url = metadata.avatar_url || metadata.picture;
+                const email = metadata.email || data.user.email;
+
+                await supabase.from("profiles").upsert({
+                    id: data.user.id,
+                    full_name: full_name || null,
+                    avatar_url: avatar_url || null,
+                    email: email,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: "id" });
+                await trackLoginActivity(supabase, data.user.id);
+            } catch (e) {
+                console.error('Background task failed (non-critical):', e);
+            }
+
+            console.log('Auth successful (Capacitor), redirecting via deep link');
+            return createCapacitorRedirectPage(
+                appCallbackUrl.toString(),
+                'Signing you in...',
+                'Redirecting you back to the app.'
+            );
         }
 
         // ──────────────────────────────────────────────────────────────────
@@ -89,39 +123,29 @@ export async function GET(request: Request) {
         const redirectUrl = `${siteUrl}${next}`;
         const response = NextResponse.redirect(redirectUrl);
 
-        // CRITICAL: Write ALL accumulated session cookies onto this response
         for (const cookie of cookiesToSet) {
             response.cookies.set(cookie.name, cookie.value, cookie.options);
         }
 
-        // Non-critical: Upsert profile
         try {
             const metadata = data.user.user_metadata || {};
             const full_name = metadata.full_name || metadata.name;
             const avatar_url = metadata.avatar_url || metadata.picture;
             const email = metadata.email || data.user.email;
 
-            await supabase
-                .from("profiles")
-                .upsert({
-                    id: data.user.id,
-                    full_name: full_name || null,
-                    avatar_url: avatar_url || null,
-                    email: email,
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: "id" });
-        } catch (profileErr) {
-            console.error('Profile upsert failed (non-critical):', profileErr);
-        }
-
-        // Non-critical: Track login
-        try {
+            await supabase.from("profiles").upsert({
+                id: data.user.id,
+                full_name: full_name || null,
+                avatar_url: avatar_url || null,
+                email: email,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: "id" });
             await trackLoginActivity(supabase, data.user.id);
-        } catch (trackErr) {
-            console.error('Login tracking failed (non-critical):', trackErr);
+        } catch (e) {
+            console.error('Background task failed (non-critical):', e);
         }
 
-        console.log('Auth successful, redirecting to:', redirectUrl, 'cookies set:', cookiesToSet.length);
+        console.log('Auth successful, redirecting to:', redirectUrl);
         return response;
 
     } catch (error) {
@@ -130,11 +154,6 @@ export async function GET(request: Request) {
     }
 }
 
-/**
- * Creates an HTML page that redirects to the Capacitor app via its custom URL scheme.
- * This is needed because you can't do a 302 redirect to a custom scheme.
- * The page auto-redirects after a short delay and also provides a manual click button.
- */
 function createCapacitorRedirectPage(url: string, title: string, subtitle: string) {
     return new NextResponse(
         `<!DOCTYPE html>
@@ -187,7 +206,6 @@ function createCapacitorRedirectPage(url: string, title: string, subtitle: strin
                     <a href="${url}" class="btn">Click here if not redirected</a>
                 </div>
                 <script>
-                    // Redirect after a short delay to ensure the page renders
                     setTimeout(function() {
                         window.location.href = "${url}";
                     }, 300);

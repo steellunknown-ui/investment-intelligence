@@ -66,14 +66,17 @@ export function SessionGuard({ children }: SessionGuardProps) {
       }
 
       // Skip for public paths
+      const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
 
       try {
         // Check if we have a valid session in Supabase
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          // No session — redirect to login
-          router.replace('/login');
+          // No session — redirect to login if not on a public path
+          if (!isPublic) {
+            router.replace('/login');
+          }
           return;
         }
 
