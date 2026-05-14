@@ -203,7 +203,7 @@ export function LiabilitiesTrendCard() {
                     Liabilities Trend
                 </p>
                 {!hasData ? (
-                    <div className="h-[110px] w-full flex flex-col items-center justify-center text-center">
+                    <div className="h-[140px] w-full flex flex-col items-center justify-center text-center">
                         <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
                             <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
@@ -212,22 +212,20 @@ export function LiabilitiesTrendCard() {
                         <p className="text-[10px] text-muted-foreground font-medium">No liability data yet</p>
                     </div>
                 ) : (
-                    <>
+                    <div className="h-[140px] w-full flex flex-col">
                         <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
-                                    ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
-                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                    }`}>
-                                    {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
-                                </div>
+                            <div className="flex items-end gap-2">
+                                <span className="text-lg font-bold text-amber-600 leading-none">{formatCompact(latestValue)}</span>
+                                <span className="text-[10px] text-muted-foreground leading-none pb-[2px]">current</span>
+                            </div>
+                            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${Number(trend) <= 0
+                                ? "bg-emerald-100 text-primary dark:bg-primary/20 dark:text-accent"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                }`}>
+                                {Number(trend) <= 0 ? "↓" : "↑"} {Math.abs(Number(trend))}%
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="text-lg font-bold text-amber-600">{formatCompact(latestValue)}</span>
-                            <span className="text-[10px] text-muted-foreground">current</span>
-                        </div>
-                        <div className="h-[90px] w-full">
+                        <div className="flex-1 w-full min-h-0">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                                     <XAxis
@@ -256,7 +254,7 @@ export function LiabilitiesTrendCard() {
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    </>
+                    </div>
                 )}
             </MotionCard>
 
