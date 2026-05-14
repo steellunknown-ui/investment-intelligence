@@ -30,10 +30,10 @@ import {
 } from "@/components/ui/Sheet";
 
 // Navigation order:
-// Home (desktop only), Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
+// Home, Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
 // Holdings, Documents, AI Assistant, Family Hub, Nominee, Activity & Alerts, Settings
 const navigation = [
-  { name: "Home", href: "/", icon: Home, hideOnMobile: true },
+  { name: "Home", href: "/", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
@@ -58,7 +58,7 @@ interface SidebarProps {
 // Navigation content - shared between desktop and mobile
 function NavigationContent({ expanded, onClose, isMobile }: { expanded?: boolean; onClose?: () => void; isMobile?: boolean }) {
   const pathname = usePathname();
-  const items = isMobile ? navigation.filter(item => !item.hideOnMobile) : navigation;
+  const items = navigation; // Always show all items including Home
 
   return (
     <nav className={cn("flex flex-col gap-0.5", expanded ? "p-3" : "p-2")}>

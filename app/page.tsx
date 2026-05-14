@@ -196,7 +196,7 @@ export default function HomePage() {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const isCapacitor = !!(window as any).Capacitor;
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     const done = localStorage.getItem("onboarding_done") === "true";
     setIsMobileApp(isCapacitor);
     setOnboardingDone(done);
