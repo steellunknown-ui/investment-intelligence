@@ -329,7 +329,7 @@ export default function InsurancePage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="w-full sm:w-48 shrink-0">
+                        <div className="w-40 sm:w-48 shrink-0">
                             <Select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -340,14 +340,14 @@ export default function InsurancePage() {
                             />
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-start">
                         <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
                         <Button
                             onClick={() => {
                                 resetForm();
                                 setIsModalOpen(true);
                             }}
-                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            className="flex-1 sm:flex-initial gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
                         >
                             <Plus className="h-4 w-4" />
                             Add Policy
@@ -442,16 +442,16 @@ export default function InsurancePage() {
                                                 ) : null}
                                             </div>
                                         </CardContent>
-                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
-                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                        <CardFooter className="pt-0 flex flex-wrap items-center justify-between gap-2 mt-auto">
+                                            <div className="text-[10px] text-muted-foreground">
                                                 {formatUpdatedLabel(policy.updated_at || policy.created_at)}
                                             </div>
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 ml-auto">
                                                 <Button
                                                     variant="secondary"
                                                     size="sm"
                                                     onClick={() => handleOpenPayments(policy)}
-                                                    className="h-8 gap-2 text-xs mr-1"
+                                                    className="h-8 gap-2 text-xs"
                                                 >
                                                     <History className="h-3 w-3" /> Payments
                                                 </Button>

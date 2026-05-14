@@ -325,7 +325,7 @@ export default function LiabilitiesPage() {
                 {/* Filters & Actions */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                     <div className="flex flex-1 w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-                        <div className="relative flex-1 min-w-[200px]">
+                        <div className="relative flex-1 min-w-[140px] sm:min-w-[200px]">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search loans..."
@@ -334,27 +334,29 @@ export default function LiabilitiesPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <Select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            options={[{ value: "all", label: "All Status" }, ...STATUS_OPTIONS]}
-                            className="w-[140px]"
-                        />
-                        <Select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            options={[{ value: "all", label: "All Types" }, ...LOAN_TYPES]}
-                            className="w-[150px]"
-                        />
+                        <div className="flex flex-1 gap-2 min-w-0">
+                            <Select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                options={[{ value: "all", label: "All Status" }, ...STATUS_OPTIONS]}
+                                className="flex-1 min-w-0"
+                            />
+                            <Select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                options={[{ value: "all", label: "All Types" }, ...LOAN_TYPES]}
+                                className="flex-1 min-w-0"
+                            />
+                        </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-start">
                         <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
                         <Button
                             onClick={() => {
                                 resetForm();
                                 setIsModalOpen(true);
                             }}
-                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            className="flex-1 sm:flex-initial gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
                         >
                             <Plus className="h-4 w-4" />
                             Add Liability
@@ -447,13 +449,13 @@ export default function LiabilitiesPage() {
                                                 )}
                                             </div>
                                         </CardContent>
-                                        <CardFooter className="pt-0 flex items-center justify-between mt-auto">
-                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                        <CardFooter className="pt-0 flex flex-wrap items-center justify-between gap-2 mt-auto">
+                                            <div className="text-[10px] text-muted-foreground">
                                                 {formatUpdatedAt(liability.updated_at || liability.created_at)}
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button variant="outline" size="sm" className="h-8 px-2 text-xs mr-1" onClick={() => openPayments(liability)}>
-                                                    <Wallet className="h-3 w-3 mr-1" /> Payments
+                                            <div className="flex items-center gap-1 ml-auto">
+                                                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => openPayments(liability)}>
+                                                    <Wallet className="h-3 w-3 mr-1" /> Pay
                                                 </Button>
                                                 <EntityDocumentsBadge
                                                     entityType="liability"

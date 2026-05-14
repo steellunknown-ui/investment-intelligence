@@ -434,7 +434,7 @@ export default function ReceivablesPage() {
                 {/* Filters & Actions */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                     <div className="flex flex-1 w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-                        <div className="relative flex-1 min-w-[200px]">
+                        <div className="relative flex-1 min-w-[140px] sm:min-w-[200px]">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                             <Input
                                 placeholder="Search by name, purpose..."
@@ -447,17 +447,17 @@ export default function ReceivablesPage() {
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             options={[{ value: "all", label: "All Status" }, ...STATUS_OPTIONS]}
-                            className="w-[160px]"
+                            className="w-32 sm:w-[160px]"
                         />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-start">
                         <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
                         <Button
                             onClick={() => {
                                 resetForm();
                                 setIsModalOpen(true);
                             }}
-                            className="w-full sm:w-auto gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
+                            className="flex-1 sm:flex-initial gap-2 bg-accent text-black hover:bg-accent/90 hover:text-black font-semibold shadow-sm border border-accent/10"
                         >
                             <Plus className="h-4 w-4" />
                             Add Receivable
@@ -500,15 +500,15 @@ export default function ReceivablesPage() {
                                     <Card key={rec.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
                                         <CardHeader className="pb-3">
                                             <div className="flex justify-between items-start">
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
                                                     <div className="h-10 w-10 min-w-[2.5rem] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-semibold">
                                                         {rec.given_to.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <div>
+                                                    <div className="min-w-0">
                                                         <h3 className="font-semibold text-foreground line-clamp-1">
                                                             {rec.given_to}
                                                         </h3>
-                                                        {rec.relationship && <p className="text-xs text-slate-500">{rec.relationship}</p>}
+                                                        {rec.relationship && <p className="text-xs text-slate-500 truncate">{rec.relationship}</p>}
                                                     </div>
                                                 </div>
                                                 <Badge
@@ -577,19 +577,19 @@ export default function ReceivablesPage() {
                                             </div>
                                         </CardContent>
                                         <CardFooter className="pt-0 flex flex-col gap-3 mt-auto">
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                            <div className="flex flex-wrap items-center justify-between w-full gap-2">
+                                                <div className="text-[10px] text-muted-foreground">
                                                     {formatUpdatedAt(rec.updated_at || rec.created_at)}
                                                 </div>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1 ml-auto">
                                                     {rec.status !== 'received' && rec.status !== 'written_off' && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="h-8 px-2 text-xs border-emerald-200 text-primary hover:bg-primary/10 hover:text-emerald-800 mr-1"
+                                                            className="h-8 px-2 text-xs border-emerald-200 text-primary hover:bg-primary/10 hover:text-emerald-800"
                                                             onClick={() => openReceiveModal(rec)}
                                                         >
-                                                            <ArrowDownLeft className="h-3 w-3 mr-1" /> Receive
+                                                            <ArrowDownLeft className="h-3 w-3 mr-1" /> Rec
                                                         </Button>
                                                     )}
                                                     <EntityDocumentsBadge
@@ -618,7 +618,7 @@ export default function ReceivablesPage() {
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        className="flex-1 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 hover:-translate-y-0.5 transition-all"
+                                                                        className="flex-1 text-[10px] h-8 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
                                                                         onClick={() => handleReminderAction(rec, 'whatsapp')}
                                                                     >
                                                                         <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
@@ -634,7 +634,7 @@ export default function ReceivablesPage() {
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        className="flex-1 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
+                                                                        className="flex-1 text-[10px] h-8 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-800"
                                                                         onClick={() => handleReminderAction(rec, 'sms')}
                                                                     >
                                                                         <Phone className="h-3 w-3 mr-1" /> SMS
@@ -650,7 +650,7 @@ export default function ReceivablesPage() {
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="sm"
-                                                                        className="text-xs text-slate-600 hover:text-slate-800 hover:-translate-y-0.5 transition-all"
+                                                                        className="h-8 w-8 p-0 text-slate-500"
                                                                         onClick={() => handleReminderAction(rec, 'copy')}
                                                                     >
                                                                         <Copy className="h-3 w-3" />
@@ -685,15 +685,11 @@ export default function ReceivablesPage() {
                                                 </TooltipProvider>
                                             ) : (
                                                 <div className="pt-2 border-t border-border">
-                                                    <p className="text-xs text-slate-400 text-center italic">
-                                                        {!rec.contact_number ? "Add phone number to send reminders" : "No pending amount"}
+                                                    <p className="text-[10px] text-slate-400 text-center italic">
+                                                        {!rec.contact_number ? "Add phone number for reminders" : "No pending amount"}
                                                     </p>
                                                 </div>
                                             )}
-
-                                            <div className="text-xs text-muted-foreground mt-2">
-                                                {formatUpdatedAt(rec.updated_at || rec.created_at)}
-                                            </div>
                                         </CardFooter>
                                     </Card>
                                 );
