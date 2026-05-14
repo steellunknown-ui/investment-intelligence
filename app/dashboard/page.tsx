@@ -416,10 +416,11 @@ function QuickStatCard({
       className={`vault-card card-hover relative overflow-hidden flex flex-col justify-center h-full ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
       delay={delay}
+      padding="none"
     >
-      <div className="p-4 flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+      <div className="p-3.5 flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
           {loading ? (
             <div className="space-y-2 mt-2">
               <div className="h-6 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
@@ -427,18 +428,18 @@ function QuickStatCard({
             </div>
           ) : (
             <>
-              <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
+              <p className={`text-lg font-bold mt-0.5 leading-tight truncate ${color}`}>{value}</p>
               {count && (
-                <p className="text-sm font-medium text-muted-foreground mt-0.5">{count}</p>
+                <p className="text-xs font-medium text-muted-foreground mt-0.5 truncate">{count}</p>
               )}
               {description && (
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-tight">{description}</p>
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-tighter line-clamp-1">{description}</p>
               )}
             </>
           )}
         </div>
-        <div className="h-10 w-10 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <Icon className={`h-5 w-5 ${color} opacity-80`} />
+        <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0 ml-2">
+          <Icon className={`h-4 w-4 ${color} opacity-80`} />
         </div>
       </div>
     </MotionCard>

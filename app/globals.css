@@ -153,7 +153,7 @@
   }
 
   .vault-card {
-    @apply min-h-[120px] sm:min-h-[140px];
+    @apply min-h-[100px] sm:min-h-[120px];
   }
 
   /* Icon Container */
