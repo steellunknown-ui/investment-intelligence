@@ -23,6 +23,7 @@ export const createCapacitorAuthClient = () => {
         autoRefreshToken: false, // We'll let the SSR client handle refreshes
         persistSession: true,
         storage: capacitorStorage, // CRITICAL: Use SharedPreferences for PKCE!
+        storageKey: 'capacitor-native-auth-token', // Prevent collision with SSR client PKCE
       }
     }
   );
