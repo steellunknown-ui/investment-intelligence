@@ -44,6 +44,25 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
     }) as Promise<T>;
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number, message: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(input, {
+            ...init,
+            signal: controller.signal,
+        });
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            throw new Error(message);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 function createCodeVerifier() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
     const length = 64;
@@ -120,19 +139,18 @@ async function exchangeNativeCodeForSession(authCode: string) {
         throw new Error('Login verifier missing. Please tap Continue with Google again.');
     }
 
-    const response = await withTimeout(
-        fetch(`${supabaseUrl}/auth/v1/token?grant_type=pkce`, {
+    const response = await fetchWithTimeout(
+        '/api/auth/native-exchange',
+        {
             method: 'POST',
             headers: {
-                apikey: supabaseAnonKey,
-                Authorization: `Bearer ${supabaseAnonKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                auth_code: authCode,
-                code_verifier: codeVerifier,
+                code: authCode,
+                codeVerifier,
             }),
-        }),
+        },
         12000,
         'Google login handshake timed out'
     );
@@ -147,19 +165,14 @@ async function exchangeNativeCodeForSession(authCode: string) {
         throw new Error(payload.error_description || payload.msg || payload.error || 'Google login handshake failed');
     }
 
-    if (!payload.access_token || !payload.refresh_token || !payload.user) {
+    if (!payload.session?.access_token || !payload.session?.refresh_token || !payload.session?.user) {
         throw new Error('Google login did not return a valid session');
     }
-
-    const session = {
-        ...payload,
-        expires_at: payload.expires_at || Math.round(Date.now() / 1000) + (payload.expires_in || 3600),
-    };
 
     localStorage.removeItem(CODE_VERIFIER_KEY);
     await capacitorStorage.removeItem(CODE_VERIFIER_KEY).catch(() => {});
 
-    return { session, user: payload.user };
+    return { session: payload.session, user: payload.user };
 }
 
 async function persistNativeSession(session: any) {
@@ -280,11 +293,29 @@ export default function LoginPage() {
                         (window as any).oauthLoginInProgress = false;
                     }
 
+                    let timedOut = false;
+                    const handshakeWatchdog = setTimeout(() => {
+                        timedOut = true;
+                        processedOAuthCodeRef.current = null;
+
+                        if (typeof window !== 'undefined') {
+                            (window as any).isAuthenticating = false;
+                        }
+
+                        if (isMounted) {
+                            setError('Handshake failed: Google login took too long. Please try again.');
+                            setStatusMessage(null);
+                            setLoading(false);
+                        }
+                    }, 18000);
+
                     try {
                         const { session } = await exchangeNativeCodeForSession(code);
+                        if (timedOut) return;
 
                         setStatusMessage("Connecting to dashboard...");
                         await persistNativeSession(session);
+                        if (timedOut) return;
 
                         await fetch('/api/auth/bootstrap', {
                             method: 'POST',
@@ -302,13 +333,17 @@ export default function LoginPage() {
                         });
 
                         await recordSessionLogin();
+                        if (timedOut) return;
+
                         router.push('/dashboard');
                         router.refresh();
                     } catch (err: any) {
+                        if (timedOut) return;
                         console.error('[AUTH] Deep link session exception:', err);
                         setError('Handshake failed: ' + (err.message || 'unknown error'));
                         setStatusMessage(null);
                     } finally {
+                        clearTimeout(handshakeWatchdog);
                         if (isMounted) {
                             setLoading(false);
                             setTimeout(() => {
