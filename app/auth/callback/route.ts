@@ -59,12 +59,17 @@ export async function GET(request: Request) {
         // SharedPreferences, completely avoiding WebView cookie bugs.
         // ──────────────────────────────────────────────────────────────────
         if (platform === 'capacitor') {
-            const appCallbackUrl = new URL('com.investmentintelligence.auth://callback');
-            appCallbackUrl.searchParams.set('code', code);
-            appCallbackUrl.searchParams.set('next', next);
+            const code_param = encodeURIComponent(code);
+            const next_param = encodeURIComponent(next);
+
+            // Use intent:// scheme — guaranteed to open app from Chrome Custom Tab
+            // Falls back to custom scheme for other browsers
+            const customSchemeUrl = `com.investmentintelligence.auth://callback?code=${code_param}&next=${next_param}`;
+            const intentUrl = `intent://callback?code=${code_param}&next=${next_param}#Intent;scheme=com.investmentintelligence.auth;package=com.investmentintelligence.app;end`;
 
             return createCapacitorRedirectPage(
-                appCallbackUrl.toString(),
+                customSchemeUrl,
+                intentUrl,
                 'Logging in...',
                 'Please wait while we complete your login.'
             );
@@ -121,7 +126,7 @@ export async function GET(request: Request) {
     }
 }
 
-function createCapacitorRedirectPage(url: string, title: string, subtitle: string) {
+function createCapacitorRedirectPage(customSchemeUrl: string, intentUrl: string, title: string, subtitle: string) {
     return new NextResponse(
         `<!DOCTYPE html>
         <html>
@@ -170,12 +175,21 @@ function createCapacitorRedirectPage(url: string, title: string, subtitle: strin
                     <div class="spinner"></div>
                     <h2>${title}</h2>
                     <p>${subtitle}</p>
-                    <a href="${url}" class="btn">Click here if not redirected</a>
+                    <a href="${customSchemeUrl}" class="btn">Click here if not redirected</a>
                 </div>
                 <script>
-                    setTimeout(function() {
-                        window.location.href = "${url}";
-                    }, 300);
+                    (function() {
+                        // Try intent:// first (works in Chrome, guaranteed app open)
+                        var intentUrl = "${intentUrl}";
+                        var customUrl = "${customSchemeUrl}";
+                        var isAndroid = /android/i.test(navigator.userAgent);
+
+                        if (isAndroid) {
+                            window.location.href = intentUrl;
+                        } else {
+                            window.location.href = customUrl;
+                        }
+                    })();
                 </script>
             </body>
         </html>`,

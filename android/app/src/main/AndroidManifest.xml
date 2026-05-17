@@ -22,18 +22,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link: catches the OAuth callback from Google/Chrome Custom Tabs -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="investment-intellegince.vercel.app"
-                    android:pathPrefix="/auth/callback" />
-            </intent-filter>
-
-            <!-- Custom Scheme for Auth: separate from main deep links for reliability -->
+            <!-- Custom Scheme for Auth callback from Google OAuth -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
