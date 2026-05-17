@@ -17,15 +17,22 @@ import { useEffect, useRef, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
-import {
-  recordSessionLogin,
-  isSessionValid,
-  clearSessionLogin,
-} from "@/src/lib/supabase/capacitor-storage";
+const SESSION_LOGIN_KEY = 'session_login_at';
+const SESSION_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 
-const isCapacitorNative = (): boolean => {
-  return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-};
+async function recordSessionLogin() {
+  localStorage.setItem(SESSION_LOGIN_KEY, Date.now().toString());
+}
+
+async function isSessionValid() {
+  const loginAt = localStorage.getItem(SESSION_LOGIN_KEY);
+  if (!loginAt) return true;
+  return Date.now() - parseInt(loginAt, 10) < SESSION_TIMEOUT_MS;
+}
+
+async function clearSessionLogin() {
+  localStorage.removeItem(SESSION_LOGIN_KEY);
+}
 
 // Paths that don't need session validation
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/auth', '/nominee-portal', '/nominee-access', '/more'];
@@ -39,59 +46,7 @@ export function SessionGuard({ children }: SessionGuardProps) {
   const pathname = usePathname();
   const hasCheckedSession = useRef(false);
 
-  useEffect(() => {
-    if (!isCapacitorNative() || typeof window === 'undefined') return;
 
-    const patchKey = '__investmentIntelligenceAuthFetch';
-    if ((window as any)[patchKey]) return;
-
-    const originalFetch = window.fetch.bind(window);
-    (window as any)[patchKey] = { originalFetch };
-
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const requestUrl =
-        typeof input === 'string'
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input.url;
-
-      const url = new URL(requestUrl, window.location.origin);
-      const isSameOriginApi = url.origin === window.location.origin && url.pathname.startsWith('/api/');
-      const isPublicAuthApi =
-        url.pathname === '/api/auth/native-exchange' ||
-        url.pathname === '/api/health';
-
-      if (!isSameOriginApi || isPublicAuthApi) {
-        return originalFetch(input, init);
-      }
-
-      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-
-      if (!headers.has('Authorization')) {
-        const supabase = createSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session?.access_token) {
-          headers.set('Authorization', `Bearer ${session.access_token}`);
-        }
-      }
-
-      return originalFetch(input, {
-        ...init,
-        credentials: init?.credentials ?? 'include',
-        headers,
-      });
-    };
-
-    return () => {
-      const patch = (window as any)[patchKey];
-      if (patch?.originalFetch === originalFetch) {
-        window.fetch = originalFetch;
-        delete (window as any)[patchKey];
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -112,44 +67,23 @@ export function SessionGuard({ children }: SessionGuardProps) {
     // ── 2. On mount: validate existing session ──
     const validateSession = async () => {
       // ── CHECK THE LOGIN LOCK ──
-      // If the app is currently processing a deep link login,
-      // STOP the guard from redirecting.
-      if (typeof window !== 'undefined' && (window as any).isAuthenticating) {
-        console.log('[SessionGuard] Auth in progress, skipping guard');
-        return;
-      }
-
       // Skip for public paths
       const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
 
       try {
-        // Check if we have a valid session in Supabase
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          // No session — redirect to login if not on a public path
-          if (!isPublic) {
-            router.replace('/login');
-          }
+          if (!isPublic) router.replace('/login');
           return;
         }
 
-        // Check 12-hour client-side timeout
         const valid = await isSessionValid();
         if (!valid) {
-          // Session exists but 12-hour window expired
           await supabase.auth.signOut();
           await clearSessionLogin();
           router.replace('/login?reason=timeout');
           return;
-        }
-
-        // Session is valid — if this is the first check on a native app,
-        // and user is on root/login, redirect to dashboard
-        if (!hasCheckedSession.current && isCapacitorNative()) {
-          if (pathname === '/' || pathname === '/login') {
-            router.replace('/dashboard');
-          }
         }
       } catch (err) {
         console.error('[SessionGuard] Session validation error:', err);
@@ -160,47 +94,8 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
     validateSession();
 
-    // ── 3. Capacitor: Listen for app resume events ──
-    let appStateCleanup: (() => void) | null = null;
-
-    if (isCapacitorNative()) {
-      const setupAppStateListener = async () => {
-        try {
-          const { App } = await import('@capacitor/app');
-
-          const listener = await App.addListener('appStateChange', async (state) => {
-            if (state.isActive) {
-              // App came to foreground — re-validate session
-              const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
-              if (isPublic) return;
-
-              const valid = await isSessionValid();
-              if (!valid) {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                  // Session exists but 12-hour expired
-                  await supabase.auth.signOut();
-                  await clearSessionLogin();
-                  router.replace('/login?reason=timeout');
-                }
-              }
-            }
-          });
-
-          appStateCleanup = () => {
-            listener.remove();
-          };
-        } catch (err) {
-          console.error('[SessionGuard] Failed to setup app state listener:', err);
-        }
-      };
-
-      setupAppStateListener();
-    }
-
     return () => {
       subscription.unsubscribe();
-      if (appStateCleanup) appStateCleanup();
     };
   }, [router, pathname]);
 

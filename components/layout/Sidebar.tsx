@@ -58,13 +58,7 @@ interface SidebarProps {
 // Navigation content - shared between desktop and mobile
 function NavigationContent({ expanded, onClose, isMobile }: { expanded?: boolean; onClose?: () => void; isMobile?: boolean }) {
   const pathname = usePathname();
-  const [isNativeApp, setIsNativeApp] = useState(false);
-
-  useEffect(() => {
-    setIsNativeApp(typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.());
-  }, []);
-
-  const items = isNativeApp ? navigation.filter(item => item.name !== "Home") : navigation;
+  const items = navigation;
 
   return (
     <nav className={cn("flex flex-col gap-0.5", expanded ? "p-3" : "p-2")}>
