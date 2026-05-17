@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
-import { createCapacitorAuthClient } from '@/src/lib/supabase/capacitor-auth';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -70,36 +69,15 @@ export default function SignupPage() {
         try {
             const supabase = createSupabaseBrowserClient();
             const PROD_URL = 'https://investment-intellegince.vercel.app';
+            const origin = window.location.origin;
+            const redirectTo = origin.includes('localhost')
+                ? `${origin}/auth/callback`
+                : `${PROD_URL}/auth/callback`;
 
-            // Detect Capacitor native environment
-            const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-
-            if (isNative) {
-                const capacitorAuth = createCapacitorAuthClient();
-                const { Browser } = await import('@capacitor/browser');
-                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
-                        skipBrowserRedirect: true,
-                    },
-                });
-                if (error || !data.url) {
-                    setError('Failed to start Google sign-up');
-                    return;
-                }
-                await Browser.open({ url: data.url, windowName: '_self' });
-            } else {
-                const origin = window.location.origin;
-                const redirectTo = origin.includes('localhost')
-                    ? `${origin}/auth/callback`
-                    : `${PROD_URL}/auth/callback`;
-
-                await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo },
-                });
-            }
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo },
+            });
         } catch (err) {
             console.error("Google login error:", err);
             setError("Failed to initialize Google login");

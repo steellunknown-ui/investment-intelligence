@@ -191,30 +191,7 @@ const staggerContainer = {
 
 export default function HomePage() {
   const router = useRouter();
-  const [isMobileApp, setIsMobileApp] = useState(false);
-  const [onboardingDone, setOnboardingDone] = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-    const done = localStorage.getItem("onboarding_done") === "true";
-    setIsMobileApp(isCapacitor);
-    setOnboardingDone(done);
-    setChecked(true);
-  }, []);
-
-  // Wait for check before rendering anything
-  if (!checked) return null;
-
-  // Mobile app — show onboarding or go to login directly
-  if (isMobileApp) {
-    if (!onboardingDone) {
-      return <OnboardingSlides />;
-    } else {
-      router.replace("/login");
-      return null;
-    }
-  }
+  const [onboardingDone] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />

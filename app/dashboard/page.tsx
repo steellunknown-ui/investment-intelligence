@@ -97,33 +97,13 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const fetchHeaders: Record<string, string> = {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      };
-
-      const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-
-      if (isNative) {
-        const supabase = createSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
-          console.log('🔑 [FETCH] Injecting Auth Header for Native');
-        }
-      }
-
-      const res = await fetch("/api/dashboard/net-worth", {
-        headers: fetchHeaders,
-        cache: 'no-store'
-      });
+      const res = await fetch("/api/dashboard/net-worth", { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setNetWorth(data);
       }
-      // Fetch last login timestamp
       try {
-        const loginRes = await fetch("/api/dashboard/last-login", { headers: fetchHeaders });
+        const loginRes = await fetch("/api/dashboard/last-login");
         if (loginRes.ok) {
           const loginData = await loginRes.json();
           setLastLoginAt(loginData.lastLoginAt || null);

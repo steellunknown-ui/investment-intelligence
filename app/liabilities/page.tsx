@@ -154,21 +154,9 @@ export default function LiabilitiesPage() {
         try {
             setLoading(true);
 
-            const fetchHeaders: Record<string, string> = {
-                'Cache-Control': 'no-cache'
-            };
-            const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-            if (isNative) {
-                const supabase = createSupabaseBrowserClient();
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.access_token) {
-                    fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
-                }
-            }
-
             const [liabilitiesRes, assetsRes] = await Promise.all([
-                fetch("/api/liabilities", { headers: fetchHeaders, cache: 'no-store' }),
-                fetch("/api/assets", { headers: fetchHeaders, cache: 'no-store' })
+                fetch("/api/liabilities", { cache: 'no-store' }),
+                fetch("/api/assets", { cache: 'no-store' })
             ]);
 
             if (liabilitiesRes.ok) {
