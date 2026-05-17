@@ -324,35 +324,39 @@ export default function LoginPage() {
 
                     // Handshake logic...
                     try {
-                        console.log('🤝 [AUTH] Exchanging code for session...');
-                        const { session } = await exchangeNativeCodeForSession(code);
+                        console.log('🤝 [AUTH] Exchanging code locally...');
+                        const capacitorAuth = createCapacitorAuthClient();
+                        const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
 
-                        setStatusMessage("Connecting to dashboard...");
-                        console.log('💾 [AUTH] Persisting session...');
-                        await persistNativeSession(session);
+                        if (exchangeError) throw exchangeError;
+                        if (!exchangeData.session) throw new Error("No session returned");
+
+                        setStatusMessage("Saving session...");
+                        const session = exchangeData.session;
+
+                        // 1. Sync to SSR Client
+                        const ssrClient = createSupabaseBrowserClient();
+                        await ssrClient.auth.setSession({
+                            access_token: session.access_token,
+                            refresh_token: session.refresh_token,
+                        });
+
+                        // 2. Sync to Cookies
+                        const cookieValue = encodeURIComponent(JSON.stringify({
+                            access_token: session.access_token,
+                            refresh_token: session.refresh_token,
+                        }));
+                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 
                         await recordSessionLogin();
 
-                        // Final bootstrap (Profile / Inactivity setup)
-                        console.log('🚀 [AUTH] Handshake complete, entering app...');
-                        void fetch('/api/auth/bootstrap', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                Authorization: `Bearer ${session.access_token}`,
-                            },
-                            body: JSON.stringify({
-                                fullName: session.user.user_metadata?.full_name
-                                    || session.user.user_metadata?.name
-                                    || null,
-                            }),
-                        }).catch((e) => console.error('[AUTH] Bootstrap non-fatal error:', e));
-
-                        // Force immediate redirect
+                        setStatusMessage("Entering app...");
                         router.push('/dashboard');
+
+                        // FAILSAFE: Force redirect if router hangs
                         setTimeout(() => {
-                            router.refresh();
-                        }, 100);
+                            window.location.href = '/dashboard';
+                        }, 800);
                     } catch (err: any) {
                         console.error('[AUTH] Deep link handshake exception:', err);
                         setError('Handshake failed: ' + (err.message || 'connection error'));
