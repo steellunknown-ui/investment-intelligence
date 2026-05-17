@@ -23,6 +23,14 @@ const isCapacitorNative = (): boolean => {
 
 let cachedClient: ReturnType<typeof createBrowserClient> | null = null;
 
+function serializeSessionForCookie(session: Session) {
+  return encodeURIComponent(JSON.stringify({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at,
+  }));
+}
+
 export function createSupabaseBrowserClient() {
   // Singleton — reuse existing client
   if (cachedClient) return cachedClient;
@@ -57,16 +65,11 @@ export function createSupabaseBrowserClient() {
     cachedClient.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       console.log(`🚀 [AUTH] State Change: ${event}`);
       if (session) {
-        const cookieValue = encodeURIComponent(JSON.stringify(session));
-        // We set the cookie for both the current origin AND the production domain
-        // This ensures API calls to Vercel include the session.
-        const domain = '.vercel.app'; // Universal domain for subdomains
-        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=${domain}`;
+        const cookieValue = serializeSessionForCookie(session);
         document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        console.log('✅ [AUTH] Cookie Synced to WebView (Standard & Vercel Domain)');
+        console.log('[AUTH] Cookie Synced to WebView');
       } else if (event === 'SIGNED_OUT') {
         document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.vercel.app';
       }
     });
   }

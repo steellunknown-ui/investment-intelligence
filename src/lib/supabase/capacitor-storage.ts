@@ -32,7 +32,19 @@ export const capacitorStorage = {
 
       const { value } = await Preferences.get({ key });
       console.log(`[STORAGE] Get: ${key} = ${value ? 'FOUND' : 'NULL'}`);
-      return value;
+
+      if (value !== null) {
+        return value;
+      }
+
+      // Supabase may have written the PKCE verifier to WebView storage if a
+      // client was created before the Capacitor storage adapter was ready.
+      // Falling back here prevents first-attempt OAuth failures after timeout.
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
     } catch (err) {
       console.error(`[STORAGE] Get Error (${key}):`, err);
       return localStorage.getItem(key);

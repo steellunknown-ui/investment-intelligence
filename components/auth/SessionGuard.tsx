@@ -40,6 +40,57 @@ export function SessionGuard({ children }: SessionGuardProps) {
   const hasCheckedSession = useRef(false);
 
   useEffect(() => {
+    if (!isCapacitorNative() || typeof window === 'undefined') return;
+
+    const patchKey = '__investmentIntelligenceAuthFetch';
+    if ((window as any)[patchKey]) return;
+
+    const originalFetch = window.fetch.bind(window);
+    (window as any)[patchKey] = { originalFetch };
+
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const requestUrl =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+
+      const url = new URL(requestUrl, window.location.origin);
+      const isSameOriginApi = url.origin === window.location.origin && url.pathname.startsWith('/api/');
+
+      if (!isSameOriginApi) {
+        return originalFetch(input, init);
+      }
+
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+
+      if (!headers.has('Authorization')) {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          headers.set('Authorization', `Bearer ${session.access_token}`);
+        }
+      }
+
+      return originalFetch(input, {
+        ...init,
+        credentials: init?.credentials ?? 'include',
+        headers,
+      });
+    };
+
+    return () => {
+      const patch = (window as any)[patchKey];
+      if (patch?.originalFetch === originalFetch) {
+        window.fetch = originalFetch;
+        delete (window as any)[patchKey];
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const supabase = createSupabaseBrowserClient();
 
     // ── 1. Listen for auth state changes ──

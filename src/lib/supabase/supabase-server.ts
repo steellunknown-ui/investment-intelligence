@@ -9,22 +9,19 @@ export function createSupabaseServerClient() {
     // 1. Try Authorization Header (Standard for Mobile APIs)
     const authHeader = headerStore.get('Authorization')
     if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1]
-        // We use createServerClient so that standard Supabase methods work
-        return createServerClient(
+        return createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
-                cookies: {
-                    get() {
-                        return JSON.stringify({
-                            access_token: token,
-                            refresh_token: '',
-                            user: {}
-                        })
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                    detectSessionInUrl: false,
+                },
+                global: {
+                    headers: {
+                        Authorization: authHeader,
                     },
-                    set() {},
-                    remove() {},
                 },
             }
         )

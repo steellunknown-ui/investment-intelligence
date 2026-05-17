@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
@@ -47,6 +47,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [checkingSession, setCheckingSession] = useState(true);
+    const processedOAuthCodeRef = useRef<string | null>(null);
 
     // ── On mount: Check for existing valid session ──
     useEffect(() => {
@@ -73,9 +74,100 @@ export default function LoginPage() {
         checkExistingSession();
     }, [router]);
 
-    // ── Capacitor Deep Link Listener ──
+    // Capacitor deep link listener
     useEffect(() => {
         let isMounted = true;
+        let listenerHandle: { remove: () => Promise<void> | void } | null = null;
+
+        const handleDeepLink = async (incomingUrl: string) => {
+            console.log('[DEEP LINK] Received URL:', incomingUrl);
+
+            try {
+                const url = new URL(incomingUrl);
+                const { Browser } = await import('@capacitor/browser');
+                await Browser.close().catch(() => {});
+
+                const code = url.searchParams.get('code');
+
+                if (code && isMounted) {
+                    if (processedOAuthCodeRef.current === code) return;
+                    processedOAuthCodeRef.current = code;
+
+                    setLoading(true);
+                    setStatusMessage("Finalizing handshake...");
+
+                    if (typeof window !== 'undefined') {
+                        (window as any).isAuthenticating = true;
+                        (window as any).oauthLoginInProgress = false;
+                    }
+
+                    try {
+                        const capacitorAuth = createCapacitorAuthClient();
+                        const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
+
+                        if (exchangeError) {
+                            console.error('[AUTH] Code exchange error:', exchangeError);
+                            setError("Authentication failed: " + exchangeError.message);
+                            setStatusMessage(null);
+                        } else if (exchangeData.session) {
+                            setStatusMessage("Connecting to dashboard...");
+
+                            const ssrClient = createSupabaseBrowserClient();
+                            await ssrClient.auth.setSession({
+                                access_token: exchangeData.session.access_token,
+                                refresh_token: exchangeData.session.refresh_token,
+                            });
+
+                            const cookieValue = encodeURIComponent(JSON.stringify({
+                                access_token: exchangeData.session.access_token,
+                                refresh_token: exchangeData.session.refresh_token,
+                                expires_at: exchangeData.session.expires_at,
+                            }));
+                            document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
+                            await fetch('/api/auth/bootstrap', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${exchangeData.session.access_token}`,
+                                },
+                                body: JSON.stringify({
+                                    fullName: exchangeData.session.user.user_metadata?.full_name
+                                        || exchangeData.session.user.user_metadata?.name
+                                        || null,
+                                }),
+                            }).catch((bootstrapError) => {
+                                console.error('[AUTH] Native bootstrap failed:', bootstrapError);
+                            });
+
+                            await recordSessionLogin();
+                            router.push('/dashboard');
+                            router.refresh();
+                        }
+                    } catch (err: any) {
+                        console.error('[AUTH] Deep link session exception:', err);
+                        setError('Handshake failed: ' + (err.message || 'unknown error'));
+                        setStatusMessage(null);
+                    } finally {
+                        if (isMounted) {
+                            setLoading(false);
+                            setTimeout(() => {
+                                if (typeof window !== 'undefined') (window as any).isAuthenticating = false;
+                            }, 2000);
+                        }
+                    }
+                    return;
+                }
+
+                const errorParam = url.searchParams.get('error');
+                if (errorParam) {
+                    setError(errorParam);
+                    setLoading(false);
+                }
+            } catch (urlErr) {
+                console.error('[Login] Failed to parse deep link URL:', urlErr);
+            }
+        };
 
         const setupDeepLinkListener = async () => {
             if (!isCapacitorNative()) return;
@@ -83,81 +175,18 @@ export default function LoginPage() {
             try {
                 const { App } = await import('@capacitor/app');
 
-                App.addListener('appUrlOpen', async (data: any) => {
-                    console.log('🚀 [DEEP LINK] Received URL:', data.url);
+                const launchUrl = await App.getLaunchUrl();
+                if (launchUrl?.url) {
+                    await handleDeepLink(launchUrl.url);
+                }
 
-                    try {
-                        const url = new URL(data.url);
-                        const { Browser } = await import('@capacitor/browser');
-                        await Browser.close();
-
-                        const code = url.searchParams.get('code');
-
-                        if (code && isMounted) {
-                            setLoading(true);
-                            setStatusMessage("Finalizing handshake...");
-
-                            // SET THE LOGIN LOCK
-                            if (typeof window !== 'undefined') {
-                                (window as any).isAuthenticating = true;
-                            }
-
-                            try {
-                                const capacitorAuth = createCapacitorAuthClient();
-                                const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
-
-                                if (exchangeError) {
-                                    console.error('❌ [AUTH] Code exchange error:', exchangeError);
-                                    setError("Authentication failed: " + exchangeError.message);
-                                    setStatusMessage(null);
-                                } else if (exchangeData.session) {
-                                    setStatusMessage("Connecting to dashboard...");
-
-                                    const ssrClient = createSupabaseBrowserClient();
-                                    await ssrClient.auth.setSession({
-                                        access_token: exchangeData.session.access_token,
-                                        refresh_token: exchangeData.session.refresh_token,
-                                    });
-
-                                    // FORCE COOKIE SYNC
-                                    // This is critical for the first few API calls to succeed!
-                                    if (isCapacitorNative()) {
-                                        const cookieValue = encodeURIComponent(JSON.stringify(exchangeData.session));
-                                        const domain = '.vercel.app';
-                                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=${domain}`;
-                                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-                                    }
-
-                                    await recordSessionLogin();
-                                    router.push('/dashboard');
-                                    router.refresh();
-                                }
-                            } catch (err: any) {
-                                console.error('❌ [AUTH] Deep link session exception:', err);
-                                setError('Handshake failed: ' + (err.message || 'unknown error'));
-                                setStatusMessage(null);
-                            } finally {
-                                if (isMounted) {
-                                    setLoading(false);
-                                    // Keep lock for a moment to allow router to finish
-                                    setTimeout(() => {
-                                        if (typeof window !== 'undefined') (window as any).isAuthenticating = false;
-                                    }, 2000);
-                                }
-                            }
-                            return;
-                        }
-
-                        const errorParam = url.searchParams.get('error');
-                        if (errorParam) {
-                            setError(errorParam);
-                            setLoading(false);
-                            return;
-                        }
-                    } catch (urlErr) {
-                        console.error('[Login] Failed to parse deep link URL:', urlErr);
-                    }
+                listenerHandle = await App.addListener('appUrlOpen', (data: any) => {
+                    void handleDeepLink(data.url);
                 });
+
+                if (!isMounted && listenerHandle) {
+                    void listenerHandle.remove();
+                }
             } catch (err) {
                 console.error('[Login] Failed to load Capacitor App plugin:', err);
             }
@@ -167,6 +196,9 @@ export default function LoginPage() {
 
         return () => {
             isMounted = false;
+            if (listenerHandle) {
+                void listenerHandle.remove();
+            }
         };
     }, [router]);
 
@@ -208,12 +240,15 @@ export default function LoginPage() {
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
-                console.log('🚀 [AUTH] Starting Google OAuth on Native...');
+                console.log('[AUTH] Starting Google OAuth on Native...');
+                if (typeof window !== 'undefined') {
+                    (window as any).oauthLoginInProgress = true;
+                }
 
                 // 1. Warm up storage
                 const ready = await warmupStorage();
                 if (!ready) {
-                    console.warn('⚠️ [AUTH] Storage warmup failed, continuing anyway...');
+                    console.warn('[AUTH] Storage warmup failed, continuing anyway...');
                 }
 
                 // 2. Clear any stale PKCE verifiers to avoid mismatch
@@ -233,13 +268,28 @@ export default function LoginPage() {
                 });
 
                 if (error) {
-                    console.error('❌ [AUTH] signInWithOAuth error:', error);
+                    console.error('[AUTH] signInWithOAuth error:', error);
                     throw error;
                 }
 
                 if (data?.url) {
-                    console.log('✅ [AUTH] PKCE Verifier set, opening browser...');
-                    await Browser.open({ url: data.url, windowName: '_self' });
+                    const verifier = await capacitorStorage.getItem(verifierKey);
+                    if (!verifier) {
+                        throw new Error('Login verifier was not stored. Please try Google sign-in again.');
+                    }
+
+                    console.log('[AUTH] PKCE verifier set, opening browser...');
+                    setStatusMessage("Opening Google...");
+
+                    void Browser.open({ url: data.url, windowName: '_self' }).catch((browserError) => {
+                        console.error('[AUTH] Browser.open failed:', browserError);
+                        if (typeof window !== 'undefined') {
+                            (window as any).oauthLoginInProgress = false;
+                        }
+                        setError('Could not open Google sign-in. Please try again.');
+                        setLoading(false);
+                        setStatusMessage(null);
+                    });
 
                     // Reset loading state after a delay to allow the browser to open
                     // This prevents the button from being stuck in "Redirecting..." state
@@ -247,9 +297,9 @@ export default function LoginPage() {
                     setTimeout(() => {
                         setLoading(false);
                         setStatusMessage(null);
-                    }, 1000);
+                    }, 1500);
                 } else {
-                    console.error('❌ [AUTH] No URL returned from signInWithOAuth');
+                    console.error('[AUTH] No URL returned from signInWithOAuth');
                     throw new Error("Failed to get Google login URL");
                 }
             } else {
@@ -268,6 +318,9 @@ export default function LoginPage() {
             }
         } catch (err: any) {
             console.error('[Login] Google login error:', err);
+            if (typeof window !== 'undefined') {
+                (window as any).oauthLoginInProgress = false;
+            }
             setError(err.message || 'Failed to initialize Google login');
             setLoading(false);
             setStatusMessage(null);
