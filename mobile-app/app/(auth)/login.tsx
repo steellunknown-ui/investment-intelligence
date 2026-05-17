@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
+import { Shield, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -38,7 +38,6 @@ export default function LoginScreen() {
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     try {
-      // In native React Native Expo, OAuth redirects users to our callback endpoint which redirects back.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -49,7 +48,6 @@ export default function LoginScreen() {
       if (error) throw error;
       
       if (data?.url) {
-        // Expo Router or WebBrowser can handle this, standard supabase handles link opening.
         Alert.alert('Google Sign In', 'Opening Google Authentication page...');
       }
     } catch (err: any) {
@@ -67,16 +65,15 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* Logo & Header */}
+          {/* Logo & Header Row */}
           <View style={styles.headerContainer}>
             <View style={styles.logoBadge}>
-              <Shield size={36} color="#3B82F6" strokeWidth={2} />
+              <Shield size={18} color="#FFFFFF" strokeWidth={2.5} />
             </View>
-            <Text style={styles.title}>INVESTMENT INTELLIGENCE</Text>
-            <Text style={styles.subtitle}>Secure Personal Finance Vault</Text>
+            <Text style={styles.title}>Investment Intelligence</Text>
           </View>
 
-          {/* Form Card (matches web card-base) */}
+          {/* Form Card (exact light card parity) */}
           <View style={styles.formCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.welcomeText}>Welcome back</Text>
@@ -87,11 +84,10 @@ export default function LoginScreen() {
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email address</Text>
               <View style={styles.inputContainer}>
-                <Mail size={18} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="you@example.com"
-                  placeholderTextColor="#4B5563"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
@@ -104,17 +100,16 @@ export default function LoginScreen() {
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Password</Text>
-                <TouchableOpacity onPress={() => Alert.alert('Reset Password', 'Password recovery will send an email details to your mailbox.')}>
+                <TouchableOpacity onPress={() => Alert.alert('Reset Password', 'Password recovery instructions will be sent to your email.')}>
                   <Text style={styles.forgotLink}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
               
               <View style={styles.inputContainer}>
-                <Lock size={18} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
-                  placeholderTextColor="#4B5563"
+                  placeholderTextColor="#94A3B8"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   value={password}
@@ -126,9 +121,9 @@ export default function LoginScreen() {
                   activeOpacity={0.7}
                 >
                   {showPassword ? (
-                    <EyeOff size={18} color="#9CA3AF" />
+                    <EyeOff size={18} color="#94A3B8" />
                   ) : (
-                    <Eye size={18} color="#9CA3AF" />
+                    <Eye size={18} color="#94A3B8" />
                   )}
                 </TouchableOpacity>
               </View>
@@ -145,7 +140,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <View style={styles.btnContent}>
-                  <Text style={styles.primaryButtonText}>Sign In</Text>
+                  <Text style={styles.primaryButtonText}>Sign in</Text>
                   <ArrowRight size={16} color="#FFFFFF" style={styles.btnIcon} />
                 </View>
               )}
@@ -160,17 +155,19 @@ export default function LoginScreen() {
 
             {/* Google Button */}
             <TouchableOpacity
-              style={[styles.googleButton, googleLoading && styles.disabledButton]}
+              style={[styles.googleButton, googleLoading && styles.disabledGoogleButton]}
               onPress={handleGoogleLogin}
               disabled={googleLoading}
               activeOpacity={0.8}
             >
               {googleLoading ? (
-                <ActivityIndicator color="#E5E7EB" size="small" />
+                <ActivityIndicator color="#64748B" size="small" />
               ) : (
                 <View style={styles.btnContent}>
-                  {/* Google SVG brand icon representation */}
-                  <View style={styles.googleIconPlaceholder} />
+                  {/* Google Brand Colored Icon representation */}
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleBrandG}>G</Text>
+                  </View>
                   <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </View>
               )}
@@ -188,7 +185,7 @@ export default function LoginScreen() {
 
           {/* Secure SSL footer indicator */}
           <View style={styles.sslFooter}>
-            <Shield size={14} color="#9CA3AF" style={styles.sslIcon} />
+            <Shield size={14} color="#94A3B8" style={styles.sslIcon} />
             <Text style={styles.sslText}>256-bit SSL encrypted</Text>
           </View>
 
@@ -201,128 +198,125 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#F8FAFC', // Sleek slate-50 light background
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 32,
   },
   headerContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#F9FAFB',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '400',
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 10,
   },
   formCard: {
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: '#E2E8F0',
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.05,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 4,
   },
   cardHeader: {
     alignItems: 'center',
     marginBottom: 24,
   },
   welcomeText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: '#0F172A',
     letterSpacing: -0.5,
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#64748B',
     marginTop: 6,
   },
   fieldGroup: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   label: {
     fontSize: 13,
-    color: '#D1D5DB',
-    fontWeight: '500',
-    marginLeft: 4,
+    color: '#334155',
+    fontWeight: '600',
+    marginLeft: 2,
     marginBottom: 6,
   },
   forgotLink: {
     fontSize: 13,
     color: '#3B82F6',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#EFF6FF', // Soft light blue input backing matching screenshot
     borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderColor: '#DBEAFE', // Soft border blue
+    borderRadius: 12,
+    paddingHorizontal: 16,
     height: 50,
-  },
-  inputIcon: {
-    marginRight: 10,
+    position: 'relative',
   },
   input: {
     flex: 1,
-    color: '#F3F4F6',
+    color: '#0F172A',
     fontSize: 14,
     height: '100%',
   },
   eyeButton: {
-    padding: 6,
-    marginLeft: 4,
+    position: 'absolute',
+    right: 16,
+    height: '100%',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   primaryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#1E293B', // Deep rich navy/slate button matching screenshot
     height: 50,
-    borderRadius: 14,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#3B82F6',
+    shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   disabledButton: {
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#64748B',
+    opacity: 0.6,
+  },
+  disabledGoogleButton: {
+    backgroundColor: '#F8FAFC',
     opacity: 0.6,
   },
   btnContent: {
@@ -341,53 +335,62 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#E2E8F0',
   },
   dividerText: {
-    color: '#6B7280',
+    color: '#94A3B8',
     fontSize: 12,
     marginHorizontal: 12,
   },
   googleButton: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#E2E8F0',
     height: 50,
-    borderRadius: 14,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  googleIconPlaceholder: {
-    width: 8,
-    height: 8,
+  googleIconContainer: {
+    width: 20,
+    height: 20,
     borderRadius: 4,
-    backgroundColor: '#4285F4',
-    marginRight: 8,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 0.5,
+    borderColor: '#E2E8F0',
+  },
+  googleBrandG: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#4285F4', // Google brand blue
   },
   googleButtonText: {
-    color: '#E5E7EB',
+    color: '#334155',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 24,
   },
   footerText: {
-    color: '#9CA3AF',
+    color: '#64748B',
     fontSize: 13,
   },
   signUpLink: {
-    color: '#3B82F6',
+    color: '#0F172A',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sslFooter: {
     flexDirection: 'row',
@@ -400,6 +403,7 @@ const styles = StyleSheet.create({
   },
   sslText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#94A3B8',
   },
 });
+

@@ -1,5 +1,3 @@
-import { Preferences } from '@capacitor/preferences';
-
 /**
  * Capacitor Native Storage Adapter for Supabase Auth
  *
@@ -11,6 +9,17 @@ const isCapacitorNative = (): boolean => {
   return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 };
 
+// Safe access to Preferences to prevent Vercel build errors
+const getPreferences = async () => {
+  if (!isCapacitorNative()) return null;
+  try {
+    const { Preferences } = await import('@capacitor/preferences');
+    return Preferences;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const capacitorStorage = {
   async getItem(key: string): Promise<string | null> {
     const isNative = isCapacitorNative();
@@ -18,6 +27,9 @@ export const capacitorStorage = {
       return localStorage.getItem(key);
     }
     try {
+      const Preferences = await getPreferences();
+      if (!Preferences) return localStorage.getItem(key);
+
       const { value } = await Preferences.get({ key });
       console.log(`[STORAGE] Get: ${key} = ${value ? 'FOUND' : 'NULL'}`);
       return value;
@@ -34,6 +46,12 @@ export const capacitorStorage = {
       return;
     }
     try {
+      const Preferences = await getPreferences();
+      if (!Preferences) {
+        localStorage.setItem(key, value);
+        return;
+      }
+
       await Preferences.set({ key, value });
       console.log(`[STORAGE] Set: ${key} (Length: ${value.length})`);
       // Backup to localStorage for redundancy
@@ -51,6 +69,12 @@ export const capacitorStorage = {
       return;
     }
     try {
+      const Preferences = await getPreferences();
+      if (!Preferences) {
+        localStorage.removeItem(key);
+        return;
+      }
+
       await Preferences.remove({ key });
       console.log(`[STORAGE] Remove: ${key}`);
       try { localStorage.removeItem(key); } catch {}

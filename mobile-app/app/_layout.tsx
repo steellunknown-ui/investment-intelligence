@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 import { supabase } from '../lib/supabase';
+import { safeStorage } from '../lib/safe-storage';
 
 export {
   ErrorBoundary,
@@ -72,25 +73,23 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
 
-    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
-      AsyncStorage.getItem('onboarding_done').then((val) => {
-        const isDone = val === 'true';
-        if (!isDone) {
-          if (!isOnboarding) {
-            router.replace('/onboarding');
-          }
-        } else if (!session) {
-          // If user is not authenticated and not in auth screens, redirect to login
-          if (!inAuthGroup) {
-            router.replace('/(auth)/login');
-          }
-        } else {
-          // If user is authenticated and in auth screens, redirect to dashboard tabs
-          if (inAuthGroup || isOnboarding) {
-            router.replace('/(tabs)');
-          }
+    safeStorage.getItem('onboarding_done').then((val) => {
+      const isDone = val === 'true';
+      if (!isDone) {
+        if (!isOnboarding) {
+          router.replace('/onboarding');
         }
-      });
+      } else if (!session) {
+        // If user is not authenticated and not in auth screens, redirect to login
+        if (!inAuthGroup) {
+          router.replace('/(auth)/login');
+        }
+      } else {
+        // If user is authenticated and in auth screens, redirect to dashboard tabs
+        if (inAuthGroup || isOnboarding) {
+          router.replace('/(tabs)');
+        }
+      }
     });
   }, [session, authLoading, segments]);
 

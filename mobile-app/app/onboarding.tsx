@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeStorage } from '../lib/safe-storage';
 import { TrendingUp, Shield, Users, Lock, ArrowRight, ChevronRight } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -50,7 +50,7 @@ export default function OnboardingScreen() {
   const [current, setCurrent] = useState(0);
 
   const handleGetStarted = async () => {
-    await AsyncStorage.setItem('onboarding_done', 'true');
+    await safeStorage.setItem('onboarding_done', 'true');
     router.replace('/(auth)/login');
   };
 
