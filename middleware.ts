@@ -26,6 +26,10 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   })
 
+  // ── API GUARD ──
+  // Never redirect API calls to login. Return 401 instead.
+  const isApi = pathname.startsWith('/api/')
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,8 +37,6 @@ export async function middleware(request: NextRequest) {
       cookies: {
         get(name) {
           // ── POWER JUMP: URL SESSION ──
-          // If we see a session in the URL, we trust it immediately.
-          // This prevents the "0.2s kick-out" on mobile.
           const urlSession = request.nextUrl.searchParams.get('session_jump')
           if (urlSession && name.includes('auth-token')) {
             try {
@@ -51,6 +53,15 @@ export async function middleware(request: NextRequest) {
           // 2. Try generic mobile sync cookie (fallback)
           const generic = request.cookies.get('sb-auth-token')?.value
           if (generic) return generic
+
+          // 3. Try Authorization Header (for mobile API calls)
+          const authHeaderValue = request.headers.get('Authorization')
+          if (authHeaderValue?.startsWith('Bearer ')) {
+            const token = authHeaderValue.split(' ')[1]
+            if (name.includes('auth-token')) {
+               return JSON.stringify({ access_token: token, refresh_token: '', user: {} })
+            }
+          }
 
           return undefined
         },
@@ -76,6 +87,7 @@ export async function middleware(request: NextRequest) {
   if (!isPublic) {
     // No user → redirect to login
     if (!user) {
+      if (isApi) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       return NextResponse.redirect(new URL('/login', request.url))
     }
 

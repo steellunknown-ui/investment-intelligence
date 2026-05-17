@@ -58,16 +58,32 @@ export function createSupabaseBrowserClient() {
     }
   );
 
-  // ── Native Cookie Sync ──
+  // ── Native Cookie Sync (Hardened) ──
   // Next.js API routes rely on cookies. We must mirror the native session
   // into document.cookie so that fetch() requests include the auth token.
   if (isNative) {
-    cachedClient.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+    cachedClient.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log(`🚀 [AUTH] State Change: ${event}`);
       if (session) {
         const cookieValue = serializeSessionForCookie(session);
+
+        // 1. Webview JS Sync
         document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        console.log('[AUTH] Cookie Synced to WebView');
+
+        // 2. Native OS Cookie Sync (Most Powerful)
+        try {
+          const { CapacitorCookies } = await import('@capacitor/core');
+          await CapacitorCookies.setCookie({
+            url: 'https://investment-intellegince.vercel.app',
+            key: 'sb-auth-token',
+            value: cookieValue,
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString(),
+            path: '/',
+          });
+          console.log('✅ [AUTH] Native OS Cookie Synced');
+        } catch (e) {
+          console.warn('⚠️ [AUTH] Native OS Cookie sync failed:', e);
+        }
       } else if (event === 'SIGNED_OUT') {
         document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
