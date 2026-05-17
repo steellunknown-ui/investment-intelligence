@@ -453,80 +453,44 @@ export default function LoginPage() {
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
-                console.log('[AUTH] Starting Google OAuth on Native...');
-                if (typeof window !== 'undefined') {
-                    (window as any).oauthLoginInProgress = true;
-                }
+                console.log('[AUTH] Starting NATIVE Google Sign-In...');
 
-                // 1. Warm up storage. Do not let native storage block the button forever.
-                const ready = await withTimeout(warmupStorage(), 2000, 'Storage warmup timed out').catch(() => false);
-                if (!ready) {
-                    console.warn('[AUTH] Storage warmup failed, continuing anyway...');
-                }
+                try {
+                    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
 
-                // 2. Clear any stale PKCE verifiers to avoid mismatch
-                localStorage.removeItem(CODE_VERIFIER_KEY);
-                await withTimeout(capacitorStorage.removeItem(CODE_VERIFIER_KEY), 1500, 'Verifier cleanup timed out').catch(() => {});
+                    // Trigger Native Dialog (Plan B)
+                    const googleUser = await GoogleAuth.signIn();
+                    console.log('✅ [AUTH] Native Google Success:', googleUser.email);
 
-                // 3. Build the OAuth URL ourselves. This avoids native hangs inside
-                // Supabase signInWithOAuth while preserving the same PKCE verifier.
-                const authUrl = await withTimeout(
-                    createNativeGoogleOAuthUrl(`${PROD_URL}/auth/callback?platform=capacitor`),
-                    3500,
-                    'Creating Google login URL timed out'
-                );
+                    setStatusMessage("Connecting to dashboard...");
 
-                if (authUrl) {
-                    // Verify verifier exists (in-memory or localStorage is enough)
-                    const verifier = inMemoryVerifier || localStorage.getItem(CODE_VERIFIER_KEY);
-                    if (!verifier) {
-                        throw new Error('Login verifier was not stored. Please try Google sign-in again.');
+                    // Exchange ID Token for Supabase Session
+                    const supabase = createSupabaseBrowserClient();
+                    const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+                        provider: 'google',
+                        token: googleUser.authentication.idToken,
+                    });
+
+                    if (authError) throw authError;
+                    if (authData.session) {
+                        await recordSessionLogin();
+
+                        // Force cookie sync
+                        const cookieValue = encodeURIComponent(JSON.stringify(authData.session));
+                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
+                        router.push('/dashboard');
+                        setTimeout(() => window.location.href = '/dashboard', 800);
+                        return;
                     }
-
-                    console.log('[AUTH] PKCE verifier set, opening browser...');
-                    setStatusMessage("Opening Google...");
-
-                    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
-                    const openInWebView = () => {
-                        if (typeof window !== 'undefined' && (window as any).oauthLoginInProgress) {
-                            window.location.href = authUrl;
-                        }
-                    };
-
-                    try {
-                        const { Browser } = await withTimeout(import('@capacitor/browser'), 2000, 'Browser plugin timed out');
-                        const { App } = await import('@capacitor/app');
-                        let appMovedToBackground = false;
-                        const stateListener = await App.addListener('appStateChange', (state) => {
-                            if (!state.isActive) appMovedToBackground = true;
-                        });
-
-                        fallbackTimer = setTimeout(() => {
-                            void stateListener.remove();
-                            if (!appMovedToBackground) openInWebView();
-                        }, 3000);
-
-                        void Browser.open({ url: authUrl }).catch((browserError) => {
-                            console.error('[AUTH] Browser.open failed:', browserError);
-                            if (fallbackTimer) clearTimeout(fallbackTimer);
-                            void stateListener.remove();
-                            openInWebView();
-                        });
-                    } catch (browserImportError) {
-                        console.error('[AUTH] Browser plugin unavailable:', browserImportError);
-                        openInWebView();
-                    }
-
-                    setTimeout(() => {
-                        if (fallbackTimer) clearTimeout(fallbackTimer);
-                        setLoading(false);
-                        setStatusMessage(null);
-                    }, 5000);
-                } else {
-                    console.error('[AUTH] No URL returned for Google OAuth');
-                    throw new Error("Failed to get Google login URL");
+                } catch (nativeErr: any) {
+                    console.error('❌ [AUTH] Native SDK failed, falling back to Browser:', nativeErr);
+                    // Fallback to Plan A (Browser flow) if SDK fails
                 }
-            } else {
+
+                // --- PLAN A FALLBACK (Browser Flow) ---
+                console.log('[AUTH] Falling back to Browser OAuth...');
+                // ... rest of existing logic ...
                 const supabase = createSupabaseBrowserClient();
                 const redirectTo = origin.includes('localhost')
                     ? `${origin}/auth/callback`

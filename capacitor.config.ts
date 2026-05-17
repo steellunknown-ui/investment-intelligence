@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
     CapacitorCookies: {
       enabled: true,
     },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: 'rmzgzczmrbooegftrzxn.supabase.co', // Use standard or Supabase client ID
+      forceCodeForRefreshToken: true,
+    },
   },
 };
 
