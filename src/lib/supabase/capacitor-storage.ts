@@ -9,6 +9,21 @@ const isCapacitorNative = (): boolean => {
   return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 };
 
+async function withStorageTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 1500): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timeoutId = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 // Safe access to Preferences to prevent Vercel build errors
 const getPreferences = async () => {
   if (!isCapacitorNative()) return null;
@@ -30,7 +45,7 @@ export const capacitorStorage = {
       const Preferences = await getPreferences();
       if (!Preferences) return localStorage.getItem(key);
 
-      const { value } = await Preferences.get({ key });
+      const { value } = await withStorageTimeout(Preferences.get({ key }), { value: null as string | null });
       console.log(`[STORAGE] Get: ${key} = ${value ? 'FOUND' : 'NULL'}`);
 
       if (value !== null) {
@@ -64,7 +79,7 @@ export const capacitorStorage = {
         return;
       }
 
-      await Preferences.set({ key, value });
+      await withStorageTimeout(Preferences.set({ key, value }), undefined);
       console.log(`[STORAGE] Set: ${key} (Length: ${value.length})`);
       // Backup to localStorage for redundancy
       try { localStorage.setItem(key, value); } catch {}
@@ -87,7 +102,7 @@ export const capacitorStorage = {
         return;
       }
 
-      await Preferences.remove({ key });
+      await withStorageTimeout(Preferences.remove({ key }), undefined);
       console.log(`[STORAGE] Remove: ${key}`);
       try { localStorage.removeItem(key); } catch {}
     } catch (err) {

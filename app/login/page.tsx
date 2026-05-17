@@ -28,6 +28,74 @@ const isCapacitorNative = (): boolean => {
     return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 };
 
+const PROD_URL = 'https://investment-intellegince.vercel.app';
+const AUTH_STORAGE_KEY = 'sb-auth-token';
+const CODE_VERIFIER_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+    }) as Promise<T>;
+}
+
+function createCodeVerifier() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const length = 64;
+
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const bytes = new Uint8Array(length);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, (byte) => chars[byte % chars.length]).join('');
+    }
+
+    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function base64UrlEncode(bytes: Uint8Array) {
+    const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function createCodeChallenge(verifier: string) {
+    if (
+        typeof crypto === 'undefined' ||
+        !crypto.subtle ||
+        typeof TextEncoder === 'undefined'
+    ) {
+        return { challenge: verifier, method: 'plain' };
+    }
+
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return { challenge: base64UrlEncode(new Uint8Array(digest)), method: 's256' };
+}
+
+async function createNativeGoogleOAuthUrl(redirectTo: string) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    if (!supabaseUrl) {
+        throw new Error('Missing Supabase URL');
+    }
+
+    const verifier = createCodeVerifier();
+    localStorage.setItem(CODE_VERIFIER_KEY, verifier);
+    await withTimeout(capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier), 1500, 'Native auth storage timed out').catch(() => {});
+
+    const { challenge, method } = await createCodeChallenge(verifier);
+    const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
+    url.searchParams.set('provider', 'google');
+    url.searchParams.set('redirect_to', redirectTo);
+    url.searchParams.set('code_challenge', challenge);
+    url.searchParams.set('code_challenge_method', method);
+
+    return url.toString();
+}
+
 function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
     const searchParams = useSearchParams();
     useEffect(() => {
@@ -236,7 +304,6 @@ export default function LoginPage() {
             setError(null);
             setStatusMessage("Redirecting to Google...");
 
-            const PROD_URL = 'https://investment-intellegince.vercel.app';
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
@@ -245,35 +312,26 @@ export default function LoginPage() {
                     (window as any).oauthLoginInProgress = true;
                 }
 
-                // 1. Warm up storage
-                const ready = await warmupStorage();
+                // 1. Warm up storage. Do not let native storage block the button forever.
+                const ready = await withTimeout(warmupStorage(), 2000, 'Storage warmup timed out').catch(() => false);
                 if (!ready) {
                     console.warn('[AUTH] Storage warmup failed, continuing anyway...');
                 }
 
                 // 2. Clear any stale PKCE verifiers to avoid mismatch
-                const verifierKey = 'sb-auth-token-code-verifier';
-                await capacitorStorage.removeItem(verifierKey);
+                localStorage.removeItem(CODE_VERIFIER_KEY);
+                await withTimeout(capacitorStorage.removeItem(CODE_VERIFIER_KEY), 1500, 'Verifier cleanup timed out').catch(() => {});
 
-                // 3. Pre-import Browser plugin to prevent loop/hang
-                const { Browser } = await import('@capacitor/browser');
-                const capacitorAuth = createCapacitorAuthClient();
+                // 3. Build the OAuth URL ourselves. This avoids native hangs inside
+                // Supabase signInWithOAuth while preserving the same PKCE verifier.
+                const authUrl = await withTimeout(
+                    createNativeGoogleOAuthUrl(`${PROD_URL}/auth/callback?platform=capacitor`),
+                    3500,
+                    'Creating Google login URL timed out'
+                );
 
-                const { data, error } = await capacitorAuth.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: `${PROD_URL}/auth/callback?platform=capacitor`,
-                        skipBrowserRedirect: true,
-                    },
-                });
-
-                if (error) {
-                    console.error('[AUTH] signInWithOAuth error:', error);
-                    throw error;
-                }
-
-                if (data?.url) {
-                    const verifier = await capacitorStorage.getItem(verifierKey);
+                if (authUrl) {
+                    const verifier = localStorage.getItem(CODE_VERIFIER_KEY) || await capacitorStorage.getItem(CODE_VERIFIER_KEY);
                     if (!verifier) {
                         throw new Error('Login verifier was not stored. Please try Google sign-in again.');
                     }
@@ -281,25 +339,44 @@ export default function LoginPage() {
                     console.log('[AUTH] PKCE verifier set, opening browser...');
                     setStatusMessage("Opening Google...");
 
-                    void Browser.open({ url: data.url, windowName: '_self' }).catch((browserError) => {
-                        console.error('[AUTH] Browser.open failed:', browserError);
-                        if (typeof window !== 'undefined') {
-                            (window as any).oauthLoginInProgress = false;
+                    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+                    const openInWebView = () => {
+                        if (typeof window !== 'undefined' && (window as any).oauthLoginInProgress) {
+                            window.location.href = authUrl;
                         }
-                        setError('Could not open Google sign-in. Please try again.');
-                        setLoading(false);
-                        setStatusMessage(null);
-                    });
+                    };
 
-                    // Reset loading state after a delay to allow the browser to open
-                    // This prevents the button from being stuck in "Redirecting..." state
-                    // if the user returns to the app.
+                    try {
+                        const { Browser } = await withTimeout(import('@capacitor/browser'), 2000, 'Browser plugin timed out');
+                        const { App } = await import('@capacitor/app');
+                        let appMovedToBackground = false;
+                        const stateListener = await App.addListener('appStateChange', (state) => {
+                            if (!state.isActive) appMovedToBackground = true;
+                        });
+
+                        fallbackTimer = setTimeout(() => {
+                            void stateListener.remove();
+                            if (!appMovedToBackground) openInWebView();
+                        }, 3000);
+
+                        void Browser.open({ url: authUrl }).catch((browserError) => {
+                            console.error('[AUTH] Browser.open failed:', browserError);
+                            if (fallbackTimer) clearTimeout(fallbackTimer);
+                            void stateListener.remove();
+                            openInWebView();
+                        });
+                    } catch (browserImportError) {
+                        console.error('[AUTH] Browser plugin unavailable:', browserImportError);
+                        openInWebView();
+                    }
+
                     setTimeout(() => {
+                        if (fallbackTimer) clearTimeout(fallbackTimer);
                         setLoading(false);
                         setStatusMessage(null);
-                    }, 1500);
+                    }, 5000);
                 } else {
-                    console.error('[AUTH] No URL returned from signInWithOAuth');
+                    console.error('[AUTH] No URL returned for Google OAuth');
                     throw new Error("Failed to get Google login URL");
                 }
             } else {
