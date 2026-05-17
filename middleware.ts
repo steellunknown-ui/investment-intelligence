@@ -34,9 +34,9 @@ export async function middleware(request: NextRequest) {
         get(name) {
           // ── EMERGENCY AUTH BRIDGE (FINAL FIX) ──
           // If we see an Authorization header (from Mobile), WE MUST USE IT.
-          const authHeader = request.headers.get('Authorization')
-          if (authHeader?.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1]
+          const authHeaderValue = request.headers.get('Authorization')
+          if (authHeaderValue?.startsWith('Bearer ')) {
+            const token = authHeaderValue.split(' ')[1]
             // We tell Supabase SSR to use this token for all cookie checks
             if (name.includes('auth-token')) {
               return JSON.stringify({
@@ -68,20 +68,6 @@ export async function middleware(request: NextRequest) {
               return decoded // Fallback to raw value
             } catch (e) {
               console.error('[MIDDLEWARE COOKIE FALLBACK] Error parsing sb-auth-token:', e)
-            }
-          }
-
-          // 3. Try Authorization Header (for mobile API calls)
-          const authHeader = request.headers.get('Authorization')
-          if (authHeader?.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1]
-            // We return a mock session if the project-specific cookie is requested
-            if (name.includes('auth-token')) {
-               return JSON.stringify({
-                 access_token: token,
-                 refresh_token: '',
-                 user: {}
-               })
             }
           }
 
