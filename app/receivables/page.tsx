@@ -514,81 +514,75 @@ export default function ReceivablesPage() {
                                 const hasInterest = rec.interest_amount && rec.interest_amount > 0;
 
                                 return (
-                                    <Card key={rec.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                        <CardHeader className="pb-3">
+                                    <Card key={rec.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1" padding="sm">
+                                        <CardHeader className="pb-2">
                                             <div className="flex justify-between items-start">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="h-10 w-10 min-w-[2.5rem] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-semibold">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className="h-8 w-8 min-w-[2rem] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-semibold text-sm">
                                                         {rec.given_to.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h3 className="font-semibold text-foreground line-clamp-1">
+                                                        <h3 className="font-semibold text-foreground line-clamp-1 text-sm">
                                                             {rec.given_to}
                                                         </h3>
-                                                        {rec.relationship && <p className="text-xs text-slate-500 truncate">{rec.relationship}</p>}
+                                                        {rec.relationship && <p className="text-[10px] text-slate-500 truncate">{rec.relationship}</p>}
                                                     </div>
                                                 </div>
                                                 <Badge
                                                     variant={rec.status === 'received' ? 'success' : isOverdue ? 'destructive' : 'secondary'}
-                                                    className="capitalize"
+                                                    className="capitalize text-[9px] h-4"
                                                 >
                                                     {isOverdue && rec.status !== 'received' ? 'Overdue' : rec.status.replace('_', ' ')}
                                                 </Badge>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="pb-3 space-y-4">
+                                        <CardContent className="pb-2 space-y-3">
                                             {hasInterest ? (
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-xs">
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between text-[10px]">
                                                         <span className="text-slate-500">Principal:</span>
                                                         <span className="font-medium">{formatCurrency(rec.principal_amount)}</span>
                                                     </div>
-                                                    <div className="flex justify-between text-xs">
+                                                    <div className="flex justify-between text-[10px]">
                                                         <span className="text-slate-500">Interest:</span>
                                                         <span className="font-medium text-blue-600">{formatCurrency(rec.interest_amount || 0)}</span>
                                                     </div>
-                                                    <div className="flex justify-between text-sm border-t pt-1">
+                                                    <div className="flex justify-between text-xs border-t pt-1">
                                                         <span className="text-slate-500">Total:</span>
                                                         <span className="font-semibold">{formatCurrency(rec.total_receivable)}</span>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="flex justify-between items-end mb-1">
-                                                    <p className="text-xs text-slate-500 uppercase tracking-wider">Total Receivable</p>
-                                                    <p className="text-sm font-medium text-foreground">{formatCurrency(rec.total_receivable)}</p>
+                                                <div className="flex justify-between items-end mb-0.5">
+                                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Receivable</p>
+                                                    <p className="text-xs font-medium text-foreground">{formatCurrency(rec.total_receivable)}</p>
                                                 </div>
                                             )}
 
                                             <div>
-                                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
                                                     <div
                                                         className={`h-full rounded-full ${rec.status === 'received' ? 'bg-primary' : 'bg-blue-500'}`}
                                                         style={{ width: `${percentReceived}%` }}
                                                     />
                                                 </div>
-                                                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                                                <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
                                                     <span>Rec: {formatCurrency(rec.amount_received)}</span>
                                                     <span>Bal: {formatCurrency(rec.outstanding_amount)}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="pt-3 border-t border-border space-y-2 text-xs text-muted-foreground">
+                                            <div className="pt-2 border-t border-border space-y-1.5 text-[10px] text-muted-foreground">
                                                 {rec.expected_return_date && (
                                                     <div className={`flex items-center gap-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
                                                         <Calendar className="h-3 w-3" />
-                                                        Exp. Return: {new Date(rec.expected_return_date).toLocaleDateString()}
+                                                        Due: {new Date(rec.expected_return_date).toLocaleDateString()}
                                                     </div>
                                                 )}
                                                 {rec.contact_number && (
                                                     <div className="flex items-center gap-2">
                                                         <Phone className="h-3 w-3" />
                                                         {rec.contact_number}
-                                                    </div>
-                                                )}
-                                                {rec.purpose && (
-                                                    <div className="flex items-center gap-2 italic text-slate-500">
-                                                        <FileText className="h-3 w-3" />
-                                                        {rec.purpose}
                                                     </div>
                                                 )}
                                             </div>

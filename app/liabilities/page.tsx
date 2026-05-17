@@ -407,46 +407,43 @@ export default function LiabilitiesPage() {
                             {filteredLiabilities.map((liability) => {
                                 const Icon = getIcon(liability.loan_type);
                                 return (
-                                    <Card key={liability.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                        <CardHeader className="pb-3">
+                                    <Card key={liability.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1" padding="sm">
+                                        <CardHeader className="pb-2">
                                             <div className="flex justify-between items-start">
-                                                <div className="icon-container bg-red-50 dark:bg-red-900/20">
-                                                    <Icon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                                                <div className="icon-container h-8 w-8 bg-red-50 dark:bg-red-900/20">
+                                                    <Icon className="h-4 w-4 text-red-600 dark:text-red-400" />
                                                 </div>
-                                                <Badge variant={liability.status === 'active' ? 'destructive' : 'secondary'} className="capitalize">
+                                                <Badge variant={liability.status === 'active' ? 'destructive' : 'secondary'} className="capitalize text-[10px] h-5">
                                                     {liability.status}
                                                 </Badge>
                                             </div>
-                                            <div className="mt-4">
-                                                <h3 className="font-semibold text-foreground line-clamp-1">
+                                            <div className="mt-2">
+                                                <h3 className="font-semibold text-foreground line-clamp-1 text-sm">
                                                     {liability.loan_name || liability.taken_from}
                                                 </h3>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <p className="text-sm text-muted-foreground capitalize">
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-[11px] text-muted-foreground capitalize">
                                                         {liability.loan_type.replace(/_/g, ' ')}
                                                     </p>
-                                                    {liability.is_secured && <Badge variant="outline" className="text-[10px] h-5 px-1">SECURED</Badge>}
+                                                    {liability.is_secured && <Badge variant="outline" className="text-[8px] h-4 px-1">SECURED</Badge>}
                                                 </div>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="pb-3 space-y-4">
+                                        <CardContent className="pb-2 space-y-2">
                                             <div>
-                                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
-                                                <p className="text-2xl font-bold text-foreground">
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Outstanding</p>
+                                                <p className="text-xl font-bold text-foreground">
                                                     {formatCurrency(liability.outstanding_amount)}
                                                 </p>
-                                                <div className="w-full bg-slate-100 h-1.5 mt-2 rounded-full overflow-hidden">
+                                                <div className="w-full bg-slate-100 h-1 mt-1.5 rounded-full overflow-hidden">
                                                     <div
                                                         className="bg-red-500 h-full rounded-full"
                                                         style={{ width: `${Math.min((liability.outstanding_amount / liability.principal_amount) * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[10px] text-slate-400 mt-1 text-right">
-                                                    {Math.round((liability.outstanding_amount / liability.principal_amount) * 100)}% remain
-                                                </p>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground border-t border-border pt-3">
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-2">
                                                 <div>
                                                     <span className="text-slate-400 block mb-1">EMI</span>
                                                     <span className="font-medium text-foreground">{liability.emi_amount ? formatCurrency(liability.emi_amount) : '-'}</span>

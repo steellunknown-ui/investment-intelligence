@@ -577,34 +577,34 @@ export default function BankingPage() {
                     viewMode === "card" ? (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {filteredAccounts.map((account) => (
-                                <Card key={account.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1">
-                                    <CardHeader className="pb-3">
+                                <Card key={account.id} className="relative hover:shadow-md transition-all sm:hover:-translate-y-1" padding="sm">
+                                    <CardHeader className="pb-2">
                                         <div className="flex justify-between items-start">
-                                            <div className="icon-container bg-blue-50 dark:bg-blue-900/20">
-                                                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            <div className="icon-container h-8 w-8 bg-blue-50 dark:bg-blue-900/20">
+                                                <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                             </div>
                                             <Badge variant={account.status === 'active' ? 'success' : 'secondary'}>
                                                 {account.status}
                                             </Badge>
                                         </div>
-                                        <div className="mt-4">
+                                        <div className="mt-2">
                                             <h3 className="font-semibold text-foreground line-clamp-1">
                                                 {account.bank_name}
                                             </h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <p className="text-sm font-mono text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <p className="text-[10px] font-mono text-muted-foreground bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                                                     •••• {account.account_number.slice(-4)}
                                                 </p>
-                                                <Badge variant="outline" className="text-[10px] h-5 px-1 uppercase tracking-wide">
+                                                <Badge variant="outline" className="text-[9px] h-4 px-1 uppercase tracking-wide">
                                                     {account.account_type.replace('_', ' ')}
                                                 </Badge>
                                             </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="pb-3 space-y-3">
+                                    <CardContent className="pb-2 space-y-2">
                                         <div>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Balance</p>
-                                            <p className="text-2xl font-bold text-foreground">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Balance</p>
+                                            <p className="text-xl font-bold text-foreground">
                                                 {formatCurrency(account.current_balance)}
                                             </p>
                                         </div>

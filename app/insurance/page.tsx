@@ -401,47 +401,47 @@ export default function InsurancePage() {
                             {filteredPolicies.map((policy) => {
                                 const overdue = isOverdue(policy.next_premium_due);
                                 return (
-                                    <Card key={policy.id} className="relative hover:shadow-md transition-shadow group">
-                                        <CardHeader className="pb-3">
+                                    <Card key={policy.id} className="relative hover:shadow-md transition-shadow group" padding="sm">
+                                        <CardHeader className="pb-2">
                                             <div className="flex justify-between items-start">
-                                                <div className="icon-container bg-primary/10 dark:bg-emerald-900/20">
-                                                    <Shield className="h-5 w-5 text-primary dark:text-accent" />
+                                                <div className="icon-container h-8 w-8 bg-primary/10 dark:bg-emerald-900/20">
+                                                    <Shield className="h-4 w-4 text-primary dark:text-accent" />
                                                 </div>
                                                 <div className="flex gap-2">
                                                     {overdue && policy.status === 'active' && (
-                                                        <Badge variant="destructive" className="flex items-center gap-1">
+                                                        <Badge variant="destructive" className="flex items-center gap-1 text-[10px] h-5">
                                                             <AlertCircle className="h-3 w-3" /> Overdue
                                                         </Badge>
                                                     )}
-                                                    <Badge variant={policy.status === 'active' ? 'success' : 'secondary'}>
+                                                    <Badge variant={policy.status === 'active' ? 'success' : 'secondary'} className="text-[10px] h-5">
                                                         {policy.status}
                                                     </Badge>
                                                 </div>
                                             </div>
-                                            <div className="mt-4">
-                                                <h3 className="font-semibold text-foreground line-clamp-1">
+                                            <div className="mt-2">
+                                                <h3 className="font-semibold text-foreground line-clamp-1 text-sm">
                                                     {policy.provider_name}
                                                 </h3>
-                                                <p className="text-sm text-muted-foreground">
+                                                <p className="text-[11px] text-muted-foreground truncate">
                                                     {policy.policy_type} • {policy.policy_number}
                                                 </p>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="pb-3 space-y-3">
-                                            <div className="flex justify-between text-sm">
+                                        <CardContent className="pb-2 space-y-2">
+                                            <div className="flex justify-between text-xs">
                                                 <span className="text-slate-500">Sum Insured</span>
                                                 <span className="font-medium">{formatCurrency(policy.sum_insured)}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
+                                            <div className="flex justify-between text-xs">
                                                 <span className="text-slate-500">Premium</span>
                                                 <span className="font-medium">
                                                     {formatCurrency(policy.premium_amount)}
-                                                    <span className="text-xs text-slate-400 font-normal">
+                                                    <span className="text-[10px] text-slate-400 font-normal">
                                                         /{policy.premium_frequency === 'yearly' ? 'yr' : 'mo'}
                                                     </span>
                                                 </span>
                                             </div>
-                                            <div className="pt-2 border-t border-border flex justify-between text-xs text-slate-500">
+                                            <div className="pt-1.5 border-t border-border flex justify-between text-[10px] text-slate-500">
                                                 <span className="flex items-center gap-1">
                                                     <User className="h-3 w-3" />
                                                     {policy.insured_name || 'Self'}
