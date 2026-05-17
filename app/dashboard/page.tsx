@@ -17,6 +17,7 @@ import { AssetsSpiderChart } from "@/components/dashboard/AssetsSpiderChart";
 import { LiabilitiesTrendCard, NetWorthTrendCard } from "@/components/dashboard/TrendGraphCards";
 
 
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import {
   Activity,
   TrendingUp,
