@@ -8,11 +8,9 @@ export const createCapacitorAuthClient = () => {
 
   // We explicitly use the pure `@supabase/supabase-js` client instead of `@supabase/ssr`
   // for the Capacitor OAuth flow.
-  // WHY? Because `@supabase/ssr`'s `createBrowserClient` forces the PKCE verifier to
-  // be stored in `document.cookie`. In Android WebViews, `document.cookie` is extremely
-  // volatile and gets wiped across deep links, causing "PKCE verifier not found" errors.
-  // By using the pure JS client, we can force it to use `capacitorStorage` (SharedPreferences)
-  // for the PKCE verifier, making it 100% immune to data loss!
+  // WHY? Because `@supabase/ssr`'s `createBrowserClient` often defaults PKCE storage
+  // to cookies. In Android WebViews, cookies can be volatile.
+  // By using the pure JS client, we strictly control the storage via capacitorStorage.
   capacitorAuthClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,10 +18,10 @@ export const createCapacitorAuthClient = () => {
       auth: {
         flowType: 'pkce',
         detectSessionInUrl: false,
-        autoRefreshToken: false, // We'll let the SSR client handle refreshes
+        autoRefreshToken: false,
         persistSession: true,
-        storage: capacitorStorage, // CRITICAL: Use SharedPreferences for PKCE!
-        storageKey: 'capacitor-native-auth-token', // Prevent collision with SSR client PKCE
+        storageKey: 'capacitor-native-auth-token',
+        storage: capacitorStorage,
       }
     }
   );

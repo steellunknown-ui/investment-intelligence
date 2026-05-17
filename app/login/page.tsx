@@ -7,6 +7,8 @@ import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser
 import {
     recordSessionLogin,
     isSessionValid,
+    warmupStorage,
+    capacitorStorage
 } from "@/src/lib/supabase/capacitor-storage";
 import { createCapacitorAuthClient } from '@/src/lib/supabase/capacitor-auth';
 import { Button } from "@/components/ui/Button";
@@ -197,6 +199,18 @@ export default function LoginPage() {
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
+                console.log('🚀 [AUTH] Starting Google OAuth on Native...');
+
+                // 1. Warm up storage
+                const ready = await warmupStorage();
+                if (!ready) {
+                    console.warn('⚠️ [AUTH] Storage warmup failed, continuing anyway...');
+                }
+
+                // 2. Clear any stale PKCE verifiers to avoid mismatch
+                const verifierKey = 'sb-capacitor-native-auth-token-code-verifier';
+                await capacitorStorage.removeItem(verifierKey);
+
                 const capacitorAuth = createCapacitorAuthClient();
                 const { Browser } = await import('@capacitor/browser');
                 
@@ -211,6 +225,7 @@ export default function LoginPage() {
                 if (error) throw error;
 
                 if (data?.url) {
+                    console.log('✅ [AUTH] PKCE Verifier set, opening browser...');
                     await Browser.open({ url: data.url, windowName: '_self' });
                 }
             } else {

@@ -13,44 +13,70 @@ const isCapacitorNative = (): boolean => {
 
 export const capacitorStorage = {
   async getItem(key: string): Promise<string | null> {
-    if (!isCapacitorNative()) {
+    const isNative = isCapacitorNative();
+    if (!isNative) {
       return localStorage.getItem(key);
     }
     try {
       const { value } = await Preferences.get({ key });
+      console.log(`[STORAGE] Get: ${key} = ${value ? 'FOUND' : 'NULL'}`);
       return value;
     } catch (err) {
+      console.error(`[STORAGE] Get Error (${key}):`, err);
       return localStorage.getItem(key);
     }
   },
 
   async setItem(key: string, value: string): Promise<void> {
-    if (!isCapacitorNative()) {
+    const isNative = isCapacitorNative();
+    if (!isNative) {
       localStorage.setItem(key, value);
       return;
     }
     try {
       await Preferences.set({ key, value });
-      // Backup to localStorage
+      console.log(`[STORAGE] Set: ${key} (Length: ${value.length})`);
+      // Backup to localStorage for redundancy
       try { localStorage.setItem(key, value); } catch {}
     } catch (err) {
+      console.error(`[STORAGE] Set Error (${key}):`, err);
       localStorage.setItem(key, value);
     }
   },
 
   async removeItem(key: string): Promise<void> {
-    if (!isCapacitorNative()) {
+    const isNative = isCapacitorNative();
+    if (!isNative) {
       localStorage.removeItem(key);
       return;
     }
     try {
       await Preferences.remove({ key });
+      console.log(`[STORAGE] Remove: ${key}`);
       try { localStorage.removeItem(key); } catch {}
     } catch (err) {
+      console.error(`[STORAGE] Remove Error (${key}):`, err);
       localStorage.removeItem(key);
     }
   },
 };
+
+/**
+ * Ensures the storage engine is responsive before starting critical tasks.
+ */
+export async function warmupStorage(): Promise<boolean> {
+  if (!isCapacitorNative()) return true;
+  try {
+    const testKey = '_warmup_test';
+    await capacitorStorage.setItem(testKey, '1');
+    const val = await capacitorStorage.getItem(testKey);
+    await capacitorStorage.removeItem(testKey);
+    return val === '1';
+  } catch (err) {
+    console.error('[STORAGE] Warmup Failed:', err);
+    return false;
+  }
+}
 
 // ── Session Timestamp Helpers ──
 const SESSION_LOGIN_KEY = 'capacitor_session_login_at';

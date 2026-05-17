@@ -41,7 +41,10 @@ export function createSupabaseBrowserClient() {
         flowType: 'pkce',
         // Use native persistent storage in Capacitor
         // This is the key fix — SharedPreferences survives app kills
-        ...(isNative ? { storage: capacitorStorage } : {}),
+        ...(isNative ? {
+          storage: capacitorStorage,
+          storageKey: 'sb-auth-token', // Keep consistent with SSR expectations
+        } : {}),
       }
     }
   );
