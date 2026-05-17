@@ -287,87 +287,53 @@ export default function LoginPage() {
 
             try {
                 const url = new URL(incomingUrl);
-                const browserPlugin = await withTimeout(
-                    import('@capacitor/browser'),
-                    1500,
-                    'Browser plugin close timed out'
-                ).catch(() => null);
-                await withTimeout(
-                    browserPlugin?.Browser.close() || Promise.resolve(),
-                    1500,
-                    'Closing Google browser timed out'
-                ).catch(() => {});
+
+                // 1. Close the browser immediately (fixes "stuck" browser issue)
+                try {
+                    const { Browser } = await import('@capacitor/browser');
+                    await Browser.close();
+                } catch (e) {
+                    console.log('[DEEP LINK] Browser already closed or plugin error');
+                }
 
                 const code = url.searchParams.get('code');
 
                 if (code && isMounted) {
+                    // Prevent duplicate processing of the same code
                     if (processedOAuthCodeRef.current === code) return;
                     processedOAuthCodeRef.current = code;
 
                     setLoading(true);
                     setStatusMessage("Finalizing handshake...");
+                    setError(null);
 
+                    // SET AUTH LOCK (Prevents other components from interrupting)
                     if (typeof window !== 'undefined') {
                         (window as any).isAuthenticating = true;
-                        (window as any).oauthLoginInProgress = false;
                     }
 
-                    let timedOut = false;
-                    const handshakeWatchdog = setTimeout(() => {
-                        timedOut = true;
-                        processedOAuthCodeRef.current = null;
-
-                        if (typeof window !== 'undefined') {
-                            (window as any).isAuthenticating = false;
-                        }
-
-                        if (isMounted) {
-                            setError('Handshake failed: Google login took too long. Please try again.');
-                            setStatusMessage(null);
-                            setLoading(false);
-                        }
-                    }, 18000);
-
+                    // Handshake logic...
                     try {
                         const { session } = await exchangeNativeCodeForSession(code);
-                        if (timedOut) return;
 
                         setStatusMessage("Connecting to dashboard...");
                         await persistNativeSession(session);
-                        if (timedOut) return;
-
-                        await fetch('/api/auth/bootstrap', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                Authorization: `Bearer ${session.access_token}`,
-                            },
-                            body: JSON.stringify({
-                                fullName: session.user.user_metadata?.full_name
-                                    || session.user.user_metadata?.name
-                                    || null,
-                            }),
-                        }).catch((bootstrapError) => {
-                            console.error('[AUTH] Native bootstrap failed:', bootstrapError);
-                        });
 
                         await recordSessionLogin();
-                        if (timedOut) return;
 
                         router.push('/dashboard');
                         router.refresh();
                     } catch (err: any) {
-                        if (timedOut) return;
-                        console.error('[AUTH] Deep link session exception:', err);
-                        setError('Handshake failed: ' + (err.message || 'unknown error'));
+                        console.error('[AUTH] Deep link handshake exception:', err);
+                        setError('Handshake failed: ' + (err.message || 'connection error'));
                         setStatusMessage(null);
+                        processedOAuthCodeRef.current = null;
                     } finally {
-                        clearTimeout(handshakeWatchdog);
                         if (isMounted) {
                             setLoading(false);
                             setTimeout(() => {
                                 if (typeof window !== 'undefined') (window as any).isAuthenticating = false;
-                            }, 2000);
+                            }, 3000);
                         }
                     }
                     return;
@@ -389,18 +355,18 @@ export default function LoginPage() {
             try {
                 const { App } = await import('@capacitor/app');
 
+                // Check for cold-start launch URL
                 const launchUrl = await App.getLaunchUrl();
                 if (launchUrl?.url) {
-                    await handleDeepLink(launchUrl.url);
+                    console.log('[LAUNCH] Handling launch URL');
+                    void handleDeepLink(launchUrl.url);
                 }
 
+                // Listen for app-in-background deep links
                 listenerHandle = await App.addListener('appUrlOpen', (data: any) => {
+                    console.log('[EVENT] Handling appUrlOpen');
                     void handleDeepLink(data.url);
                 });
-
-                if (!isMounted && listenerHandle) {
-                    void listenerHandle.remove();
-                }
             } catch (err) {
                 console.error('[Login] Failed to load Capacitor App plugin:', err);
             }
