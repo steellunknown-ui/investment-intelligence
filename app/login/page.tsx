@@ -305,8 +305,12 @@ export default function LoginPage() {
                 const code = url.searchParams.get('code');
 
                 if (code && isMounted) {
+                    console.log('✅ [DEEP LINK] Found code, starting handshake');
                     // Prevent duplicate processing of the same code
-                    if (processedOAuthCodeRef.current === code) return;
+                    if (processedOAuthCodeRef.current === code) {
+                        console.log('⚠️ [DEEP LINK] Code already processed, skipping');
+                        return;
+                    }
                     processedOAuthCodeRef.current = code;
 
                     setLoading(true);
@@ -323,14 +327,15 @@ export default function LoginPage() {
                         console.log('🤝 [AUTH] Exchanging code for session...');
                         const { session } = await exchangeNativeCodeForSession(code);
 
-                        setStatusMessage("Finalizing profile...");
+                        setStatusMessage("Connecting to dashboard...");
+                        console.log('💾 [AUTH] Persisting session...');
                         await persistNativeSession(session);
 
                         await recordSessionLogin();
 
                         // Final bootstrap (Profile / Inactivity setup)
-                        console.log('🚀 [AUTH] Bootstrapping user data...');
-                        await fetch('/api/auth/bootstrap', {
+                        console.log('🚀 [AUTH] Handshake complete, entering app...');
+                        void fetch('/api/auth/bootstrap', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -341,11 +346,13 @@ export default function LoginPage() {
                                     || session.user.user_metadata?.name
                                     || null,
                             }),
-                        }).catch((e) => console.error('[AUTH] Bootstrap failed:', e));
+                        }).catch((e) => console.error('[AUTH] Bootstrap non-fatal error:', e));
 
-                        setStatusMessage("Loading dashboard...");
+                        // Force immediate redirect
                         router.push('/dashboard');
-                        router.refresh();
+                        setTimeout(() => {
+                            router.refresh();
+                        }, 100);
                     } catch (err: any) {
                         console.error('[AUTH] Deep link handshake exception:', err);
                         setError('Handshake failed: ' + (err.message || 'connection error'));
