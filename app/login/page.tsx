@@ -96,6 +96,109 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
     return url.toString();
 }
 
+async function getStoredCodeVerifier() {
+    const localVerifier = localStorage.getItem(CODE_VERIFIER_KEY);
+    const storedVerifier = localVerifier || await withTimeout(
+        capacitorStorage.getItem(CODE_VERIFIER_KEY),
+        2000,
+        'Reading login verifier timed out'
+    );
+
+    return (storedVerifier || '').split('/')[0];
+}
+
+async function exchangeNativeCodeForSession(authCode: string) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Missing Supabase auth config');
+    }
+
+    const codeVerifier = await getStoredCodeVerifier();
+    if (!codeVerifier) {
+        throw new Error('Login verifier missing. Please tap Continue with Google again.');
+    }
+
+    const response = await withTimeout(
+        fetch(`${supabaseUrl}/auth/v1/token?grant_type=pkce`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseAnonKey,
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                auth_code: authCode,
+                code_verifier: codeVerifier,
+            }),
+        }),
+        12000,
+        'Google login handshake timed out'
+    );
+
+    const payload = await withTimeout(
+        response.json().catch(() => ({})),
+        5000,
+        'Reading Google login response timed out'
+    );
+
+    if (!response.ok) {
+        throw new Error(payload.error_description || payload.msg || payload.error || 'Google login handshake failed');
+    }
+
+    if (!payload.access_token || !payload.refresh_token || !payload.user) {
+        throw new Error('Google login did not return a valid session');
+    }
+
+    const session = {
+        ...payload,
+        expires_at: payload.expires_at || Math.round(Date.now() / 1000) + (payload.expires_in || 3600),
+    };
+
+    localStorage.removeItem(CODE_VERIFIER_KEY);
+    await capacitorStorage.removeItem(CODE_VERIFIER_KEY).catch(() => {});
+
+    return { session, user: payload.user };
+}
+
+async function persistNativeSession(session: any) {
+    const sessionJson = JSON.stringify(session);
+    localStorage.setItem(AUTH_STORAGE_KEY, sessionJson);
+    await capacitorStorage.setItem(AUTH_STORAGE_KEY, sessionJson);
+
+    const cookieValue = encodeURIComponent(JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+    }));
+    document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
+    const capacitorAuth = createCapacitorAuthClient();
+    await withTimeout(
+        capacitorAuth.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+        }),
+        5000,
+        'Saving native session timed out'
+    ).catch((err) => {
+        console.error('[AUTH] Capacitor session save failed:', err);
+    });
+
+    const ssrClient = createSupabaseBrowserClient();
+    await withTimeout(
+        ssrClient.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+        }),
+        5000,
+        'Saving browser session timed out'
+    ).catch((err) => {
+        console.error('[AUTH] Browser session save failed:', err);
+    });
+}
+
 function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
     const searchParams = useSearchParams();
     useEffect(() => {
@@ -152,8 +255,16 @@ export default function LoginPage() {
 
             try {
                 const url = new URL(incomingUrl);
-                const { Browser } = await import('@capacitor/browser');
-                await Browser.close().catch(() => {});
+                const browserPlugin = await withTimeout(
+                    import('@capacitor/browser'),
+                    1500,
+                    'Browser plugin close timed out'
+                ).catch(() => null);
+                await withTimeout(
+                    browserPlugin?.Browser.close() || Promise.resolve(),
+                    1500,
+                    'Closing Google browser timed out'
+                ).catch(() => {});
 
                 const code = url.searchParams.get('code');
 
@@ -170,48 +281,29 @@ export default function LoginPage() {
                     }
 
                     try {
-                        const capacitorAuth = createCapacitorAuthClient();
-                        const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
+                        const { session } = await exchangeNativeCodeForSession(code);
 
-                        if (exchangeError) {
-                            console.error('[AUTH] Code exchange error:', exchangeError);
-                            setError("Authentication failed: " + exchangeError.message);
-                            setStatusMessage(null);
-                        } else if (exchangeData.session) {
-                            setStatusMessage("Connecting to dashboard...");
+                        setStatusMessage("Connecting to dashboard...");
+                        await persistNativeSession(session);
 
-                            const ssrClient = createSupabaseBrowserClient();
-                            await ssrClient.auth.setSession({
-                                access_token: exchangeData.session.access_token,
-                                refresh_token: exchangeData.session.refresh_token,
-                            });
+                        await fetch('/api/auth/bootstrap', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                fullName: session.user.user_metadata?.full_name
+                                    || session.user.user_metadata?.name
+                                    || null,
+                            }),
+                        }).catch((bootstrapError) => {
+                            console.error('[AUTH] Native bootstrap failed:', bootstrapError);
+                        });
 
-                            const cookieValue = encodeURIComponent(JSON.stringify({
-                                access_token: exchangeData.session.access_token,
-                                refresh_token: exchangeData.session.refresh_token,
-                                expires_at: exchangeData.session.expires_at,
-                            }));
-                            document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-
-                            await fetch('/api/auth/bootstrap', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    Authorization: `Bearer ${exchangeData.session.access_token}`,
-                                },
-                                body: JSON.stringify({
-                                    fullName: exchangeData.session.user.user_metadata?.full_name
-                                        || exchangeData.session.user.user_metadata?.name
-                                        || null,
-                                }),
-                            }).catch((bootstrapError) => {
-                                console.error('[AUTH] Native bootstrap failed:', bootstrapError);
-                            });
-
-                            await recordSessionLogin();
-                            router.push('/dashboard');
-                            router.refresh();
-                        }
+                        await recordSessionLogin();
+                        router.push('/dashboard');
+                        router.refresh();
                     } catch (err: any) {
                         console.error('[AUTH] Deep link session exception:', err);
                         setError('Handshake failed: ' + (err.message || 'unknown error'));
