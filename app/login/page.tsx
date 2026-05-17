@@ -323,17 +323,20 @@ export default function LoginPage() {
                         if (exchangeError) throw exchangeError;
                         if (!exchangeData.session) throw new Error("Authentication returned no session");
 
-                        setStatusMessage("Synchronizing...");
+                        // 1. CLEAR LOADING STATE IMMEDIATELY
+                        setLoading(false);
+                        setStatusMessage(null);
+
                         const session = exchangeData.session;
 
-                        // Force sync to SSR Client
+                        // 2. Sync to SSR Client
                         const ssrClient = createSupabaseBrowserClient();
                         await ssrClient.auth.setSession({
                             access_token: session.access_token,
                             refresh_token: session.refresh_token,
                         });
 
-                        // Force sync to Cookies (Critical for Dashboard API)
+                        // 3. Sync to Cookies (Critical for Dashboard API)
                         const cookieValue = encodeURIComponent(JSON.stringify({
                             access_token: session.access_token,
                             refresh_token: session.refresh_token,
@@ -343,17 +346,9 @@ export default function LoginPage() {
 
                         await recordSessionLogin();
 
-                        setStatusMessage("Success! Entering dashboard...");
-
-                        // Push to dashboard
-                        router.push('/dashboard');
-
-                        // FAILSAFE: Hard redirect if Next.js router is stuck
-                        setTimeout(() => {
-                            if (window.location.pathname !== '/dashboard') {
-                                window.location.href = '/dashboard';
-                            }
-                        }, 1500);
+                        // 4. NUCLEAR HARD REDIRECT
+                        console.log('🚀 [AUTH] Forcing Hard Redirect to Dashboard...');
+                        window.location.assign('/dashboard');
 
                     } catch (err: any) {
                         console.error('❌ [AUTH] Handshake failed:', err);
