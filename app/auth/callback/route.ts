@@ -12,24 +12,17 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const code = searchParams.get("code");
         const next = searchParams.get("next") ?? "/dashboard";
-        const platform = searchParams.get("platform");
 
         if (!code) {
-            console.error('No auth code provided');
             return NextResponse.redirect(`${siteUrl}/login?error=no_code`);
-        }
-
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-            console.error('Missing Supabase environment variables');
-            return NextResponse.redirect(`${siteUrl}/login?error=missing_env_vars`);
         }
 
         const cookieStore = cookies();
         const cookiesToSet: { name: string; value: string; options: any }[] = [];
 
         const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
                     getAll() {
@@ -39,59 +32,27 @@ export async function GET(request: Request) {
                         cookies.forEach(({ name, value, options }) => {
                             cookiesToSet.push({ name, value, options });
                         });
-
                         try {
                             cookies.forEach(({ name, value, options }) => {
                                 cookieStore.set(name, value, options);
                             });
-                        } catch {
-                            // Will be set on response below
-                        }
+                        } catch {}
                     },
                 },
             }
         );
 
-        // ──────────────────────────────────────────────────────────────────
-        // CAPACITOR PATH: Send code back to the app via deep link.
-        // The app will use the capacitor-auth pure JS client to exchange
-        // the code. This ensures the PKCE verifier is read securely from
-        // SharedPreferences, completely avoiding WebView cookie bugs.
-        // ──────────────────────────────────────────────────────────────────
-        if (platform === 'capacitor') {
-            const code_param = encodeURIComponent(code);
-            const next_param = encodeURIComponent(next);
-
-            // Use intent:// scheme — guaranteed to open app from Chrome Custom Tab
-            // Falls back to custom scheme for other browsers
-            const customSchemeUrl = `com.investmentintelligence.auth://callback?code=${code_param}&next=${next_param}`;
-            const intentUrl = `intent://callback?code=${code_param}&next=${next_param}#Intent;scheme=com.investmentintelligence.auth;package=com.investmentintelligence.app;end`;
-
-            return createCapacitorRedirectPage(
-                customSchemeUrl,
-                intentUrl,
-                'Logging in...',
-                'Please wait while we complete your login.'
-            );
-        }
-
-        // Exchange code for session (WEB ONLY)
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
             console.error('Auth exchange error:', error.message);
-            return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed&msg=${encodeURIComponent(error.message)}`);
+            return NextResponse.redirect(`${siteUrl}/login?error=auth_exchange_failed`);
         }
 
         if (!data?.user || !data?.session) {
-            console.error('No user/session data after auth');
             return NextResponse.redirect(`${siteUrl}/login?error=no_user_data`);
         }
 
-
-        // ──────────────────────────────────────────────────────────────────
-        // WEB PATH: Normal cookie-based redirect
-        // ──────────────────────────────────────────────────────────────────
         const redirectUrl = `${siteUrl}${next}`;
         const response = NextResponse.redirect(redirectUrl);
 
@@ -101,15 +62,11 @@ export async function GET(request: Request) {
 
         try {
             const metadata = data.user.user_metadata || {};
-            const full_name = metadata.full_name || metadata.name;
-            const avatar_url = metadata.avatar_url || metadata.picture;
-            const email = metadata.email || data.user.email;
-
             await supabase.from("profiles").upsert({
                 id: data.user.id,
-                full_name: full_name || null,
-                avatar_url: avatar_url || null,
-                email: email,
+                full_name: metadata.full_name || metadata.name || null,
+                avatar_url: metadata.avatar_url || metadata.picture || null,
+                email: metadata.email || data.user.email,
                 updated_at: new Date().toISOString(),
             }, { onConflict: "id" });
             await trackLoginActivity(supabase, data.user.id);
@@ -117,84 +74,10 @@ export async function GET(request: Request) {
             console.error('Background task failed (non-critical):', e);
         }
 
-        console.log('Auth successful, redirecting to:', redirectUrl);
         return response;
 
     } catch (error) {
         console.error('Auth callback fatal error:', error);
         return NextResponse.redirect(`${siteUrl}/login?error=fatal_error`);
     }
-}
-
-function createCapacitorRedirectPage(customSchemeUrl: string, intentUrl: string, title: string, subtitle: string) {
-    return new NextResponse(
-        `<!DOCTYPE html>
-        <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>${title}</title>
-                <style>
-                    body {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        height: 100vh;
-                        margin: 0;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                        background: #f8fafc;
-                        color: #334155;
-                    }
-                    .container { text-align: center; padding: 20px; }
-                    h2 { color: #10b981; margin-bottom: 8px; }
-                    p { color: #64748b; margin-bottom: 16px; }
-                    .btn {
-                        display: inline-block;
-                        padding: 12px 24px;
-                        background: #10b981;
-                        color: white;
-                        border-radius: 8px;
-                        text-decoration: none;
-                        margin-top: 10px;
-                        font-weight: 500;
-                    }
-                    .spinner {
-                        width: 32px;
-                        height: 32px;
-                        border: 3px solid #e2e8f0;
-                        border-top: 3px solid #10b981;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto 16px;
-                    }
-                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="spinner"></div>
-                    <h2>${title}</h2>
-                    <p>${subtitle}</p>
-                    <a href="${customSchemeUrl}" class="btn">Click here if not redirected</a>
-                </div>
-                <script>
-                    (function() {
-                        // Try intent:// first (works in Chrome, guaranteed app open)
-                        var intentUrl = "${intentUrl}";
-                        var customUrl = "${customSchemeUrl}";
-                        var isAndroid = /android/i.test(navigator.userAgent);
-
-                        if (isAndroid) {
-                            window.location.href = intentUrl;
-                        } else {
-                            window.location.href = customUrl;
-                        }
-                    })();
-                </script>
-            </body>
-        </html>`,
-        {
-            headers: { 'Content-Type': 'text/html' },
-        }
-    );
 }

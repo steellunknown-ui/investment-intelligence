@@ -1,16 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
-import {
-    recordSessionLogin,
-    isSessionValid,
-    warmupStorage,
-    capacitorStorage
-} from "@/src/lib/supabase/capacitor-storage";
-import { createCapacitorAuthClient } from '@/src/lib/supabase/capacitor-auth';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -23,219 +16,7 @@ import {
     Sparkles
 } from "lucide-react";
 
-// Detect if running inside Capacitor (Android/iOS native app)
-const isCapacitorNative = (): boolean => {
-    return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-};
-
 const PROD_URL = 'https://investment-intellegince.vercel.app';
-const AUTH_STORAGE_KEY = 'sb-auth-token';
-const CODE_VERIFIER_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
-
-// In-memory fallback for PKCE verifier (survives within same JS context)
-let inMemoryVerifier: string | null = null;
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
-    });
-
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-        if (timeoutId) clearTimeout(timeoutId);
-    }) as Promise<T>;
-}
-
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number, message: string) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        return await fetch(input, {
-            ...init,
-            signal: controller.signal,
-        });
-    } catch (error: any) {
-        if (error?.name === 'AbortError') {
-            throw new Error(message);
-        }
-        throw error;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
-function createCodeVerifier() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-    const length = 64;
-
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        const bytes = new Uint8Array(length);
-        crypto.getRandomValues(bytes);
-        return Array.from(bytes, (byte) => chars[byte % chars.length]).join('');
-    }
-
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
-
-function base64UrlEncode(bytes: Uint8Array) {
-    const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function createCodeChallenge(verifier: string) {
-    if (
-        typeof crypto === 'undefined' ||
-        !crypto.subtle ||
-        typeof TextEncoder === 'undefined'
-    ) {
-        return { challenge: verifier, method: 'plain' };
-    }
-
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-    return { challenge: base64UrlEncode(new Uint8Array(digest)), method: 's256' };
-}
-
-async function createNativeGoogleOAuthUrl(redirectTo: string) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-    if (!supabaseUrl) {
-        throw new Error('Missing Supabase URL');
-    }
-
-    const verifier = createCodeVerifier();
-    console.log('🛡️ [AUTH] Generated PKCE Verifier');
-
-    // 1. Always keep in memory (fastest)
-    inMemoryVerifier = verifier;
-
-    // 2. localStorage backup (sync)
-    try { localStorage.setItem(CODE_VERIFIER_KEY, verifier); } catch {}
-
-    // 3. Native Preferences (AWAIT this one to be safe)
-    console.log('💾 [AUTH] Saving verifier to native storage...');
-    await withTimeout(
-        capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier),
-        2500,
-        'Native storage save timed out'
-    ).catch((e) => console.warn('⚠️ [AUTH] Native save warning:', e));
-
-    const { challenge, method } = await createCodeChallenge(verifier);
-    const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
-    url.searchParams.set('provider', 'google');
-    url.searchParams.set('redirect_to', redirectTo);
-    url.searchParams.set('code_challenge', challenge);
-    url.searchParams.set('code_challenge_method', method);
-
-    return url.toString();
-}
-
-async function getStoredCodeVerifier() {
-    // 1. In-memory (fastest, same JS context — works if app wasn't killed)
-    if (inMemoryVerifier) return inMemoryVerifier;
-
-    // 2. localStorage (survives soft reloads)
-    const localVerifier = localStorage.getItem(CODE_VERIFIER_KEY);
-    if (localVerifier) return localVerifier;
-
-    // 3. Native Preferences (survives app kills / WebView hard reloads)
-    const nativeVerifier = await withTimeout(
-        capacitorStorage.getItem(CODE_VERIFIER_KEY),
-        4000,
-        'Reading login verifier timed out'
-    ).catch(() => null);
-
-    return nativeVerifier || '';
-}
-
-async function exchangeNativeCodeForSession(authCode: string) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Missing Supabase auth config');
-    }
-
-    const codeVerifier = await getStoredCodeVerifier();
-    if (!codeVerifier) {
-        throw new Error('Login verifier missing. Please tap Continue with Google again.');
-    }
-
-    const response = await fetchWithTimeout(
-        `${PROD_URL}/api/auth/native-exchange`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer native-oauth-exchange',
-            },
-            body: JSON.stringify({
-                code: authCode,
-                codeVerifier,
-            }),
-        },
-        12000,
-        'Google login handshake timed out'
-    );
-
-    const payload = await withTimeout(
-        response.json().catch(() => ({})),
-        5000,
-        'Reading Google login response timed out'
-    );
-
-    if (!response.ok) {
-        throw new Error(payload.error_description || payload.msg || payload.error || 'Google login handshake failed');
-    }
-
-    if (!payload.session?.access_token || !payload.session?.refresh_token || !payload.session?.user) {
-        throw new Error('Google login did not return a valid session');
-    }
-
-    localStorage.removeItem(CODE_VERIFIER_KEY);
-    inMemoryVerifier = null;
-    await capacitorStorage.removeItem(CODE_VERIFIER_KEY).catch(() => {});
-
-    return { session: payload.session, user: payload.user };
-}
-
-async function persistNativeSession(session: any) {
-    const sessionJson = JSON.stringify(session);
-    localStorage.setItem(AUTH_STORAGE_KEY, sessionJson);
-    await capacitorStorage.setItem(AUTH_STORAGE_KEY, sessionJson);
-
-    const cookieValue = encodeURIComponent(JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        expires_at: session.expires_at,
-    }));
-    document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-
-    const capacitorAuth = createCapacitorAuthClient();
-    await withTimeout(
-        capacitorAuth.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-        }),
-        5000,
-        'Saving native session timed out'
-    ).catch((err) => {
-        console.error('[AUTH] Capacitor session save failed:', err);
-    });
-
-    const ssrClient = createSupabaseBrowserClient();
-    await withTimeout(
-        ssrClient.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-        }),
-        5000,
-        'Saving browser session timed out'
-    ).catch((err) => {
-        console.error('[AUTH] Browser session save failed:', err);
-    });
-}
 
 function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
     const searchParams = useSearchParams();
@@ -254,29 +35,16 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [checkingSession, setCheckingSession] = useState(true);
-    const [showManualEntry, setShowManualEntry] = useState(false); // NEW: Emergency Button State
-    const processedOAuthCodeRef = useRef<string | null>(null);
 
-    // ── On mount: Check for existing valid session ──
     useEffect(() => {
         const checkExistingSession = async () => {
             try {
                 const supabase = createSupabaseBrowserClient();
                 const { data: { session } } = await supabase.auth.getSession();
-
                 if (session) {
-                    const valid = await isSessionValid();
-                    if (valid) {
-                        router.replace('/dashboard');
-                        // Failsafe: Hard redirect if router fails
-                        setTimeout(() => {
-                            if (window.location.pathname !== '/dashboard') window.location.href = '/dashboard';
-                        }, 500);
-                        return;
-                    }
-                    await supabase.auth.signOut();
+                    router.replace('/dashboard');
+                    return;
                 }
             } catch (err) {
                 console.error('[Login] Session check error:', err);
@@ -284,151 +52,23 @@ export default function LoginPage() {
                 setCheckingSession(false);
             }
         };
-
         checkExistingSession();
-    }, [router]);
-
-    // Capacitor deep link listener
-    useEffect(() => {
-        let isMounted = true;
-        let listenerHandle: { remove: () => Promise<void> | void } | null = null;
-
-        const handleDeepLink = async (incomingUrl: string) => {
-            console.log('🚀 [DEEP LINK] Incoming:', incomingUrl);
-
-            try {
-                const url = new URL(incomingUrl);
-
-                // 1. Close browser window
-                try {
-                    const { Browser } = await import('@capacitor/browser');
-                    await Browser.close();
-                } catch (e) {}
-
-                const code = url.searchParams.get('code');
-
-                if (code && isMounted) {
-                    console.log('✅ [DEEP LINK] Found code, starting handshake');
-                    // Prevent duplicate runs
-                    if (processedOAuthCodeRef.current === code) {
-                        console.log('⚠️ [DEEP LINK] Code already processed');
-                        return;
-                    }
-                    processedOAuthCodeRef.current = code;
-
-                    setLoading(true);
-                    setStatusMessage("Finalizing handshake...");
-                    setError(null);
-
-                    // Show manual entry button after 4 seconds of hang
-                    setTimeout(() => {
-                        if (isMounted) setShowManualEntry(true);
-                    }, 4000);
-
-                    try {
-                        console.log('🤝 [AUTH] Exchanging code locally...');
-                        const capacitorAuth = createCapacitorAuthClient();
-                        const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
-
-                        if (exchangeError) throw exchangeError;
-                        if (!exchangeData.session) throw new Error("Authentication returned no session");
-
-                        // 1. CLEAR LOADING STATE IMMEDIATELY
-                        setLoading(false);
-                        setStatusMessage(null);
-
-                        const session = exchangeData.session;
-
-                        // 2. Sync to SSR Client
-                        const ssrClient = createSupabaseBrowserClient();
-                        await ssrClient.auth.setSession({
-                            access_token: session.access_token,
-                            refresh_token: session.refresh_token,
-                        });
-
-                        // 3. Sync to Cookies (Critical for Dashboard API)
-                        const cookieValue = encodeURIComponent(JSON.stringify({
-                            access_token: session.access_token,
-                            refresh_token: session.refresh_token,
-                        }));
-                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=.vercel.app`;
-                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-
-                        await recordSessionLogin();
-
-                        // 4. POWER JUMP (FINAL FIX)
-                        // Pass the session directly in the URL to bypass Middleware kick-out
-                        console.log('🚀 [AUTH] Executing Power Jump to Dashboard...');
-                        const jumpUrl = `/dashboard?session_jump=${encodeURIComponent(JSON.stringify(session))}`;
-                        window.location.assign(jumpUrl);
-
-                    } catch (err: any) {
-                        console.error('❌ [AUTH] Handshake failed:', err);
-                        setError('Handshake failed: ' + (err.message || 'connection error'));
-                        setStatusMessage(null);
-                        processedOAuthCodeRef.current = null;
-                    } finally {
-                        if (isMounted) setLoading(false);
-                    }
-                    return;
-                }
-            } catch (urlErr) {
-                console.error('[Login] Deep link parse error:', urlErr);
-            }
-        };
-
-        const setupDeepLinkListener = async () => {
-            if (!isCapacitorNative()) return;
-
-            try {
-                const { App } = await import('@capacitor/app');
-
-                // Check for cold-start (App was closed)
-                const launchUrl = await App.getLaunchUrl();
-                if (launchUrl?.url) {
-                    console.log('🚀 [LAUNCH] App started with deep link');
-                    void handleDeepLink(launchUrl.url);
-                }
-
-                // Listen for warm-start (App was in background)
-                listenerHandle = await App.addListener('appUrlOpen', (data: any) => {
-                    console.log('🚀 [EVENT] App received deep link while running');
-                    void handleDeepLink(data.url);
-                });
-            } catch (err) {
-                console.error('[Login] Capacitor App plugin failed:', err);
-            }
-        };
-
-        setupDeepLinkListener();
-
-        return () => {
-            isMounted = false;
-            if (listenerHandle) {
-                void listenerHandle.remove();
-            }
-        };
     }, [router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
-        setStatusMessage(null);
 
         try {
             const supabase = createSupabaseBrowserClient();
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
                 setError(error.message);
                 return;
             }
 
-            await recordSessionLogin();
             router.push("/dashboard");
             router.refresh();
         } catch {
@@ -442,68 +82,20 @@ export default function LoginPage() {
         try {
             setLoading(true);
             setError(null);
-            setStatusMessage("Redirecting to Google...");
 
+            const supabase = createSupabaseBrowserClient();
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            const redirectTo = origin.includes('localhost')
+                ? `${origin}/auth/callback`
+                : `${PROD_URL}/auth/callback`;
 
-            if (isCapacitorNative()) {
-                console.log('[AUTH] Starting Browser-based Google OAuth on Native...');
-
-                // 1. Warm up storage
-                const ready = await withTimeout(warmupStorage(), 2000, 'Storage warmup timed out').catch(() => false);
-                if (!ready) {
-                    console.warn('[AUTH] Storage warmup failed, continuing anyway...');
-                }
-
-                // 2. Clear any stale PKCE verifiers to avoid mismatch
-                localStorage.removeItem(CODE_VERIFIER_KEY);
-                await withTimeout(capacitorStorage.removeItem(CODE_VERIFIER_KEY), 1500, 'Verifier cleanup timed out').catch(() => {});
-
-                // 3. Build the OAuth URL
-                const authUrl = await withTimeout(
-                    createNativeGoogleOAuthUrl(`${PROD_URL}/auth/callback?platform=capacitor`),
-                    3500,
-                    'Creating Google login URL timed out'
-                );
-
-                if (authUrl) {
-                    console.log('[AUTH] PKCE verifier set, opening browser...');
-                    setStatusMessage("Opening Google...");
-
-                    try {
-                        const { Browser } = await import('@capacitor/browser');
-                        await Browser.open({ url: authUrl });
-                    } catch (browserImportError) {
-                        console.error('[AUTH] Browser plugin error:', browserImportError);
-                        window.location.href = authUrl;
-                    }
-
-                    setTimeout(() => {
-                        setLoading(false);
-                        setStatusMessage(null);
-                    }, 5000);
-                } else {
-                    throw new Error("Failed to get Google login URL");
-                }
-            } else {
-                const supabase = createSupabaseBrowserClient();
-                const redirectTo = origin.includes('localhost')
-                    ? `${origin}/auth/callback`
-                    : `${PROD_URL}/auth/callback`;
-
-                await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo,
-                        skipBrowserRedirect: false,
-                    },
-                });
-            }
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo, skipBrowserRedirect: false },
+            });
         } catch (err: any) {
-            console.error('[Login] Google login error:', err);
             setError(err.message || 'Failed to initialize Google login');
             setLoading(false);
-            setStatusMessage(null);
         }
     };
 
@@ -521,51 +113,12 @@ export default function LoginPage() {
         );
     }
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-6 p-8 text-center max-w-sm">
-                    <div className="relative">
-                        <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-                        <svg className="animate-spin h-12 w-12 text-primary relative z-10" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                    </div>
-
-                    <div className="space-y-2">
-                        <h2 className="text-xl font-bold text-foreground">
-                            {statusMessage || "Finalizing Login..."}
-                        </h2>
-                        <p className="text-sm text-muted-foreground italic">
-                            This usually takes only 2 seconds.
-                        </p>
-                    </div>
-
-                    {showManualEntry && (
-                        <div className="mt-4 animate-fade-in-up">
-                            <Button
-                                onClick={() => window.location.href = '/dashboard'}
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 px-6 rounded-xl shadow-lg"
-                            >
-                                Enter Dashboard Now
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Button>
-                            <p className="text-xs text-muted-foreground mt-4">
-                                Handshake is taking too long? Tap above to force entry.
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen flex">
             <Suspense fallback={null}>
                 <TimeoutMessage setError={setError} />
             </Suspense>
+
             {/* Left Panel - Branding */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
                 <div className="absolute inset-0">
@@ -584,9 +137,7 @@ export default function LoginPage() {
                             <h1 className="text-4xl font-bold leading-tight text-white">
                                 Secure your
                                 <br />
-                                <span className="text-accent">
-                                    investment legacy
-                                </span>
+                                <span className="text-accent">investment legacy</span>
                             </h1>
                             <p className="mt-4 text-lg text-white/70 max-w-md">
                                 Track, protect, and ensure your loved ones can access your portfolio when it matters most.
@@ -667,7 +218,7 @@ export default function LoginPage() {
                                 disabled={loading}
                                 className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all duration-200"
                             >
-                                {loading && !statusMessage ? (
+                                {loading ? (
                                     <span className="flex items-center gap-2">
                                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -697,29 +248,15 @@ export default function LoginPage() {
                                 variant="outline"
                                 onClick={handleGoogleLogin}
                                 disabled={loading}
-                                className="w-full h-12 bg-card border-border hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-3 relative"
+                                className="w-full h-12 bg-card border-border hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-3"
                             >
-                                {loading && statusMessage ? (
-                                    <div className="flex flex-col items-center">
-                                        <span className="flex items-center gap-2">
-                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                            </svg>
-                                            {statusMessage}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <svg className="h-5 w-5" viewBox="0 0 24 24">
-                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" />
-                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                        </svg>
-                                        Continue with Google
-                                    </>
-                                )}
+                                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" />
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                </svg>
+                                Continue with Google
                             </Button>
                         </form>
 
