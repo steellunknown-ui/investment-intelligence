@@ -105,15 +105,21 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
     }
 
     const verifier = createCodeVerifier();
+    console.log('🛡️ [AUTH] Generated PKCE Verifier');
 
-    // 1. Always keep in memory (fastest, same JS context)
+    // 1. Always keep in memory (fastest)
     inMemoryVerifier = verifier;
 
-    // 2. localStorage backup (sync, instant)
+    // 2. localStorage backup (sync)
     try { localStorage.setItem(CODE_VERIFIER_KEY, verifier); } catch {}
 
-    // 3. Native Preferences (async, fire-and-forget — don't block or throw)
-    capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier).catch(() => {});
+    // 3. Native Preferences (AWAIT this one to be safe)
+    console.log('💾 [AUTH] Saving verifier to native storage...');
+    await withTimeout(
+        capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier),
+        2500,
+        'Native storage save timed out'
+    ).catch((e) => console.warn('⚠️ [AUTH] Native save warning:', e));
 
     const { challenge, method } = await createCodeChallenge(verifier);
     const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
@@ -314,13 +320,30 @@ export default function LoginPage() {
 
                     // Handshake logic...
                     try {
+                        console.log('🤝 [AUTH] Exchanging code for session...');
                         const { session } = await exchangeNativeCodeForSession(code);
 
-                        setStatusMessage("Connecting to dashboard...");
+                        setStatusMessage("Finalizing profile...");
                         await persistNativeSession(session);
 
                         await recordSessionLogin();
 
+                        // Final bootstrap (Profile / Inactivity setup)
+                        console.log('🚀 [AUTH] Bootstrapping user data...');
+                        await fetch('/api/auth/bootstrap', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                fullName: session.user.user_metadata?.full_name
+                                    || session.user.user_metadata?.name
+                                    || null,
+                            }),
+                        }).catch((e) => console.error('[AUTH] Bootstrap failed:', e));
+
+                        setStatusMessage("Loading dashboard...");
                         router.push('/dashboard');
                         router.refresh();
                     } catch (err: any) {
