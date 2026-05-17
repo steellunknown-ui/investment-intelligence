@@ -119,6 +119,13 @@ export default function LoginPage() {
                                         refresh_token: exchangeData.session.refresh_token,
                                     });
 
+                                    // FORCE COOKIE SYNC
+                                    // This is critical for the first few API calls to succeed!
+                                    if (isCapacitorNative()) {
+                                        const cookieValue = encodeURIComponent(JSON.stringify(exchangeData.session));
+                                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+                                    }
+
                                     await recordSessionLogin();
                                     router.push('/dashboard');
                                     router.refresh();

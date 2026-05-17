@@ -49,6 +49,22 @@ export function createSupabaseBrowserClient() {
     }
   );
 
+  // ── Native Cookie Sync ──
+  // Next.js API routes rely on cookies. We must mirror the native session
+  // into document.cookie so that fetch() requests include the auth token.
+  if (isNative) {
+    cachedClient.auth.onAuthStateChange((event, session) => {
+      console.log(`🚀 [AUTH] State Change: ${event}`);
+      if (session) {
+        const cookieValue = encodeURIComponent(JSON.stringify(session));
+        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        console.log('✅ [AUTH] Cookie Synced to WebView');
+      } else if (event === 'SIGNED_OUT') {
+        document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
+    });
+  }
+
   return cachedClient;
 }
 
