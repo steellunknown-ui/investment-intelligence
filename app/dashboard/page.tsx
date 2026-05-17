@@ -97,7 +97,11 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const fetchHeaders: Record<string, string> = {};
+      const fetchHeaders: Record<string, string> = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      };
+
       const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 
       if (isNative) {
@@ -105,10 +109,14 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
           fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
+          console.log('🔑 [FETCH] Injecting Auth Header for Native');
         }
       }
 
-      const res = await fetch("/api/dashboard/net-worth", { headers: fetchHeaders });
+      const res = await fetch("/api/dashboard/net-worth", {
+        headers: fetchHeaders,
+        cache: 'no-store'
+      });
       if (res.ok) {
         const data = await res.json();
         setNetWorth(data);

@@ -53,7 +53,9 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
         const supabase = createSupabaseBrowserClient();
         const { data: { user } } = await supabase.auth.getUser();
         
-        const fetchHeaders: Record<string, string> = {};
+        const fetchHeaders: Record<string, string> = {
+          'Cache-Control': 'no-cache'
+        };
         const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
         if (isNative) {
           const { data: { session } } = await supabase.auth.getSession();
@@ -62,7 +64,10 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
           }
         }
 
-        const res = await fetch('/api/profile', { headers: fetchHeaders });
+        const res = await fetch('/api/profile', {
+          headers: fetchHeaders,
+          cache: 'no-store'
+        });
         if (res.ok) {
           const data = await res.json();
           const profile = data.profile;

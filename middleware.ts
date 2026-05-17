@@ -32,6 +32,21 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name) {
+          // ── EMERGENCY AUTH BRIDGE (FINAL FIX) ──
+          // If we see an Authorization header (from Mobile), WE MUST USE IT.
+          const authHeader = request.headers.get('Authorization')
+          if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            // We tell Supabase SSR to use this token for all cookie checks
+            if (name.includes('auth-token')) {
+              return JSON.stringify({
+                access_token: token,
+                refresh_token: '',
+                user: {}
+              })
+            }
+          }
+
           // 1. Try standard project-specific cookie
           const standardCookie = request.cookies.get(name)?.value
           if (standardCookie) return standardCookie
