@@ -39,6 +39,7 @@ import {
     ChevronDown
 } from "lucide-react";
 import type { Receivable } from "@/lib/types";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
 import { receivableRelationships, receivablePurposes, receivableStatus, interestTypes, receivableNotes } from "@/src/lib/presets";

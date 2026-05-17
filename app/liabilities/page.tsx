@@ -31,7 +31,8 @@ import {
     Wallet,
     Sparkles
 } from "lucide-react";
-import type { Liability, Asset } from "@/lib/types";
+import { Liability, Asset } from "@/lib/types";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";

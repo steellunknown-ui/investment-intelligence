@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { InsurancePolicy } from "@/lib/types";
 import { formatUpdatedLabel, formatDateTime } from "@/src/lib/time";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { PaymentsDialog } from "@/components/insurance/PaymentsDialog";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";

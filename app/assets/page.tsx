@@ -15,21 +15,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/Dialog";
-import {
-    Briefcase,
-    Plus,
-    Filter,
-    Search,
-    Edit2,
-    Trash2,
-    Home,
-    Car,
-    Gem,
-    DollarSign,
-    Users,
-    FileText,
-    Sparkles
-} from "lucide-react";
+import { Plus, Filter, Search, Edit2, Trash2, Home, Car, Gem, DollarSign, Users, FileText, Sparkles, Briefcase } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import type { Asset } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/dateUtils";
 import { QuickPickPanel } from "@/components/ui/QuickPickPanel";
