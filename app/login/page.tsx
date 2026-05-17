@@ -32,6 +32,9 @@ const PROD_URL = 'https://investment-intellegince.vercel.app';
 const AUTH_STORAGE_KEY = 'sb-auth-token';
 const CODE_VERIFIER_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
 
+// In-memory fallback for PKCE verifier (survives within same JS context)
+let inMemoryVerifier: string | null = null;
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -103,9 +106,14 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
 
     const verifier = createCodeVerifier();
 
-    // Store in native Preferences FIRST (survives WebView reload), then localStorage as backup
-    await withTimeout(capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier), 3000, 'Native auth storage timed out');
+    // 1. Always keep in memory (fastest, same JS context)
+    inMemoryVerifier = verifier;
+
+    // 2. localStorage backup (sync, instant)
     try { localStorage.setItem(CODE_VERIFIER_KEY, verifier); } catch {}
+
+    // 3. Native Preferences (async, fire-and-forget — don't block or throw)
+    capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier).catch(() => {});
 
     const { challenge, method } = await createCodeChallenge(verifier);
     const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
@@ -118,17 +126,21 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
 }
 
 async function getStoredCodeVerifier() {
-    // Always try native Preferences first (survives WebView reloads)
+    // 1. In-memory (fastest, same JS context — works if app wasn't killed)
+    if (inMemoryVerifier) return inMemoryVerifier;
+
+    // 2. localStorage (survives soft reloads)
+    const localVerifier = localStorage.getItem(CODE_VERIFIER_KEY);
+    if (localVerifier) return localVerifier;
+
+    // 3. Native Preferences (survives app kills / WebView hard reloads)
     const nativeVerifier = await withTimeout(
         capacitorStorage.getItem(CODE_VERIFIER_KEY),
-        3000,
+        4000,
         'Reading login verifier timed out'
     ).catch(() => null);
 
-    if (nativeVerifier) return nativeVerifier;
-
-    // Fallback to localStorage (web / non-native)
-    return localStorage.getItem(CODE_VERIFIER_KEY) || '';
+    return nativeVerifier || '';
 }
 
 async function exchangeNativeCodeForSession(authCode: string) {
@@ -176,6 +188,7 @@ async function exchangeNativeCodeForSession(authCode: string) {
     }
 
     localStorage.removeItem(CODE_VERIFIER_KEY);
+    inMemoryVerifier = null;
     await capacitorStorage.removeItem(CODE_VERIFIER_KEY).catch(() => {});
 
     return { session: payload.session, user: payload.user };
@@ -464,13 +477,8 @@ export default function LoginPage() {
                 );
 
                 if (authUrl) {
-                    // Verify the verifier was persisted to native storage (survives WebView reload)
-                    const verifier = await withTimeout(
-                        capacitorStorage.getItem(CODE_VERIFIER_KEY),
-                        2000,
-                        'Verifier read timed out'
-                    ).catch(() => null) || localStorage.getItem(CODE_VERIFIER_KEY);
-
+                    // Verify verifier exists (in-memory or localStorage is enough)
+                    const verifier = inMemoryVerifier || localStorage.getItem(CODE_VERIFIER_KEY);
                     if (!verifier) {
                         throw new Error('Login verifier was not stored. Please try Google sign-in again.');
                     }
