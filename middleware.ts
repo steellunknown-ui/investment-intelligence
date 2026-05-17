@@ -31,7 +31,10 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) { return request.cookies.get(name)?.value },
+        get(name) {
+          // Check standard, then mobile fallback
+          return request.cookies.get(name)?.value || request.cookies.get('sb-auth-token')?.value
+        },
         // IMPORTANT: These must write to the response so the refreshed
         // session token is forwarded to the browser on every request.
         set(name, value, options) {

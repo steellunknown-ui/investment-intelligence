@@ -123,6 +123,8 @@ export default function LoginPage() {
                                     // This is critical for the first few API calls to succeed!
                                     if (isCapacitorNative()) {
                                         const cookieValue = encodeURIComponent(JSON.stringify(exchangeData.session));
+                                        const domain = '.vercel.app';
+                                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=${domain}`;
                                         document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
                                     }
 

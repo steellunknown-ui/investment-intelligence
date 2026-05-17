@@ -58,10 +58,15 @@ export function createSupabaseBrowserClient() {
       console.log(`🚀 [AUTH] State Change: ${event}`);
       if (session) {
         const cookieValue = encodeURIComponent(JSON.stringify(session));
+        // We set the cookie for both the current origin AND the production domain
+        // This ensures API calls to Vercel include the session.
+        const domain = '.vercel.app'; // Universal domain for subdomains
+        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=${domain}`;
         document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        console.log('✅ [AUTH] Cookie Synced to WebView');
+        console.log('✅ [AUTH] Cookie Synced to WebView (Standard & Vercel Domain)');
       } else if (event === 'SIGNED_OUT') {
         document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.vercel.app';
       }
     });
   }

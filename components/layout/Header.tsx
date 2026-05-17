@@ -53,7 +53,16 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
         const supabase = createSupabaseBrowserClient();
         const { data: { user } } = await supabase.auth.getUser();
         
-        const res = await fetch('/api/profile');
+        const fetchHeaders: Record<string, string> = {};
+        const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+        if (isNative) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
+          }
+        }
+
+        const res = await fetch('/api/profile', { headers: fetchHeaders });
         if (res.ok) {
           const data = await res.json();
           const profile = data.profile;

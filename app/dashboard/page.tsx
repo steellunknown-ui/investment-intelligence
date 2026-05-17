@@ -95,14 +95,26 @@ export default function DashboardPage() {
   const fetchNetWorth = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/dashboard/net-worth");
+
+      const fetchHeaders: Record<string, string> = {};
+      const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+
+      if (isNative) {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
+      const res = await fetch("/api/dashboard/net-worth", { headers: fetchHeaders });
       if (res.ok) {
         const data = await res.json();
         setNetWorth(data);
       }
       // Fetch last login timestamp
       try {
-        const loginRes = await fetch("/api/dashboard/last-login");
+        const loginRes = await fetch("/api/dashboard/last-login", { headers: fetchHeaders });
         if (loginRes.ok) {
           const loginData = await loginRes.json();
           setLastLoginAt(loginData.lastLoginAt || null);
