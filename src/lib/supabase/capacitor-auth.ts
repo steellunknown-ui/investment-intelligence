@@ -20,7 +20,7 @@ export const createCapacitorAuthClient = () => {
         detectSessionInUrl: false,
         autoRefreshToken: false,
         persistSession: true,
-        storageKey: 'capacitor-native-auth-token',
+        storageKey: 'sb-auth-token', // SYNC with SSR client
         storage: capacitorStorage,
       }
     }

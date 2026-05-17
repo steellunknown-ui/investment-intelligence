@@ -208,7 +208,7 @@ export default function LoginPage() {
                 }
 
                 // 2. Clear any stale PKCE verifiers to avoid mismatch
-                const verifierKey = 'sb-capacitor-native-auth-token-code-verifier';
+                const verifierKey = 'sb-auth-token-code-verifier';
                 await capacitorStorage.removeItem(verifierKey);
 
                 const capacitorAuth = createCapacitorAuthClient();
