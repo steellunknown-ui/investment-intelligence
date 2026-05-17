@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
     },
     GoogleAuth: {
       scopes: ['profile', 'email'],
-      serverClientId: 'rmzgzczmrbooegftrzxn.supabase.co', // Use standard or Supabase client ID
+      serverClientId: '143187123616-9q2o9g0i7j1u0g7u5u2u2u2u2u2u2u2u.apps.googleusercontent.com', // Placeholder - User needs to provide real Web Client ID
       forceCodeForRefreshToken: true,
     },
   },
