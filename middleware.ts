@@ -32,8 +32,45 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name) {
-          // Check standard, then mobile fallback
-          return request.cookies.get(name)?.value || request.cookies.get('sb-auth-token')?.value
+          // 1. Try standard project-specific cookie
+          const standardCookie = request.cookies.get(name)?.value
+          if (standardCookie) return standardCookie
+
+          // 2. Try generic mobile sync cookie (fallback)
+          const generic = request.cookies.get('sb-auth-token')?.value
+          if (generic) {
+            try {
+              const decoded = decodeURIComponent(generic)
+              // Handle case where cookie is already JSON
+              if (decoded.startsWith('{')) {
+                const session = JSON.parse(decoded)
+                if (session && typeof session === 'object') {
+                  if (name.endsWith('.0')) return session.access_token || undefined
+                  if (name.endsWith('.1')) return session.refresh_token || undefined
+                  if (!name.includes('.')) return session.access_token || undefined
+                }
+              }
+              return decoded // Fallback to raw value
+            } catch (e) {
+              console.error('[MIDDLEWARE COOKIE FALLBACK] Error parsing sb-auth-token:', e)
+            }
+          }
+
+          // 3. Try Authorization Header (for mobile API calls)
+          const authHeader = request.headers.get('Authorization')
+          if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            // We return a mock session if the project-specific cookie is requested
+            if (name.includes('auth-token')) {
+               return JSON.stringify({
+                 access_token: token,
+                 refresh_token: '',
+                 user: {}
+               })
+            }
+          }
+
+          return undefined
         },
         // IMPORTANT: These must write to the response so the refreshed
         // session token is forwarded to the browser on every request.
