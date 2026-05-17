@@ -220,9 +220,10 @@ export default function LoginPage() {
                 const verifierKey = 'sb-auth-token-code-verifier';
                 await capacitorStorage.removeItem(verifierKey);
 
-                const capacitorAuth = createCapacitorAuthClient();
+                // 3. Pre-import Browser plugin to prevent loop/hang
                 const { Browser } = await import('@capacitor/browser');
-                
+                const capacitorAuth = createCapacitorAuthClient();
+
                 const { data, error } = await capacitorAuth.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
@@ -231,11 +232,25 @@ export default function LoginPage() {
                     },
                 });
 
-                if (error) throw error;
+                if (error) {
+                    console.error('❌ [AUTH] signInWithOAuth error:', error);
+                    throw error;
+                }
 
                 if (data?.url) {
                     console.log('✅ [AUTH] PKCE Verifier set, opening browser...');
                     await Browser.open({ url: data.url, windowName: '_self' });
+
+                    // Reset loading state after a delay to allow the browser to open
+                    // This prevents the button from being stuck in "Redirecting..." state
+                    // if the user returns to the app.
+                    setTimeout(() => {
+                        setLoading(false);
+                        setStatusMessage(null);
+                    }, 1000);
+                } else {
+                    console.error('❌ [AUTH] No URL returned from signInWithOAuth');
+                    throw new Error("Failed to get Google login URL");
                 }
             } else {
                 const supabase = createSupabaseBrowserClient();
