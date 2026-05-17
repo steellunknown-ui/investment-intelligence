@@ -14,6 +14,7 @@
  */
 
 import { createBrowserClient } from '@supabase/ssr'
+import { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { capacitorStorage } from './capacitor-storage'
 
 const isCapacitorNative = (): boolean => {
@@ -53,7 +54,7 @@ export function createSupabaseBrowserClient() {
   // Next.js API routes rely on cookies. We must mirror the native session
   // into document.cookie so that fetch() requests include the auth token.
   if (isNative) {
-    cachedClient.auth.onAuthStateChange((event, session) => {
+    cachedClient.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       console.log(`🚀 [AUTH] State Change: ${event}`);
       if (session) {
         const cookieValue = encodeURIComponent(JSON.stringify(session));
