@@ -145,6 +145,7 @@ async function exchangeNativeCodeForSession(authCode: string) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                Authorization: 'Bearer native-oauth-exchange',
             },
             body: JSON.stringify({
                 code: authCode,

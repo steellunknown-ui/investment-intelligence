@@ -58,8 +58,11 @@ export function SessionGuard({ children }: SessionGuardProps) {
 
       const url = new URL(requestUrl, window.location.origin);
       const isSameOriginApi = url.origin === window.location.origin && url.pathname.startsWith('/api/');
+      const isPublicAuthApi =
+        url.pathname === '/api/auth/native-exchange' ||
+        url.pathname === '/api/health';
 
-      if (!isSameOriginApi) {
+      if (!isSameOriginApi || isPublicAuthApi) {
         return originalFetch(input, init);
       }
 
