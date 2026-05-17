@@ -440,44 +440,45 @@ export default function LoginPage() {
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
             if (isCapacitorNative()) {
-                console.log('[AUTH] Starting NATIVE Google Sign-In...');
+                console.log('[AUTH] Starting Browser-based Google OAuth on Native...');
 
-                try {
-                    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-
-                    // Trigger Native Dialog (Plan B)
-                    const googleUser = await GoogleAuth.signIn();
-                    console.log('✅ [AUTH] Native Google Success:', googleUser.email);
-
-                    setStatusMessage("Connecting to dashboard...");
-
-                    // Exchange ID Token for Supabase Session
-                    const supabase = createSupabaseBrowserClient();
-                    const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
-                        provider: 'google',
-                        token: googleUser.authentication.idToken,
-                    });
-
-                    if (authError) throw authError;
-                    if (authData.session) {
-                        await recordSessionLogin();
-
-                        // Force cookie sync
-                        const cookieValue = encodeURIComponent(JSON.stringify(authData.session));
-                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-
-                        router.push('/dashboard');
-                        setTimeout(() => window.location.href = '/dashboard', 800);
-                        return;
-                    }
-                } catch (nativeErr: any) {
-                    console.error('❌ [AUTH] Native SDK failed, falling back to Browser:', nativeErr);
-                    // Fallback to Plan A (Browser flow) if SDK fails
+                // 1. Warm up storage
+                const ready = await withTimeout(warmupStorage(), 2000, 'Storage warmup timed out').catch(() => false);
+                if (!ready) {
+                    console.warn('[AUTH] Storage warmup failed, continuing anyway...');
                 }
 
-                // --- PLAN A FALLBACK (Browser Flow) ---
-                console.log('[AUTH] Falling back to Browser OAuth...');
-                // ... rest of existing logic ...
+                // 2. Clear any stale PKCE verifiers to avoid mismatch
+                localStorage.removeItem(CODE_VERIFIER_KEY);
+                await withTimeout(capacitorStorage.removeItem(CODE_VERIFIER_KEY), 1500, 'Verifier cleanup timed out').catch(() => {});
+
+                // 3. Build the OAuth URL
+                const authUrl = await withTimeout(
+                    createNativeGoogleOAuthUrl(`${PROD_URL}/auth/callback?platform=capacitor`),
+                    3500,
+                    'Creating Google login URL timed out'
+                );
+
+                if (authUrl) {
+                    console.log('[AUTH] PKCE verifier set, opening browser...');
+                    setStatusMessage("Opening Google...");
+
+                    try {
+                        const { Browser } = await import('@capacitor/browser');
+                        await Browser.open({ url: authUrl });
+                    } catch (browserImportError) {
+                        console.error('[AUTH] Browser plugin error:', browserImportError);
+                        window.location.href = authUrl;
+                    }
+
+                    setTimeout(() => {
+                        setLoading(false);
+                        setStatusMessage(null);
+                    }, 5000);
+                } else {
+                    throw new Error("Failed to get Google login URL");
+                }
+            } else {
                 const supabase = createSupabaseBrowserClient();
                 const redirectTo = origin.includes('localhost')
                     ? `${origin}/auth/callback`
@@ -493,9 +494,6 @@ export default function LoginPage() {
             }
         } catch (err: any) {
             console.error('[Login] Google login error:', err);
-            if (typeof window !== 'undefined') {
-                (window as any).oauthLoginInProgress = false;
-            }
             setError(err.message || 'Failed to initialize Google login');
             setLoading(false);
             setStatusMessage(null);
