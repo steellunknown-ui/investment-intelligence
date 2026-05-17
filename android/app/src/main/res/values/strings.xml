@@ -3,6 +3,5 @@
     <string name="app_name">Investment Intelligence</string>
     <string name="title_activity_main">Investment Intelligence</string>
     <string name="package_name">com.investmentintelligence.app</string>
-    <string name="custom_url_scheme">com.investmentintelligence.app</string>
-    <string name="server_client_id">6113114125-o92r0usael55l08m75kvtfsm8lji4veg.apps.googleusercontent.com</string>
+    <string name="custom_url_scheme">com.investmentintelligence.auth</string>
 </resources>

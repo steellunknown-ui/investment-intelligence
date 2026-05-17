@@ -5,13 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Investment Intelligence',
   webDir: 'out',
   server: {
-    // Use live Vercel URL — no need to build static files
+    // Use live Vercel URL — this ensures we get the latest web features instantly
     url: 'https://investment-intellegince.vercel.app',
-    cleartext: false,
-  },
-  android: {
-    allowMixedContent: false,
-    backgroundColor: '#ffffff',
+    cleartext: true, // Allow HTTP for local testing if needed, though Vercel is HTTPS
   },
   plugins: {
     CapacitorHttp: {
@@ -19,11 +15,6 @@ const config: CapacitorConfig = {
     },
     CapacitorCookies: {
       enabled: true,
-    },
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      serverClientId: '6113114125-o92r0usael55l08m75kvtfsm8lji4veg.apps.googleusercontent.com',
-      forceCodeForRefreshToken: true,
     },
   },
 };

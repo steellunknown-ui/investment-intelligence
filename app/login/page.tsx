@@ -289,26 +289,24 @@ export default function LoginPage() {
         let listenerHandle: { remove: () => Promise<void> | void } | null = null;
 
         const handleDeepLink = async (incomingUrl: string) => {
-            console.log('[DEEP LINK] Received URL:', incomingUrl);
+            console.log('🚀 [DEEP LINK] Incoming:', incomingUrl);
 
             try {
                 const url = new URL(incomingUrl);
 
-                // 1. Close the browser immediately (fixes "stuck" browser issue)
+                // 1. Close browser window
                 try {
                     const { Browser } = await import('@capacitor/browser');
                     await Browser.close();
-                } catch (e) {
-                    console.log('[DEEP LINK] Browser already closed or plugin error');
-                }
+                } catch (e) {}
 
                 const code = url.searchParams.get('code');
 
                 if (code && isMounted) {
                     console.log('✅ [DEEP LINK] Found code, starting handshake');
-                    // Prevent duplicate processing of the same code
+                    // Prevent duplicate runs
                     if (processedOAuthCodeRef.current === code) {
-                        console.log('⚠️ [DEEP LINK] Code already processed, skipping');
+                        console.log('⚠️ [DEEP LINK] Code already processed');
                         return;
                     }
                     processedOAuthCodeRef.current = code;
@@ -317,69 +315,58 @@ export default function LoginPage() {
                     setStatusMessage("Finalizing handshake...");
                     setError(null);
 
-                    // SET AUTH LOCK (Prevents other components from interrupting)
-                    if (typeof window !== 'undefined') {
-                        (window as any).isAuthenticating = true;
-                    }
-
-                    // Handshake logic...
                     try {
                         console.log('🤝 [AUTH] Exchanging code locally...');
                         const capacitorAuth = createCapacitorAuthClient();
                         const { data: exchangeData, error: exchangeError } = await capacitorAuth.auth.exchangeCodeForSession(code);
 
                         if (exchangeError) throw exchangeError;
-                        if (!exchangeData.session) throw new Error("No session returned");
+                        if (!exchangeData.session) throw new Error("Authentication returned no session");
 
-                        setStatusMessage("Saving session...");
+                        setStatusMessage("Synchronizing...");
                         const session = exchangeData.session;
 
-                        // 1. Sync to SSR Client
+                        // Force sync to SSR Client
                         const ssrClient = createSupabaseBrowserClient();
                         await ssrClient.auth.setSession({
                             access_token: session.access_token,
                             refresh_token: session.refresh_token,
                         });
 
-                        // 2. Sync to Cookies
+                        // Force sync to Cookies (Critical for Dashboard API)
                         const cookieValue = encodeURIComponent(JSON.stringify({
                             access_token: session.access_token,
                             refresh_token: session.refresh_token,
                         }));
+                        document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; domain=.vercel.app`;
                         document.cookie = `sb-auth-token=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
 
                         await recordSessionLogin();
 
-                        setStatusMessage("Entering app...");
+                        setStatusMessage("Success! Entering dashboard...");
+
+                        // Push to dashboard
                         router.push('/dashboard');
 
-                        // FAILSAFE: Force redirect if router hangs
+                        // FAILSAFE: Hard redirect if Next.js router is stuck
                         setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 800);
+                            if (window.location.pathname !== '/dashboard') {
+                                window.location.href = '/dashboard';
+                            }
+                        }, 1500);
+
                     } catch (err: any) {
-                        console.error('[AUTH] Deep link handshake exception:', err);
+                        console.error('❌ [AUTH] Handshake failed:', err);
                         setError('Handshake failed: ' + (err.message || 'connection error'));
                         setStatusMessage(null);
                         processedOAuthCodeRef.current = null;
                     } finally {
-                        if (isMounted) {
-                            setLoading(false);
-                            setTimeout(() => {
-                                if (typeof window !== 'undefined') (window as any).isAuthenticating = false;
-                            }, 3000);
-                        }
+                        if (isMounted) setLoading(false);
                     }
                     return;
                 }
-
-                const errorParam = url.searchParams.get('error');
-                if (errorParam) {
-                    setError(errorParam);
-                    setLoading(false);
-                }
             } catch (urlErr) {
-                console.error('[Login] Failed to parse deep link URL:', urlErr);
+                console.error('[Login] Deep link parse error:', urlErr);
             }
         };
 
@@ -389,20 +376,20 @@ export default function LoginPage() {
             try {
                 const { App } = await import('@capacitor/app');
 
-                // Check for cold-start launch URL
+                // Check for cold-start (App was closed)
                 const launchUrl = await App.getLaunchUrl();
                 if (launchUrl?.url) {
-                    console.log('[LAUNCH] Handling launch URL');
+                    console.log('🚀 [LAUNCH] App started with deep link');
                     void handleDeepLink(launchUrl.url);
                 }
 
-                // Listen for app-in-background deep links
+                // Listen for warm-start (App was in background)
                 listenerHandle = await App.addListener('appUrlOpen', (data: any) => {
-                    console.log('[EVENT] Handling appUrlOpen');
+                    console.log('🚀 [EVENT] App received deep link while running');
                     void handleDeepLink(data.url);
                 });
             } catch (err) {
-                console.error('[Login] Failed to load Capacitor App plugin:', err);
+                console.error('[Login] Capacitor App plugin failed:', err);
             }
         };
 
