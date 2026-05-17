@@ -356,9 +356,11 @@ export default function LoginPage() {
 
                         await recordSessionLogin();
 
-                        // 4. NUCLEAR HARD REDIRECT
-                        console.log('🚀 [AUTH] Forcing Hard Redirect to Dashboard...');
-                        window.location.assign('/dashboard');
+                        // 4. POWER JUMP (FINAL FIX)
+                        // Pass the session directly in the URL to bypass Middleware kick-out
+                        console.log('🚀 [AUTH] Executing Power Jump to Dashboard...');
+                        const jumpUrl = `/dashboard?session_jump=${encodeURIComponent(JSON.stringify(session))}`;
+                        window.location.assign(jumpUrl);
 
                     } catch (err: any) {
                         console.error('❌ [AUTH] Handshake failed:', err);

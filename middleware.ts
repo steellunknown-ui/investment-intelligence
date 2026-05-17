@@ -32,6 +32,18 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get(name) {
+          // ── POWER JUMP: URL SESSION ──
+          // If we see a session in the URL, we trust it immediately.
+          // This prevents the "0.2s kick-out" on mobile.
+          const urlSession = request.nextUrl.searchParams.get('session_jump')
+          if (urlSession && name.includes('auth-token')) {
+            try {
+              const decoded = decodeURIComponent(urlSession)
+              if (decoded.startsWith('{')) return decoded
+              return JSON.stringify({ access_token: decoded, refresh_token: '', user: {} })
+            } catch (e) {}
+          }
+
           // 1. Try standard project-specific cookie
           const standardCookie = request.cookies.get(name)?.value
           if (standardCookie) return standardCookie
