@@ -102,8 +102,10 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
     }
 
     const verifier = createCodeVerifier();
-    localStorage.setItem(CODE_VERIFIER_KEY, verifier);
-    await withTimeout(capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier), 1500, 'Native auth storage timed out').catch(() => {});
+
+    // Store in native Preferences FIRST (survives WebView reload), then localStorage as backup
+    await withTimeout(capacitorStorage.setItem(CODE_VERIFIER_KEY, verifier), 3000, 'Native auth storage timed out');
+    try { localStorage.setItem(CODE_VERIFIER_KEY, verifier); } catch {}
 
     const { challenge, method } = await createCodeChallenge(verifier);
     const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
@@ -116,14 +118,17 @@ async function createNativeGoogleOAuthUrl(redirectTo: string) {
 }
 
 async function getStoredCodeVerifier() {
-    const localVerifier = localStorage.getItem(CODE_VERIFIER_KEY);
-    const storedVerifier = localVerifier || await withTimeout(
+    // Always try native Preferences first (survives WebView reloads)
+    const nativeVerifier = await withTimeout(
         capacitorStorage.getItem(CODE_VERIFIER_KEY),
-        2000,
+        3000,
         'Reading login verifier timed out'
-    );
+    ).catch(() => null);
 
-    return (storedVerifier || '').split('/')[0];
+    if (nativeVerifier) return nativeVerifier;
+
+    // Fallback to localStorage (web / non-native)
+    return localStorage.getItem(CODE_VERIFIER_KEY) || '';
 }
 
 async function exchangeNativeCodeForSession(authCode: string) {
@@ -140,7 +145,7 @@ async function exchangeNativeCodeForSession(authCode: string) {
     }
 
     const response = await fetchWithTimeout(
-        '/api/auth/native-exchange',
+        `${PROD_URL}/api/auth/native-exchange`,
         {
             method: 'POST',
             headers: {
@@ -459,7 +464,13 @@ export default function LoginPage() {
                 );
 
                 if (authUrl) {
-                    const verifier = localStorage.getItem(CODE_VERIFIER_KEY) || await capacitorStorage.getItem(CODE_VERIFIER_KEY);
+                    // Verify the verifier was persisted to native storage (survives WebView reload)
+                    const verifier = await withTimeout(
+                        capacitorStorage.getItem(CODE_VERIFIER_KEY),
+                        2000,
+                        'Verifier read timed out'
+                    ).catch(() => null) || localStorage.getItem(CODE_VERIFIER_KEY);
+
                     if (!verifier) {
                         throw new Error('Login verifier was not stored. Please try Google sign-in again.');
                     }
