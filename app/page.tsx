@@ -8,6 +8,7 @@ import { Footer } from "@/components/marketing/Footer";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import {
   TrendingUp,
   Shield,
@@ -199,9 +200,27 @@ export default function HomePage() {
     const native = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     const done = localStorage.getItem("onboarding_done") === "true";
     setIsNative(native);
-    setOnboardingDone(done);
-    setChecked(true);
-  }, []);
+
+    // Check if user is already logged in
+    const checkUser = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.replace("/dashboard");
+          return;
+        }
+        setOnboardingDone(done);
+        setChecked(true);
+      } catch (err) {
+        console.error("User check error:", err);
+        setOnboardingDone(done);
+        setChecked(true);
+      }
+    };
+
+    checkUser();
+  }, [router]);
 
   if (!checked) return null;
 
