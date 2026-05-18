@@ -191,7 +191,25 @@ const staggerContainer = {
 
 export default function HomePage() {
   const router = useRouter();
-  const [onboardingDone] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    const native = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+    const done = localStorage.getItem("onboarding_done") === "true";
+    setIsNative(native);
+    setOnboardingDone(done);
+    setChecked(true);
+  }, []);
+
+  if (!checked) return null;
+
+  if (isNative) {
+    if (!onboardingDone) return <OnboardingSlides />;
+    router.replace("/login");
+    return null;
+  }
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
