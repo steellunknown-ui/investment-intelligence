@@ -78,21 +78,44 @@ export default function LoginPage() {
         }
     };
 
+    const isCapacitorNative = () =>
+        typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const supabase = createSupabaseBrowserClient();
-            const origin = typeof window !== 'undefined' ? window.location.origin : '';
-            const redirectTo = origin.includes('localhost')
-                ? `${origin}/auth/callback`
-                : `${PROD_URL}/auth/callback`;
+            if (isCapacitorNative()) {
+                // Native Google Sign-In — no PKCE, no browser, no deep links
+                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+                const googleUser = await GoogleAuth.signIn();
+                const idToken = googleUser.authentication.idToken;
 
-            await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo, skipBrowserRedirect: false },
-            });
+                if (!idToken) throw new Error('Google sign-in failed — no token received');
+
+                const supabase = createSupabaseBrowserClient();
+                const { error } = await supabase.auth.signInWithIdToken({
+                    provider: 'google',
+                    token: idToken,
+                });
+
+                if (error) throw new Error(error.message);
+
+                router.replace('/dashboard');
+            } else {
+                // Web OAuth flow
+                const supabase = createSupabaseBrowserClient();
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                const redirectTo = origin.includes('localhost')
+                    ? `${origin}/auth/callback`
+                    : `${PROD_URL}/auth/callback`;
+
+                await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo, skipBrowserRedirect: false },
+                });
+            }
         } catch (err: any) {
             setError(err.message || 'Failed to initialize Google login');
             setLoading(false);
