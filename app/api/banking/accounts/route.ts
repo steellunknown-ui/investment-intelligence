@@ -40,7 +40,9 @@ export async function GET() {
             account_number: decrypt(account.account_number),
             linked_mobile: decrypt(account.linked_mobile),
             debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name)
+            joint_holder_name: decrypt(account.joint_holder_name),
+            account_holder_name: decrypt(account.account_holder_name),
+            account_nominee_name: decrypt(account.account_nominee_name)
         }))
 
         return NextResponse.json({ accounts: decryptedAccounts ?? [] })
@@ -151,13 +153,13 @@ export async function POST(request: Request) {
                 branch_name,
                 ifsc_code,
                 account_type: account_type || 'savings',
-                account_holder_name,
+                account_holder_name: encrypt(account_holder_name),
                 is_joint_account: !!is_joint_account,
                 joint_holder_name: encrypt(joint_holder_name || null),
                 joint_holders: joint_holders || [],
                 current_balance: Number(current_balance) || 0,
                 balance_as_of: balance_as_of || new Date().toISOString().split('T')[0],
-                account_nominee_name,
+                account_nominee_name: encrypt(account_nominee_name || null),
                 account_nominee_relationship,
                 status: status || 'active',
                 linked_mobile: encrypt(linked_mobile),
@@ -191,7 +193,9 @@ export async function POST(request: Request) {
             account_number: decrypt(account.account_number),
             linked_mobile: decrypt(account.linked_mobile),
             debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name)
+            joint_holder_name: decrypt(account.joint_holder_name),
+            account_holder_name: decrypt(account.account_holder_name),
+            account_nominee_name: decrypt(account.account_nominee_name)
         }
 
         return NextResponse.json({ account: decryptedAccount }, { status: 201 })

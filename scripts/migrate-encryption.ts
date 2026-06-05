@@ -124,7 +124,7 @@ async function migrateTable(tableName: string, fieldsToEncrypt: string[]) {
 async function runMigration() {
     console.log('Starting Encryption Migration...\n')
 
-    await migrateTable('bank_accounts', ['account_number', 'linked_mobile', 'debit_card_number', 'joint_holder_name'])
+    await migrateTable('bank_accounts', ['account_number', 'linked_mobile', 'debit_card_number', 'joint_holder_name', 'account_holder_name', 'account_nominee_name'])
     await migrateTable('insurance_policies', ['policy_number', 'agent_contact', 'policy_nominee_name'])
     await migrateTable('assets', ['registration_number', 'vehicle_registration', 'property_address'])
     await migrateTable('liabilities', ['account_number', 'auto_debit_account', 'collateral_details'])

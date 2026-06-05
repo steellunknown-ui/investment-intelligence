@@ -63,6 +63,8 @@ export async function PATCH(
         if (updateData.linked_mobile !== undefined) updateData.linked_mobile = encrypt(updateData.linked_mobile)
         if (updateData.debit_card_number !== undefined) updateData.debit_card_number = encrypt(updateData.debit_card_number)
         if (updateData.joint_holder_name !== undefined) updateData.joint_holder_name = encrypt(updateData.joint_holder_name)
+        if (updateData.account_holder_name !== undefined) updateData.account_holder_name = encrypt(updateData.account_holder_name)
+        if (updateData.account_nominee_name !== undefined) updateData.account_nominee_name = encrypt(updateData.account_nominee_name)
 
         const { data: account, error } = await supabase
             .from('bank_accounts')
@@ -85,7 +87,9 @@ export async function PATCH(
             account_number: decrypt(account.account_number),
             linked_mobile: decrypt(account.linked_mobile),
             debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name)
+            joint_holder_name: decrypt(account.joint_holder_name),
+            account_holder_name: decrypt(account.account_holder_name),
+            account_nominee_name: decrypt(account.account_nominee_name)
         }
 
         return NextResponse.json({ account: decryptedAccount })
