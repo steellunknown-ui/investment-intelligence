@@ -43,6 +43,9 @@ export async function PATCH(
         if (updateData.registration_number !== undefined) updateData.registration_number = encrypt(updateData.registration_number)
         if (updateData.vehicle_registration !== undefined) updateData.vehicle_registration = encrypt(updateData.vehicle_registration)
         if (updateData.property_address !== undefined) updateData.property_address = encrypt(updateData.property_address)
+        if (updateData.owner_name !== undefined) updateData.owner_name = encrypt(updateData.owner_name)
+        if (updateData.location !== undefined) updateData.location = encrypt(updateData.location)
+        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
 
         const { data: asset, error } = await supabase
             .from('assets')
@@ -64,7 +67,10 @@ export async function PATCH(
             ...asset,
             registration_number: decrypt(asset.registration_number),
             vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address)
+            property_address: decrypt(asset.property_address),
+            owner_name: decrypt(asset.owner_name),
+            location: decrypt(asset.location),
+            notes: decrypt(asset.notes)
         }
 
         return NextResponse.json({ asset: decryptedAsset })

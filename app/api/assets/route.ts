@@ -37,7 +37,10 @@ export async function GET() {
             ...asset,
             registration_number: decrypt(asset.registration_number),
             vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address)
+            property_address: decrypt(asset.property_address),
+            owner_name: decrypt(asset.owner_name),
+            location: decrypt(asset.location),
+            notes: decrypt(asset.notes)
         }))
 
         return NextResponse.json({ assets: decryptedAssets ?? [] })
@@ -121,7 +124,7 @@ export async function POST(request: Request) {
                 asset_type,
                 asset_name,
                 ownership_type: ownership_type || 'sole',
-                owner_name,
+                owner_name: encrypt(owner_name || null),
                 co_owner_names: co_owner_names || null,
                 ownership_percentage: ownership_percentage !== undefined ? Number(ownership_percentage) : 100,
                 purchase_value: purchase_value ? Number(purchase_value) : null,
@@ -143,8 +146,8 @@ export async function POST(request: Request) {
                 loan_end_date: loan_end_date || null,
                 document_reference,
                 status: status || 'owned',
-                location,
-                notes
+                location: encrypt(location || null),
+                notes: encrypt(notes || null)
             })
             .select()
             .single()
@@ -169,7 +172,10 @@ export async function POST(request: Request) {
             ...asset,
             registration_number: decrypt(asset.registration_number),
             vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address)
+            property_address: decrypt(asset.property_address),
+            owner_name: decrypt(asset.owner_name),
+            location: decrypt(asset.location),
+            notes: decrypt(asset.notes)
         }
 
         return NextResponse.json({ asset: decryptedAsset }, { status: 201 })

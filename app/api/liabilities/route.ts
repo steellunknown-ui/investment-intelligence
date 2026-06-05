@@ -37,7 +37,8 @@ export async function GET() {
             ...liability,
             account_number: decrypt(liability.account_number),
             auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details)
+            collateral_details: decrypt(liability.collateral_details),
+            notes: decrypt(liability.notes)
         }))
 
         return NextResponse.json({ liabilities: decryptedLiabilities ?? [] })
@@ -144,7 +145,7 @@ export async function POST(request: Request) {
                 status: status || 'active',
                 linked_asset_id: linked_asset_id || null,
                 account_number: encrypt(account_number),
-                notes
+                notes: encrypt(notes || null)
             })
             .select()
             .single()
@@ -169,7 +170,8 @@ export async function POST(request: Request) {
             ...liability,
             account_number: decrypt(liability.account_number),
             auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details)
+            collateral_details: decrypt(liability.collateral_details),
+            notes: decrypt(liability.notes)
         }
 
         return NextResponse.json({ liability: decryptedLiability }, { status: 201 })

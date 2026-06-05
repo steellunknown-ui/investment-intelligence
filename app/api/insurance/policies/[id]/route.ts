@@ -66,6 +66,9 @@ export async function PATCH(
         if (updateData.policy_number !== undefined) updateData.policy_number = encrypt(updateData.policy_number)
         if (updateData.agent_contact !== undefined) updateData.agent_contact = encrypt(updateData.agent_contact)
         if (updateData.policy_nominee_name !== undefined) updateData.policy_nominee_name = encrypt(updateData.policy_nominee_name)
+        if (updateData.insured_name !== undefined) updateData.insured_name = encrypt(updateData.insured_name)
+        if (updateData.agent_name !== undefined) updateData.agent_name = encrypt(updateData.agent_name)
+        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
 
         const { data: policy, error } = await supabase
             .from('insurance_policies')
@@ -87,7 +90,10 @@ export async function PATCH(
             ...policy,
             policy_number: decrypt(policy.policy_number),
             agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name)
+            policy_nominee_name: decrypt(policy.policy_nominee_name),
+            insured_name: decrypt(policy.insured_name),
+            agent_name: decrypt(policy.agent_name),
+            notes: decrypt(policy.notes)
         }
 
         return NextResponse.json({ policy: decryptedPolicy })

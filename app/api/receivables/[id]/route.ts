@@ -106,6 +106,7 @@ export async function PATCH(
         if (updates.contact_number !== undefined) updates.contact_number = encrypt(updates.contact_number)
         if (updates.email !== undefined) updates.email = encrypt(updates.email)
         if (updates.notes !== undefined) updates.notes = encrypt(updates.notes)
+        if (updates.given_to !== undefined) updates.given_to = encrypt(updates.given_to)
 
         const { data: receivable, error } = await supabase
             .from('receivables')
@@ -127,7 +128,8 @@ export async function PATCH(
             ...receivable,
             contact_number: decrypt(receivable.contact_number),
             email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes)
+            notes: decrypt(receivable.notes),
+            given_to: decrypt(receivable.given_to)
         }
 
         return NextResponse.json({ receivable: decryptedReceivable })

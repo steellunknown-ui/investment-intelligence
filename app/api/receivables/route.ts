@@ -37,7 +37,8 @@ export async function GET() {
             ...receivable,
             contact_number: decrypt(receivable.contact_number),
             email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes)
+            notes: decrypt(receivable.notes),
+            given_to: decrypt(receivable.given_to)
         }))
 
         return NextResponse.json({ receivables: decryptedReceivables ?? [] })
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
             .from('receivables')
             .insert({
                 user_id: user.id,
-                given_to,
+                given_to: encrypt(given_to),
                 relationship,
                 contact_number: encrypt(contact_number),
                 email: encrypt(email),
@@ -180,7 +181,8 @@ export async function POST(request: Request) {
             ...receivable,
             contact_number: decrypt(receivable.contact_number),
             email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes)
+            notes: decrypt(receivable.notes),
+            given_to: decrypt(receivable.given_to)
         }
 
         return NextResponse.json({ receivable: decryptedReceivable }, { status: 201 })

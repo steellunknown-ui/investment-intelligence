@@ -38,7 +38,10 @@ export async function GET() {
             ...policy,
             policy_number: decrypt(policy.policy_number),
             agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name)
+            policy_nominee_name: decrypt(policy.policy_nominee_name),
+            insured_name: decrypt(policy.insured_name),
+            agent_name: decrypt(policy.agent_name),
+            notes: decrypt(policy.notes)
         }))
 
         return NextResponse.json({ policies: decryptedPolicies ?? [] })
@@ -132,14 +135,14 @@ export async function POST(request: Request) {
                 end_date: end_date || null,
                 maturity_date: maturity_date || null,
                 next_premium_due: next_premium_due || null,
-                insured_name,
+                insured_name: encrypt(insured_name || null),
                 insured_relationship: insured_relationship || 'self',
                 policy_nominee_name: encrypt(policy_nominee_name),
                 policy_nominee_relationship,
                 status: status || 'active',
-                agent_name,
+                agent_name: encrypt(agent_name || null),
                 agent_contact: encrypt(agent_contact),
-                notes
+                notes: encrypt(notes || null)
             })
             .select()
             .single()
@@ -164,7 +167,10 @@ export async function POST(request: Request) {
             ...policy,
             policy_number: decrypt(policy.policy_number),
             agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name)
+            policy_nominee_name: decrypt(policy.policy_nominee_name),
+            insured_name: decrypt(policy.insured_name),
+            agent_name: decrypt(policy.agent_name),
+            notes: decrypt(policy.notes)
         }
 
         return NextResponse.json({ policy: decryptedPolicy }, { status: 201 })

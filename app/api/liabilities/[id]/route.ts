@@ -44,6 +44,7 @@ export async function PATCH(
         if (updateData.account_number !== undefined) updateData.account_number = encrypt(updateData.account_number)
         if (updateData.auto_debit_account !== undefined) updateData.auto_debit_account = encrypt(updateData.auto_debit_account)
         if (updateData.collateral_details !== undefined) updateData.collateral_details = encrypt(updateData.collateral_details)
+        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
 
         const { data: liability, error } = await supabase
             .from('liabilities')
@@ -65,7 +66,8 @@ export async function PATCH(
             ...liability,
             account_number: decrypt(liability.account_number),
             auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details)
+            collateral_details: decrypt(liability.collateral_details),
+            notes: decrypt(liability.notes)
         }
 
         return NextResponse.json({ liability: decryptedLiability })
