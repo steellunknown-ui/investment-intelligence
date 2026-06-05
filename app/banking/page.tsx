@@ -320,10 +320,11 @@ export default function BankingPage() {
                 const response = await fetch(`/api/banking/ifsc/${upValue}`);
                 if (response.ok) {
                     const details = await response.json();
-                    const matchedBank = bankNames.find(b => 
-                        b.toLowerCase().includes(details.BANK.toLowerCase()) || 
-                        details.BANK.toLowerCase().includes(b.split(' (')[0].toLowerCase())
-                    );
+                    const apiBank = details.BANK.toLowerCase();
+                    const matchedBank =
+                        bankNames.find(b => b.split(' (')[0].toLowerCase() === apiBank) ||
+                        bankNames.find(b => apiBank === b.toLowerCase()) ||
+                        bankNames.find(b => apiBank.includes(b.split(' (')[0].toLowerCase()) && b.split(' (')[0].length > 5);
 
                     setFormData(p => {
                         const newFormData = {
