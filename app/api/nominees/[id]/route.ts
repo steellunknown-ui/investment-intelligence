@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
