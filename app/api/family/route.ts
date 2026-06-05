@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,6 +33,8 @@ export async function GET() {
                 
                 return {
                     ...member,
+                    member_name: decrypt(member.member_name),
+                    relation: decrypt(member.relation),
                     member_profile: profile
                 }
             })
@@ -86,8 +89,8 @@ export async function POST(request: Request) {
             .insert({
                 owner_id: user.id,
                 member_user_id: memberUser.id,
-                member_name: name,
-                relation,
+                member_name: encrypt(name),
+                relation: encrypt(relation),
                 role: 'viewer'
             })
             .select()
@@ -114,6 +117,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ 
             member: {
                 ...member,
+                member_name: decrypt(member.member_name),
+                relation: decrypt(member.relation),
                 member_profile: profile
             }
         }, { status: 201 })

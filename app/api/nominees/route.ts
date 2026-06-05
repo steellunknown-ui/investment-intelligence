@@ -34,8 +34,11 @@ export async function GET() {
 
         const decryptedNominees = nominees?.map(nominee => ({
             ...nominee,
+            name: decrypt(nominee.name),
             email: decrypt(nominee.email),
-            nominee_phone: decrypt(nominee.nominee_phone)
+            nominee_phone: decrypt(nominee.nominee_phone),
+            aadhaar_hash: decrypt(nominee.aadhaar_hash),
+            pan_hash: decrypt(nominee.pan_hash)
         }))
 
         return NextResponse.json({ nominees: decryptedNominees ?? [] })
@@ -99,11 +102,11 @@ export async function POST(request: Request) {
             .from('nominees')
             .insert({
                 user_id: user.id,
-                name,
+                name: encrypt(name),
                 email: email ? encrypt(email.toLowerCase()) : null,
                 nominee_phone: encrypt(nominee_phone),
-                aadhaar_hash: aadhaar_hash || null,
-                pan_hash: pan_hash || null,
+                aadhaar_hash: encrypt(aadhaar_hash || null),
+                pan_hash: encrypt(pan_hash || null),
                 verification_method: verificationMethod,
                 relationship: relationship || null,
                 access_level: access_level || 'view_only',
@@ -122,8 +125,11 @@ export async function POST(request: Request) {
 
         const decryptedNominee = {
             ...nominee,
+            name: decrypt(nominee.name),
             email: decrypt(nominee.email),
-            nominee_phone: decrypt(nominee.nominee_phone)
+            nominee_phone: decrypt(nominee.nominee_phone),
+            aadhaar_hash: decrypt(nominee.aadhaar_hash),
+            pan_hash: decrypt(nominee.pan_hash)
         }
 
         return NextResponse.json({ nominee: decryptedNominee }, { status: 201 })

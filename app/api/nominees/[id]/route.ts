@@ -23,7 +23,7 @@ export async function PATCH(
 
         // Update only allowed fields (not email or is_verified)
         const updateData: Record<string, unknown> = {}
-        if (name !== undefined) updateData.name = name
+        if (name !== undefined) updateData.name = encrypt(name)
         if (relationship !== undefined) updateData.relationship = relationship
         if (access_level !== undefined) updateData.access_level = access_level
         updateData.updated_at = new Date().toISOString()
@@ -44,7 +44,16 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ nominee })
+        const decryptedNominee = {
+            ...nominee,
+            name: decrypt(nominee.name),
+            email: decrypt(nominee.email),
+            nominee_phone: decrypt(nominee.nominee_phone),
+            aadhaar_hash: decrypt(nominee.aadhaar_hash),
+            pan_hash: decrypt(nominee.pan_hash)
+        }
+
+        return NextResponse.json({ nominee: decryptedNominee })
     } catch (error) {
         console.error('Nominees PATCH error:', error)
         return NextResponse.json(

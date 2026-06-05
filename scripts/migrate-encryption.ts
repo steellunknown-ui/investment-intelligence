@@ -131,7 +131,8 @@ async function runMigration() {
     await migrateTable('receivables', ['contact_number', 'email', 'notes', 'given_to'])
     await migrateTable('belongings', ['storage_location', 'bank_locker_details', 'location_details', 'notes', 'insurance_policy_reference'])
     await migrateTable('profiles', ['contact_number', 'address'])
-    await migrateTable('nominees', ['email', 'nominee_phone'])
+    await migrateTable('nominees', ['email', 'nominee_phone', 'name', 'aadhaar_hash', 'pan_hash'])
+    await migrateTable('family_members', ['member_name', 'relation'])
 
     console.log('\nMigration Complete! All sensitive data is now encrypted.')
 }
