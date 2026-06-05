@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -31,7 +32,12 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ holdings: holdings ?? [] })
+        const decryptedHoldings = holdings?.map(holding => ({
+            ...holding,
+            notes: decrypt(holding.notes)
+        }))
+
+        return NextResponse.json({ holdings: decryptedHoldings ?? [] })
     } catch (error) {
         console.error('Holdings GET error:', error)
         return NextResponse.json(
@@ -76,7 +82,7 @@ export async function POST(request: Request) {
                 asset_type: asset_type || 'stock',
                 quantity: Number(quantity),
                 avg_buy_price: avg_buy_price ? Number(avg_buy_price) : null,
-                notes: notes || null,
+                notes: encrypt(notes || null),
             })
             .select()
             .single()
@@ -89,7 +95,12 @@ export async function POST(request: Request) {
             )
         }
 
-        return NextResponse.json({ holding }, { status: 201 })
+        const decryptedHolding = {
+            ...holding,
+            notes: decrypt(holding.notes)
+        }
+
+        return NextResponse.json({ holding: decryptedHolding }, { status: 201 })
     } catch (error) {
         console.error('Holdings POST error:', error)
         return NextResponse.json(
