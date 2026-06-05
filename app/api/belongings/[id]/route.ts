@@ -40,6 +40,9 @@ export async function PATCH(
         const updateData = { ...sanitizedBody }
         if (updateData.storage_location !== undefined) updateData.storage_location = encrypt(updateData.storage_location)
         if (updateData.bank_locker_details !== undefined) updateData.bank_locker_details = encrypt(updateData.bank_locker_details)
+        if (updateData.location_details !== undefined) updateData.location_details = encrypt(updateData.location_details)
+        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
+        if (updateData.insurance_policy_reference !== undefined) updateData.insurance_policy_reference = encrypt(updateData.insurance_policy_reference)
 
         const { data: belonging, error } = await supabase
             .from('belongings')
@@ -60,7 +63,10 @@ export async function PATCH(
         const decryptedBelonging = {
             ...belonging,
             storage_location: decrypt(belonging.storage_location),
-            bank_locker_details: decrypt(belonging.bank_locker_details)
+            bank_locker_details: decrypt(belonging.bank_locker_details),
+            location_details: decrypt(belonging.location_details),
+            notes: decrypt(belonging.notes),
+            insurance_policy_reference: decrypt(belonging.insurance_policy_reference)
         }
 
         return NextResponse.json({ belonging: decryptedBelonging })

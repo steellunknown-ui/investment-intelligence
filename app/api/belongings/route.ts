@@ -35,7 +35,10 @@ export async function GET() {
         const decryptedBelongings = belongings?.map(belonging => ({
             ...belonging,
             storage_location: decrypt(belonging.storage_location),
-            bank_locker_details: decrypt(belonging.bank_locker_details)
+            bank_locker_details: decrypt(belonging.bank_locker_details),
+            location_details: decrypt(belonging.location_details),
+            notes: decrypt(belonging.notes),
+            insurance_policy_reference: decrypt(belonging.insurance_policy_reference)
         }))
 
         return NextResponse.json({ belongings: decryptedBelongings ?? [] })
@@ -116,14 +119,14 @@ export async function POST(request: Request) {
                 current_estimated_value: current_estimated_value ? Number(current_estimated_value) : null,
                 valuation_date: valuation_date || null,
                 storage_location: encrypt(storage_location),
-                location_details,
+                location_details: encrypt(location_details || null),
                 is_insured: !!is_insured,
-                insurance_policy_reference: insurance_policy_reference || null,
+                insurance_policy_reference: encrypt(insurance_policy_reference || null),
                 has_invoice: !!has_invoice,
                 has_certificate: !!has_certificate,
                 bank_locker_details: encrypt(bank_locker_details || null),
                 status: status || 'in_possession',
-                notes
+                notes: encrypt(notes || null)
             })
             .select()
             .single()
@@ -158,7 +161,10 @@ export async function POST(request: Request) {
         const decryptedBelonging = {
             ...belonging,
             storage_location: decrypt(belonging.storage_location),
-            bank_locker_details: decrypt(belonging.bank_locker_details)
+            bank_locker_details: decrypt(belonging.bank_locker_details),
+            location_details: decrypt(belonging.location_details),
+            notes: decrypt(belonging.notes),
+            insurance_policy_reference: decrypt(belonging.insurance_policy_reference)
         }
 
         return NextResponse.json({ belonging: decryptedBelonging }, { status: 201 })

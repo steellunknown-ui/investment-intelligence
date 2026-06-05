@@ -129,7 +129,7 @@ async function runMigration() {
     await migrateTable('assets', ['registration_number', 'vehicle_registration', 'property_address'])
     await migrateTable('liabilities', ['account_number', 'auto_debit_account', 'collateral_details'])
     await migrateTable('receivables', ['contact_number', 'email', 'notes'])
-    await migrateTable('belongings', ['storage_location', 'bank_locker_details'])
+    await migrateTable('belongings', ['storage_location', 'bank_locker_details', 'location_details', 'notes', 'insurance_policy_reference'])
     await migrateTable('profiles', ['contact_number', 'address'])
     await migrateTable('nominees', ['email', 'nominee_phone'])
 
