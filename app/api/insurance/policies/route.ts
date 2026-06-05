@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
 import { createAlert } from '@/lib/alerts'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -33,7 +34,14 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ policies: policies ?? [] })
+        const decryptedPolicies = policies?.map(policy => ({
+            ...policy,
+            policy_number: decrypt(policy.policy_number),
+            agent_contact: decrypt(policy.agent_contact),
+            policy_nominee_name: decrypt(policy.policy_nominee_name)
+        }))
+
+        return NextResponse.json({ policies: decryptedPolicies ?? [] })
     } catch (error) {
         console.error('Insurance policies GET error:', error)
         return NextResponse.json(
@@ -113,7 +121,7 @@ export async function POST(request: Request) {
             .from('insurance_policies')
             .insert({
                 user_id: user.id,
-                policy_number,
+                policy_number: encrypt(policy_number),
                 policy_type,
                 provider_name,
                 sum_insured: Number(sum_insured) || 0,
@@ -126,11 +134,11 @@ export async function POST(request: Request) {
                 next_premium_due: next_premium_due || null,
                 insured_name,
                 insured_relationship: insured_relationship || 'self',
-                policy_nominee_name,
+                policy_nominee_name: encrypt(policy_nominee_name),
                 policy_nominee_relationship,
                 status: status || 'active',
                 agent_name,
-                agent_contact,
+                agent_contact: encrypt(agent_contact),
                 notes
             })
             .select()
@@ -152,7 +160,14 @@ export async function POST(request: Request) {
             message: `Insurance policy ${policy_number} for ${provider_name} has been successfully added.`
         });
 
-        return NextResponse.json({ policy }, { status: 201 })
+        const decryptedPolicy = {
+            ...policy,
+            policy_number: decrypt(policy.policy_number),
+            agent_contact: decrypt(policy.agent_contact),
+            policy_nominee_name: decrypt(policy.policy_nominee_name)
+        }
+
+        return NextResponse.json({ policy: decryptedPolicy }, { status: 201 })
     } catch (error) {
         console.error('Insurance policies POST error:', error)
         return NextResponse.json(

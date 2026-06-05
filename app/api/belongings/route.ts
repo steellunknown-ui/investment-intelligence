@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -31,7 +32,13 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ belongings: belongings ?? [] })
+        const decryptedBelongings = belongings?.map(belonging => ({
+            ...belonging,
+            storage_location: decrypt(belonging.storage_location),
+            bank_locker_details: decrypt(belonging.bank_locker_details)
+        }))
+
+        return NextResponse.json({ belongings: decryptedBelongings ?? [] })
     } catch (error) {
         console.error('Belongings GET error:', error)
         return NextResponse.json(
@@ -108,13 +115,13 @@ export async function POST(request: Request) {
                 purchase_date: purchase_date || null,
                 current_estimated_value: current_estimated_value ? Number(current_estimated_value) : null,
                 valuation_date: valuation_date || null,
-                storage_location,
+                storage_location: encrypt(storage_location),
                 location_details,
                 is_insured: !!is_insured,
                 insurance_policy_reference: insurance_policy_reference || null,
                 has_invoice: !!has_invoice,
                 has_certificate: !!has_certificate,
-                bank_locker_details: bank_locker_details || null,
+                bank_locker_details: encrypt(bank_locker_details || null),
                 status: status || 'in_possession',
                 notes
             })
@@ -148,7 +155,13 @@ export async function POST(request: Request) {
             }
         }
 
-        return NextResponse.json({ belonging }, { status: 201 })
+        const decryptedBelonging = {
+            ...belonging,
+            storage_location: decrypt(belonging.storage_location),
+            bank_locker_details: decrypt(belonging.bank_locker_details)
+        }
+
+        return NextResponse.json({ belonging: decryptedBelonging }, { status: 201 })
     } catch (error) {
         console.error('Belongings POST error:', error)
         return NextResponse.json(

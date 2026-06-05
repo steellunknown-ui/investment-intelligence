@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { IFSC_REGEX, validateBankAccountNumber } from '@/src/lib/financialValidationRules'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -47,7 +48,7 @@ export async function PATCH(
             
             if (existing) {
                 const bank = body.bank_name || existing.bank_name;
-                const acc = body.account_number || existing.account_number;
+                const acc = body.account_number || decrypt(existing.account_number);
                 const accValidation = validateBankAccountNumber(bank, acc);
                 if (!accValidation.isValid) {
                     return NextResponse.json({ error: accValidation.error }, { status: 400 });
@@ -57,9 +58,15 @@ export async function PATCH(
         // Actually, let's just do basic checks for PATCH to avoid breaking partial updates
         // but IFSC is safe to check if present.
 
+        const updateData = { ...body }
+        if (updateData.account_number !== undefined) updateData.account_number = encrypt(updateData.account_number)
+        if (updateData.linked_mobile !== undefined) updateData.linked_mobile = encrypt(updateData.linked_mobile)
+        if (updateData.debit_card_number !== undefined) updateData.debit_card_number = encrypt(updateData.debit_card_number)
+        if (updateData.joint_holder_name !== undefined) updateData.joint_holder_name = encrypt(updateData.joint_holder_name)
+
         const { data: account, error } = await supabase
             .from('bank_accounts')
-            .update(body)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -73,7 +80,15 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ account })
+        const decryptedAccount = {
+            ...account,
+            account_number: decrypt(account.account_number),
+            linked_mobile: decrypt(account.linked_mobile),
+            debit_card_number: decrypt(account.debit_card_number),
+            joint_holder_name: decrypt(account.joint_holder_name)
+        }
+
+        return NextResponse.json({ account: decryptedAccount })
     } catch (error) {
         console.error('Bank account PATCH error:', error)
         return NextResponse.json(

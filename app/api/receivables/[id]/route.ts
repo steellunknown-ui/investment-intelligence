@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { calculateInterest } from '@/lib/interest'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -102,6 +103,10 @@ export async function PATCH(
             }
         }
 
+        if (updates.contact_number !== undefined) updates.contact_number = encrypt(updates.contact_number)
+        if (updates.email !== undefined) updates.email = encrypt(updates.email)
+        if (updates.notes !== undefined) updates.notes = encrypt(updates.notes)
+
         const { data: receivable, error } = await supabase
             .from('receivables')
             .update(updates)
@@ -118,7 +123,14 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ receivable })
+        const decryptedReceivable = {
+            ...receivable,
+            contact_number: decrypt(receivable.contact_number),
+            email: decrypt(receivable.email),
+            notes: decrypt(receivable.notes)
+        }
+
+        return NextResponse.json({ receivable: decryptedReceivable })
     } catch (error) {
         console.error('Receivable PATCH error:', error)
         return NextResponse.json(

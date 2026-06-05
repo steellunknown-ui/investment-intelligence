@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -36,9 +37,13 @@ export async function PATCH(
             return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
         }
 
+        const updateData = { ...sanitizedBody }
+        if (updateData.storage_location !== undefined) updateData.storage_location = encrypt(updateData.storage_location)
+        if (updateData.bank_locker_details !== undefined) updateData.bank_locker_details = encrypt(updateData.bank_locker_details)
+
         const { data: belonging, error } = await supabase
             .from('belongings')
-            .update(sanitizedBody)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -52,7 +57,13 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ belonging })
+        const decryptedBelonging = {
+            ...belonging,
+            storage_location: decrypt(belonging.storage_location),
+            bank_locker_details: decrypt(belonging.bank_locker_details)
+        }
+
+        return NextResponse.json({ belonging: decryptedBelonging })
     } catch (error) {
         console.error('Belonging PATCH error:', error)
         return NextResponse.json(

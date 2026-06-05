@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { createAlert } from '@/lib/alerts'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,7 +33,14 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ assets: assets ?? [] })
+        const decryptedAssets = assets?.map(asset => ({
+            ...asset,
+            registration_number: decrypt(asset.registration_number),
+            vehicle_registration: decrypt(asset.vehicle_registration),
+            property_address: decrypt(asset.property_address)
+        }))
+
+        return NextResponse.json({ assets: decryptedAssets ?? [] })
     } catch (error) {
         console.error('Assets GET error:', error)
         return NextResponse.json(
@@ -120,11 +128,11 @@ export async function POST(request: Request) {
                 purchase_date: purchase_date || null,
                 current_market_value: current_market_value ? Number(current_market_value) : null,
                 valuation_date: valuation_date || null,
-                property_address,
+                property_address: encrypt(property_address),
                 property_area: property_area ? Number(property_area) : null,
                 property_area_unit,
-                registration_number,
-                vehicle_registration,
+                registration_number: encrypt(registration_number),
+                vehicle_registration: encrypt(vehicle_registration),
                 vehicle_make,
                 vehicle_model,
                 vehicle_year: vehicle_year ? Number(vehicle_year) : null,
@@ -157,7 +165,14 @@ export async function POST(request: Request) {
             message: `New asset "${asset_name}" (${asset_type}) has been added to your vault.`
         });
 
-        return NextResponse.json({ asset }, { status: 201 })
+        const decryptedAsset = {
+            ...asset,
+            registration_number: decrypt(asset.registration_number),
+            vehicle_registration: decrypt(asset.vehicle_registration),
+            property_address: decrypt(asset.property_address)
+        }
+
+        return NextResponse.json({ asset: decryptedAsset }, { status: 201 })
     } catch (error) {
         console.error('Assets POST error:', error)
         return NextResponse.json(

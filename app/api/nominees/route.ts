@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -31,7 +32,13 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ nominees: nominees ?? [] })
+        const decryptedNominees = nominees?.map(nominee => ({
+            ...nominee,
+            email: decrypt(nominee.email),
+            nominee_phone: decrypt(nominee.nominee_phone)
+        }))
+
+        return NextResponse.json({ nominees: decryptedNominees ?? [] })
     } catch (error) {
         console.error('Nominees GET error:', error)
         return NextResponse.json(
@@ -93,8 +100,8 @@ export async function POST(request: Request) {
             .insert({
                 user_id: user.id,
                 name,
-                email: email ? email.toLowerCase() : null,
-                nominee_phone,
+                email: email ? encrypt(email.toLowerCase()) : null,
+                nominee_phone: encrypt(nominee_phone),
                 aadhaar_hash: aadhaar_hash || null,
                 pan_hash: pan_hash || null,
                 verification_method: verificationMethod,
@@ -113,7 +120,13 @@ export async function POST(request: Request) {
             )
         }
 
-        return NextResponse.json({ nominee }, { status: 201 })
+        const decryptedNominee = {
+            ...nominee,
+            email: decrypt(nominee.email),
+            nominee_phone: decrypt(nominee.nominee_phone)
+        }
+
+        return NextResponse.json({ nominee: decryptedNominee }, { status: 201 })
     } catch (error) {
         console.error('Nominees POST error:', error)
         return NextResponse.json(

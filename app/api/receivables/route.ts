@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { calculateInterest } from '@/lib/interest'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,7 +33,14 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ receivables: receivables ?? [] })
+        const decryptedReceivables = receivables?.map(receivable => ({
+            ...receivable,
+            contact_number: decrypt(receivable.contact_number),
+            email: decrypt(receivable.email),
+            notes: decrypt(receivable.notes)
+        }))
+
+        return NextResponse.json({ receivables: decryptedReceivables ?? [] })
     } catch (error) {
         console.error('Receivables GET error:', error)
         return NextResponse.json(
@@ -136,8 +144,8 @@ export async function POST(request: Request) {
                 user_id: user.id,
                 given_to,
                 relationship,
-                contact_number,
-                email,
+                contact_number: encrypt(contact_number),
+                email: encrypt(email),
                 principal_amount: principal,
                 interest_rate: rate,
                 interest_type: rate && rate > 0 ? type : null,
@@ -155,7 +163,7 @@ export async function POST(request: Request) {
                 has_written_agreement: !!has_written_agreement,
                 agreement_reference,
                 reminder_enabled: !!reminder_enabled,
-                notes
+                notes: encrypt(notes)
             })
             .select()
             .single()
@@ -168,7 +176,14 @@ export async function POST(request: Request) {
             )
         }
 
-        return NextResponse.json({ receivable }, { status: 201 })
+        const decryptedReceivable = {
+            ...receivable,
+            contact_number: decrypt(receivable.contact_number),
+            email: decrypt(receivable.email),
+            notes: decrypt(receivable.notes)
+        }
+
+        return NextResponse.json({ receivable: decryptedReceivable }, { status: 201 })
     } catch (error) {
         console.error('Receivables POST error:', error)
         return NextResponse.json(

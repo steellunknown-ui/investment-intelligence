@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -39,9 +40,14 @@ export async function PATCH(
             return NextResponse.json({ error: 'Outstanding cannot be negative' }, { status: 400 })
         }
 
+        const updateData = { ...sanitizedBody }
+        if (updateData.account_number !== undefined) updateData.account_number = encrypt(updateData.account_number)
+        if (updateData.auto_debit_account !== undefined) updateData.auto_debit_account = encrypt(updateData.auto_debit_account)
+        if (updateData.collateral_details !== undefined) updateData.collateral_details = encrypt(updateData.collateral_details)
+
         const { data: liability, error } = await supabase
             .from('liabilities')
-            .update(sanitizedBody)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -55,7 +61,14 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ liability })
+        const decryptedLiability = {
+            ...liability,
+            account_number: decrypt(liability.account_number),
+            auto_debit_account: decrypt(liability.auto_debit_account),
+            collateral_details: decrypt(liability.collateral_details)
+        }
+
+        return NextResponse.json({ liability: decryptedLiability })
     } catch (error) {
         console.error('Liability PATCH error:', error)
         return NextResponse.json(

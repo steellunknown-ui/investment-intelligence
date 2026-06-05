@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,9 +39,14 @@ export async function PATCH(
             return NextResponse.json({ error: 'Ownership percentage must be between 0 and 100' }, { status: 400 })
         }
 
+        const updateData = { ...sanitizedBody }
+        if (updateData.registration_number !== undefined) updateData.registration_number = encrypt(updateData.registration_number)
+        if (updateData.vehicle_registration !== undefined) updateData.vehicle_registration = encrypt(updateData.vehicle_registration)
+        if (updateData.property_address !== undefined) updateData.property_address = encrypt(updateData.property_address)
+
         const { data: asset, error } = await supabase
             .from('assets')
-            .update(sanitizedBody)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -54,7 +60,14 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ asset })
+        const decryptedAsset = {
+            ...asset,
+            registration_number: decrypt(asset.registration_number),
+            vehicle_registration: decrypt(asset.vehicle_registration),
+            property_address: decrypt(asset.property_address)
+        }
+
+        return NextResponse.json({ asset: decryptedAsset })
     } catch (error) {
         console.error('Asset PATCH error:', error)
         return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { createAlert } from '@/lib/alerts'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,7 +33,14 @@ export async function GET() {
             )
         }
 
-        return NextResponse.json({ liabilities: liabilities ?? [] })
+        const decryptedLiabilities = liabilities?.map(liability => ({
+            ...liability,
+            account_number: decrypt(liability.account_number),
+            auto_debit_account: decrypt(liability.auto_debit_account),
+            collateral_details: decrypt(liability.collateral_details)
+        }))
+
+        return NextResponse.json({ liabilities: decryptedLiabilities ?? [] })
     } catch (error) {
         console.error('Liabilities GET error:', error)
         return NextResponse.json(
@@ -129,13 +137,13 @@ export async function POST(request: Request) {
                 loan_end_date: loan_end_date || null,
                 tenure_months: tenure_months ? Number(tenure_months) : null,
                 emi_due_day: emi_due_day ? Number(emi_due_day) : null,
-                auto_debit_account,
+                auto_debit_account: encrypt(auto_debit_account),
                 is_secured: !!is_secured,
                 collateral_type: collateral_type || null,
-                collateral_details: collateral_details || null,
+                collateral_details: encrypt(collateral_details || null),
                 status: status || 'active',
                 linked_asset_id: linked_asset_id || null,
-                account_number,
+                account_number: encrypt(account_number),
                 notes
             })
             .select()
@@ -157,7 +165,14 @@ export async function POST(request: Request) {
             message: `New liability "${loan_name || loan_type}" from ${taken_from} has been recorded.`
         });
 
-        return NextResponse.json({ liability }, { status: 201 })
+        const decryptedLiability = {
+            ...liability,
+            account_number: decrypt(liability.account_number),
+            auto_debit_account: decrypt(liability.auto_debit_account),
+            collateral_details: decrypt(liability.collateral_details)
+        }
+
+        return NextResponse.json({ liability: decryptedLiability }, { status: 201 })
     } catch (error) {
         console.error('Liabilities POST error:', error)
         return NextResponse.json(

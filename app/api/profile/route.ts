@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -47,10 +48,10 @@ export async function GET() {
             return NextResponse.json({
                 profile: {
                     full_name: newProfile.full_name || '',
-                    contact_number: newProfile.contact_number || '',
+                    contact_number: decrypt(newProfile.contact_number) || '',
                     gender: newProfile.gender || '',
                     date_of_birth: newProfile.date_of_birth || '',
-                    address: newProfile.address || '',
+                    address: decrypt(newProfile.address) || '',
                     city: newProfile.city || '',
                     state: newProfile.state || '',
                     pincode: newProfile.pincode || '',
@@ -64,10 +65,10 @@ export async function GET() {
         return NextResponse.json({
             profile: {
                 full_name: profile.full_name || '',
-                contact_number: profile.contact_number || '',
+                contact_number: decrypt(profile.contact_number) || '',
                 gender: profile.gender || '',
                 date_of_birth: profile.date_of_birth || '',
-                address: profile.address || '',
+                address: decrypt(profile.address) || '',
                 city: profile.city || '',
                 state: profile.state || '',
                 pincode: profile.pincode || '',
@@ -124,10 +125,10 @@ export async function PATCH(request: Request) {
             .upsert({
                 id: user.id,
                 full_name: full_name.trim(),
-                contact_number: contact_number || null,
+                contact_number: contact_number ? encrypt(contact_number) : null,
                 gender: gender || null,
                 date_of_birth: date_of_birth || null,
-                address: address || null,
+                address: address ? encrypt(address) : null,
                 city: city || null,
                 state: state || null,
                 pincode: pincode || null,

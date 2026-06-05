@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
+import { encrypt, decrypt } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -53,7 +54,7 @@ export async function PATCH(
             
             if (existing) {
                 const provider = sanitizedBody.provider_name || existing.provider_name;
-                const policy = sanitizedBody.policy_number || existing.policy_number;
+                const policy = sanitizedBody.policy_number || decrypt(existing.policy_number);
                 const validation = validateInsurancePolicyNumber(provider, policy);
                 if (!validation.isValid) {
                     return NextResponse.json({ error: "Invalid policy number format for selected provider." }, { status: 400 });
@@ -61,9 +62,14 @@ export async function PATCH(
             }
         }
 
+        const updateData = { ...sanitizedBody }
+        if (updateData.policy_number !== undefined) updateData.policy_number = encrypt(updateData.policy_number)
+        if (updateData.agent_contact !== undefined) updateData.agent_contact = encrypt(updateData.agent_contact)
+        if (updateData.policy_nominee_name !== undefined) updateData.policy_nominee_name = encrypt(updateData.policy_nominee_name)
+
         const { data: policy, error } = await supabase
             .from('insurance_policies')
-            .update(sanitizedBody)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id) // Extra safety + RLS
             .select()
@@ -77,7 +83,14 @@ export async function PATCH(
             )
         }
 
-        return NextResponse.json({ policy })
+        const decryptedPolicy = {
+            ...policy,
+            policy_number: decrypt(policy.policy_number),
+            agent_contact: decrypt(policy.agent_contact),
+            policy_nominee_name: decrypt(policy.policy_nominee_name)
+        }
+
+        return NextResponse.json({ policy: decryptedPolicy })
     } catch (error) {
         console.error('Insurance policy PATCH error:', error)
         return NextResponse.json(
