@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Briefcase,
@@ -162,8 +163,27 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
 
 // Logo component
 function Logo({ collapsed }: { collapsed?: boolean }) {
+  const [clicks, setClicks] = useState(0);
+
+  const handleLogoClick = () => {
+    const newClicks = clicks + 1;
+    setClicks(newClicks);
+
+    if (newClicks === 7) {
+      toast.success("Designed, Originated & Created by Abhishek Vishwakarma", {
+        description: "Investment Intelligence Core Architecture",
+        duration: 5000,
+        icon: "🚀",
+      });
+      setClicks(0); // Reset after showing
+    }
+  };
+
   return (
-    <div className="flex items-center gap-3 overflow-hidden">
+    <div 
+      className="flex items-center gap-3 overflow-hidden cursor-pointer select-none"
+      onClick={handleLogoClick}
+    >
       <div className="icon-container bg-primary flex-shrink-0">
         <Shield className="h-4.5 w-4.5 text-white" />
       </div>
