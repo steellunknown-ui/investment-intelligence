@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
 import { createAlert } from '@/lib/alerts'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -34,15 +34,15 @@ export async function GET() {
             )
         }
 
-        const decryptedPolicies = policies?.map(policy => ({
-            ...policy,
-            policy_number: decrypt(policy.policy_number),
-            agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name),
-            insured_name: decrypt(policy.insured_name),
-            agent_name: decrypt(policy.agent_name),
-            notes: decrypt(policy.notes)
-        }))
+        let decryptedPolicies = policies?.map(policy => decryptFields(policy, [
+            'policy_number', 'policy_name', 'insured_name', 'insured_relationship', 
+            'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 
+            'agent_contact', 'notes'
+        ]))
+
+        decryptedPolicies = decryptedPolicies?.map(policy => decryptNumericFields(policy, [
+            'sum_insured', 'premium_amount'
+        ]))
 
         return NextResponse.json({ policies: decryptedPolicies ?? [] })
     } catch (error) {
@@ -120,30 +120,40 @@ export async function POST(request: Request) {
             )
         }
 
+        let newPolicyData = encryptFields({
+            user_id: user.id,
+            policy_number,
+            policy_type,
+            provider_name,
+            sum_insured: Number(sum_insured) || 0,
+            premium_amount: Number(premium_amount) || 0,
+            premium_frequency: premium_frequency || 'yearly',
+            start_date,
+            policy_name: policy_name || null,
+            end_date: end_date || null,
+            maturity_date: maturity_date || null,
+            next_premium_due: next_premium_due || null,
+            insured_name: insured_name || null,
+            insured_relationship: insured_relationship || 'self',
+            policy_nominee_name,
+            policy_nominee_relationship,
+            status: status || 'active',
+            agent_name: agent_name || null,
+            agent_contact,
+            notes: notes || null
+        }, [
+            'policy_number', 'policy_name', 'insured_name', 'insured_relationship', 
+            'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 
+            'agent_contact', 'notes'
+        ]);
+
+        newPolicyData = encryptNumericFields(newPolicyData, [
+            'sum_insured', 'premium_amount'
+        ]);
+
         const { data: policy, error } = await supabase
             .from('insurance_policies')
-            .insert({
-                user_id: user.id,
-                policy_number: encrypt(policy_number),
-                policy_type,
-                provider_name,
-                sum_insured: Number(sum_insured) || 0,
-                premium_amount: Number(premium_amount) || 0,
-                premium_frequency: premium_frequency || 'yearly',
-                start_date,
-                policy_name,
-                end_date: end_date || null,
-                maturity_date: maturity_date || null,
-                next_premium_due: next_premium_due || null,
-                insured_name: encrypt(insured_name || null),
-                insured_relationship: insured_relationship || 'self',
-                policy_nominee_name: encrypt(policy_nominee_name),
-                policy_nominee_relationship,
-                status: status || 'active',
-                agent_name: encrypt(agent_name || null),
-                agent_contact: encrypt(agent_contact),
-                notes: encrypt(notes || null)
-            })
+            .insert(newPolicyData)
             .select()
             .single()
 
@@ -163,15 +173,15 @@ export async function POST(request: Request) {
             message: `Insurance policy ${policy_number} for ${provider_name} has been successfully added.`
         });
 
-        const decryptedPolicy = {
-            ...policy,
-            policy_number: decrypt(policy.policy_number),
-            agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name),
-            insured_name: decrypt(policy.insured_name),
-            agent_name: decrypt(policy.agent_name),
-            notes: decrypt(policy.notes)
-        }
+        let decryptedPolicy = decryptFields(policy, [
+            'policy_number', 'policy_name', 'insured_name', 'insured_relationship', 
+            'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 
+            'agent_contact', 'notes'
+        ])
+
+        decryptedPolicy = decryptNumericFields(decryptedPolicy, [
+            'sum_insured', 'premium_amount'
+        ])
 
         return NextResponse.json({ policy: decryptedPolicy }, { status: 201 })
     } catch (error) {

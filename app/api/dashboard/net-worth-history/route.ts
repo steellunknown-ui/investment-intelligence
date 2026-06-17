@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
+import { decryptNumber, encryptNumber } from '@/src/lib/encryption'
 
 /**
  * GET /api/dashboard/net-worth-history
@@ -31,13 +32,21 @@ export async function GET() {
         }
 
         // Transform data to include total_assets and total_liabilities for chart
-        const transformedSnapshots = (snapshots || []).map(s => ({
-            snapshot_date: s.snapshot_date,
-            net_worth: s.net_worth,
-            total_assets: (Number(s.bank_balance) || 0) + (Number(s.assets_value) || 0) +
-                (Number(s.belongings_value) || 0) + (Number(s.receivables_value) || 0),
-            total_liabilities: Number(s.liabilities_value) || 0
-        }))
+        const transformedSnapshots = (snapshots || []).map(s => {
+            const net_worth = decryptNumber(s.net_worth as string) || 0
+            const bank_balance = decryptNumber(s.bank_balance as string) || 0
+            const assets_value = decryptNumber(s.assets_value as string) || 0
+            const belongings_value = decryptNumber(s.belongings_value as string) || 0
+            const receivables_value = decryptNumber(s.receivables_value as string) || 0
+            const liabilities_value = decryptNumber(s.liabilities_value as string) || 0
+
+            return {
+                snapshot_date: s.snapshot_date,
+                net_worth: net_worth,
+                total_assets: bank_balance + assets_value + belongings_value + receivables_value,
+                total_liabilities: liabilities_value
+            }
+        })
 
         return NextResponse.json({
             snapshots: transformedSnapshots,
@@ -77,17 +86,17 @@ export async function POST() {
             supabase.from("liabilities").select("outstanding_amount").eq("user_id", user.id).eq("status", "active")
         ])
 
-        type BankAccount = { current_balance: number | null }
-        type Asset = { current_market_value: number | null }
-        type Belonging = { current_estimated_value: number | null }
-        type Receivable = { outstanding_amount: number | null }
-        type Liability = { outstanding_amount: number | null }
+        type BankAccount = { current_balance: string | number | null }
+        type Asset = { current_market_value: string | number | null }
+        type Belonging = { current_estimated_value: string | number | null }
+        type Receivable = { outstanding_amount: string | number | null }
+        type Liability = { outstanding_amount: string | number | null }
 
-        const bankBalance = (bankAccounts as BankAccount[] || []).reduce((sum: number, a: BankAccount) => sum + (Number(a.current_balance) || 0), 0)
-        const assetsValue = (assets as Asset[] || []).reduce((sum: number, a: Asset) => sum + (Number(a.current_market_value) || 0), 0)
-        const belongingsValue = (belongings as Belonging[] || []).reduce((sum: number, b: Belonging) => sum + (Number(b.current_estimated_value) || 0), 0)
-        const receivablesValue = (receivables as Receivable[] || []).reduce((sum: number, r: Receivable) => sum + (Number(r.outstanding_amount) || 0), 0)
-        const liabilitiesValue = (liabilities as Liability[] || []).reduce((sum: number, l: Liability) => sum + (Number(l.outstanding_amount) || 0), 0)
+        const bankBalance = (bankAccounts as BankAccount[] || []).reduce((sum: number, a: BankAccount) => sum + (decryptNumber(a.current_balance as string) || 0), 0)
+        const assetsValue = (assets as Asset[] || []).reduce((sum: number, a: Asset) => sum + (decryptNumber(a.current_market_value as string) || 0), 0)
+        const belongingsValue = (belongings as Belonging[] || []).reduce((sum: number, b: Belonging) => sum + (decryptNumber(b.current_estimated_value as string) || 0), 0)
+        const receivablesValue = (receivables as Receivable[] || []).reduce((sum: number, r: Receivable) => sum + (decryptNumber(r.outstanding_amount as string) || 0), 0)
+        const liabilitiesValue = (liabilities as Liability[] || []).reduce((sum: number, l: Liability) => sum + (decryptNumber(l.outstanding_amount as string) || 0), 0)
 
         const netWorth = bankBalance + assetsValue + belongingsValue + receivablesValue - liabilitiesValue
 
@@ -99,12 +108,12 @@ export async function POST() {
             .upsert({
                 user_id: user.id,
                 snapshot_date: today,
-                net_worth: netWorth,
-                bank_balance: bankBalance,
-                assets_value: assetsValue,
-                belongings_value: belongingsValue,
-                receivables_value: receivablesValue,
-                liabilities_value: liabilitiesValue
+                net_worth: encryptNumber(netWorth.toString()),
+                bank_balance: encryptNumber(bankBalance.toString()),
+                assets_value: encryptNumber(assetsValue.toString()),
+                belongings_value: encryptNumber(belongingsValue.toString()),
+                receivables_value: encryptNumber(receivablesValue.toString()),
+                liabilities_value: encryptNumber(liabilitiesValue.toString())
             }, {
                 onConflict: "user_id,snapshot_date"
             })

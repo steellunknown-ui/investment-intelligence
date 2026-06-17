@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,10 +32,13 @@ export async function GET() {
             )
         }
 
-        const decryptedHoldings = holdings?.map(holding => ({
-            ...holding,
-            notes: decrypt(holding.notes)
-        }))
+        let decryptedHoldings = holdings?.map(holding => decryptFields(holding, [
+            'symbol', 'name', 'broker', 'notes', 'account_number'
+        ]))
+        
+        decryptedHoldings = decryptedHoldings?.map(holding => decryptNumericFields(holding, [
+            'quantity', 'avg_buy_price'
+        ]))
 
         return NextResponse.json({ holdings: decryptedHoldings ?? [] })
     } catch (error) {
@@ -63,7 +66,7 @@ export async function POST(request: Request) {
         updateLastActivity(supabase, user.id)
 
         const body = await request.json()
-        const { symbol, name, asset_type, quantity, avg_buy_price, notes } = body
+        const { symbol, name, asset_type, quantity, avg_buy_price, notes, purchase_date, broker, account_number } = body
 
         // Validate required fields
         if (!symbol || quantity === undefined || quantity === null) {
@@ -73,17 +76,29 @@ export async function POST(request: Request) {
             )
         }
 
+        let newHoldingData = encryptFields({
+            user_id: user.id,
+            asset_type,
+            symbol: symbol.toUpperCase(),
+            name,
+            quantity: Number(quantity) || 0,
+            avg_buy_price: Number(avg_buy_price) || 0,
+            purchase_date: purchase_date || null,
+            broker: broker || null,
+            notes: notes || null,
+            account_number: account_number || null,
+            is_active: true
+        }, [
+            'symbol', 'name', 'broker', 'notes', 'account_number'
+        ]);
+
+        newHoldingData = encryptNumericFields(newHoldingData, [
+            'quantity', 'avg_buy_price'
+        ]);
+
         const { data: holding, error } = await supabase
             .from('holdings')
-            .insert({
-                user_id: user.id,
-                symbol: symbol.toUpperCase(),
-                name: name || null,
-                asset_type: asset_type || 'stock',
-                quantity: Number(quantity),
-                avg_buy_price: avg_buy_price ? Number(avg_buy_price) : null,
-                notes: encrypt(notes || null),
-            })
+            .insert(newHoldingData)
             .select()
             .single()
 
@@ -95,10 +110,13 @@ export async function POST(request: Request) {
             )
         }
 
-        const decryptedHolding = {
-            ...holding,
-            notes: decrypt(holding.notes)
-        }
+        let decryptedHolding = decryptFields(holding, [
+            'symbol', 'name', 'broker', 'notes', 'account_number'
+        ])
+        
+        decryptedHolding = decryptNumericFields(decryptedHolding, [
+            'quantity', 'avg_buy_price'
+        ])
 
         return NextResponse.json({ holding: decryptedHolding }, { status: 201 })
     } catch (error) {

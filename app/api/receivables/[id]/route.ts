@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { calculateInterest } from '@/lib/interest'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -83,6 +83,8 @@ export async function PATCH(
             if (newReceived < 0) return NextResponse.json({ error: 'Received amount cannot be negative' }, { status: 400 })
             if (newReceived > total) return NextResponse.json({ error: 'Received amount cannot exceed total' }, { status: 400 })
 
+            updates.outstanding_amount = total - newReceived
+
             // Auto-update status
             if (newReceived === total && total > 0) {
                 updates.status = 'received'
@@ -103,14 +105,18 @@ export async function PATCH(
             }
         }
 
-        if (updates.contact_number !== undefined) updates.contact_number = encrypt(updates.contact_number)
-        if (updates.email !== undefined) updates.email = encrypt(updates.email)
-        if (updates.notes !== undefined) updates.notes = encrypt(updates.notes)
-        if (updates.given_to !== undefined) updates.given_to = encrypt(updates.given_to)
+        let updateData = encryptFields({ ...updates }, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ])
+        
+        updateData = encryptNumericFields(updateData, [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ])
 
         const { data: receivable, error } = await supabase
             .from('receivables')
-            .update(updates)
+            .update(updateData)
             .eq('id', id)
             .eq('user_id', user.id)
             .select()
@@ -124,13 +130,14 @@ export async function PATCH(
             )
         }
 
-        const decryptedReceivable = {
-            ...receivable,
-            contact_number: decrypt(receivable.contact_number),
-            email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes),
-            given_to: decrypt(receivable.given_to)
-        }
+        let decryptedReceivable = decryptFields(receivable, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ])
+        
+        decryptedReceivable = decryptNumericFields(decryptedReceivable, [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ])
 
         return NextResponse.json({ receivable: decryptedReceivable })
     } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/src/lib/supabase/admin';
+import { decryptNumericFields, decryptNumber } from '@/src/lib/encryption';
 
 // GET /api/nominee-access/[token]
 // Public endpoint - validates token and returns read-only portfolio data
@@ -66,26 +67,35 @@ export async function GET(
             .eq('id', tokenData.user_id)
             .single();
 
-        // Fetch holdings
-        const { data: holdings } = await supabaseAdmin
-            .from('holdings')
-            .select('id, symbol, name, asset_type, quantity, avg_buy_price, created_at')
-            .eq('user_id', tokenData.user_id)
-            .order('created_at', { ascending: false });
+        // Fetch all financial data securely
+        const [
+            { data: bankData },
+            { data: assetsData },
+            { data: belongingsData },
+            { data: receivablesData },
+            { data: liabilitiesData }
+        ] = await Promise.all([
+            supabaseAdmin.from('bank_accounts').select('*').eq('user_id', tokenData.user_id),
+            supabaseAdmin.from('assets').select('*').eq('user_id', tokenData.user_id),
+            supabaseAdmin.from('belongings').select('*').eq('user_id', tokenData.user_id),
+            supabaseAdmin.from('receivables').select('*').eq('user_id', tokenData.user_id),
+            supabaseAdmin.from('liabilities').select('*').eq('user_id', tokenData.user_id)
+        ]);
 
-        // Calculate dashboard summary
-        let totalInvested = 0;
-        const holdingsCount = holdings?.length ?? 0;
+        const bankAccounts = (bankData || []).map((r: any) => decryptNumericFields(r, ['current_balance']));
+        const assets = (assetsData || []).map((r: any) => decryptNumericFields(r, ['current_market_value', 'purchase_value']));
+        const belongings = (belongingsData || []).map((r: any) => decryptNumericFields(r, ['quantity', 'purchase_value', 'current_estimated_value']));
+        const receivables = (receivablesData || []).map((r: any) => decryptNumericFields(r, ['principal_amount', 'outstanding_amount']));
+        const liabilities = (liabilitiesData || []).map((r: any) => decryptNumericFields(r, ['principal_amount', 'outstanding_amount', 'emi_amount']));
 
-        if (holdings && holdings.length > 0) {
-            totalInvested = holdings.reduce((sum, h) => {
-                const qty = Number(h.quantity) || 0;
-                const price = Number(h.avg_buy_price) || 0;
-                return sum + (qty * price);
-            }, 0);
-        }
+        const totalBank = bankAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+        const totalAssets = assets.reduce((sum, a) => sum + (a.current_market_value || 0), 0);
+        const totalBelongings = belongings.reduce((sum, b) => sum + (b.current_estimated_value || 0), 0);
+        const totalReceivables = receivables.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0);
+        const totalLiabilities = liabilities.reduce((sum, l) => sum + (l.outstanding_amount || 0), 0);
 
-        const totalValue = totalInvested; // No live pricing yet
+        const totalValue = totalBank + totalAssets + totalBelongings + totalReceivables;
+        const totalInvested = totalAssets; // rough proxy
 
         // Fetch nominees (names + relationships only, NO emails)
         const { data: nominees } = await supabaseAdmin
@@ -104,10 +114,16 @@ export async function GET(
             summary: {
                 totalInvested,
                 totalValue,
-                holdingsCount,
+                totalLiabilities,
                 nomineesCount: nominees?.length ?? 0
             },
-            holdings: holdings ?? [],
+            portfolio: {
+                bankAccounts,
+                assets,
+                belongings,
+                receivables,
+                liabilities
+            },
             nominees: (nominees ?? []).map(n => ({
                 id: n.id,
                 name: n.name,

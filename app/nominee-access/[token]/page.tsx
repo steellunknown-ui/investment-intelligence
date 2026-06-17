@@ -23,17 +23,16 @@ interface NomineeAccessData {
     summary: {
         totalInvested: number;
         totalValue: number;
-        holdingsCount: number;
+        totalLiabilities: number;
         nomineesCount: number;
     };
-    holdings: Array<{
-        id: string;
-        symbol: string;
-        name: string | null;
-        asset_type: string;
-        quantity: number;
-        avg_buy_price: number | null;
-    }>;
+    portfolio: {
+        bankAccounts: any[];
+        assets: any[];
+        belongings: any[];
+        receivables: any[];
+        liabilities: any[];
+    };
     nominees: Array<{
         id: string;
         name: string;
@@ -165,8 +164,8 @@ export default function NomineeAccessPage() {
                     />
                     <SummaryCard
                         icon={PieChart}
-                        title="Holdings"
-                        value={data.summary.holdingsCount.toString()}
+                        title="Net Worth"
+                        value={formatCurrency(data.summary.totalValue - data.summary.totalLiabilities)}
                         gradient="from-emerald-500 to-emerald-600"
                     />
                     <SummaryCard
@@ -177,67 +176,32 @@ export default function NomineeAccessPage() {
                     />
                 </div>
 
-                {/* Holdings Table */}
+                {/* Portfolio Summary */}
                 <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
                     <div className="px-6 py-4 border-b border-white/10">
                         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                             <PieChart className="h-5 w-5 text-purple-400" />
-                            Holdings
+                            Portfolio Summary
                         </h2>
                     </div>
-                    {data.holdings.length === 0 ? (
-                        <div className="px-6 py-12 text-center text-white/50">
-                            No holdings recorded
+                    <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div>
+                            <p className="text-sm text-white/50">Bank Accounts</p>
+                            <p className="text-xl font-semibold text-white mt-1">{data.portfolio.bankAccounts.length}</p>
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="text-left text-white/60 text-sm border-b border-white/10">
-                                        <th className="px-6 py-3 font-medium">Symbol</th>
-                                        <th className="px-6 py-3 font-medium">Name</th>
-                                        <th className="px-6 py-3 font-medium">Type</th>
-                                        <th className="px-6 py-3 font-medium text-right">Quantity</th>
-                                        <th className="px-6 py-3 font-medium text-right">Avg. Price</th>
-                                        <th className="px-6 py-3 font-medium text-right">Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.holdings.map((holding) => (
-                                        <tr
-                                            key={holding.id}
-                                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                                        >
-                                            <td className="px-6 py-4 font-semibold text-white">
-                                                {holding.symbol}
-                                            </td>
-                                            <td className="px-6 py-4 text-white/70">
-                                                {holding.name || "—"}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 capitalize">
-                                                    {holding.asset_type.replace("_", " ")}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right text-white">
-                                                {holding.quantity}
-                                            </td>
-                                            <td className="px-6 py-4 text-right text-white/70">
-                                                {holding.avg_buy_price
-                                                    ? formatCurrency(holding.avg_buy_price)
-                                                    : "—"}
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-medium text-white">
-                                                {holding.avg_buy_price
-                                                    ? formatCurrency(holding.quantity * holding.avg_buy_price)
-                                                    : "—"}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div>
+                            <p className="text-sm text-white/50">Real Assets</p>
+                            <p className="text-xl font-semibold text-white mt-1">{data.portfolio.assets.length}</p>
                         </div>
-                    )}
+                        <div>
+                            <p className="text-sm text-white/50">Belongings</p>
+                            <p className="text-xl font-semibold text-white mt-1">{data.portfolio.belongings.length}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-white/50">Liabilities</p>
+                            <p className="text-xl font-semibold text-white mt-1">{data.portfolio.liabilities.length}</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Nominees List */}

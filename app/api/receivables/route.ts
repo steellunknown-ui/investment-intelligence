@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { calculateInterest } from '@/lib/interest'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -33,13 +33,14 @@ export async function GET() {
             )
         }
 
-        const decryptedReceivables = receivables?.map(receivable => ({
-            ...receivable,
-            contact_number: decrypt(receivable.contact_number),
-            email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes),
-            given_to: decrypt(receivable.given_to)
-        }))
+        let decryptedReceivables = receivables?.map(receivable => decryptFields(receivable, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ]))
+        
+        decryptedReceivables = decryptedReceivables?.map(receivable => decryptNumericFields(receivable, [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ]))
 
         return NextResponse.json({ receivables: decryptedReceivables ?? [] })
     } catch (error) {
@@ -139,33 +140,41 @@ export async function POST(request: Request) {
             actual_return_date = new Date().toISOString().split('T')[0]
         }
 
+        const newReceivableData = encryptNumericFields(encryptFields({
+            user_id: user.id,
+            given_to,
+            relationship: relationship || null,
+            contact_number: contact_number || null,
+            email: email || null,
+            principal_amount: principal,
+            interest_rate: rate,
+            interest_type: rate && rate > 0 ? type : null,
+            interest_start_date: rate && rate > 0 ? (interest_start_date || given_date) : null,
+            interest_end_date: rate && rate > 0 ? interest_end_date : null,
+            interest_amount,
+            last_interest_calculated_at: rate && rate > 0 ? new Date().toISOString() : null,
+            total_receivable: finalTotalReceivable,
+            amount_received: finalAmountReceived,
+            outstanding_amount: finalTotalReceivable - finalAmountReceived,
+            given_date,
+            expected_return_date: expected_return_date || null,
+            actual_return_date,
+            purpose: purpose || null,
+            status,
+            has_written_agreement: !!has_written_agreement,
+            agreement_reference: agreement_reference || null,
+            reminder_enabled: !!reminder_enabled,
+            notes: notes || null
+        }, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ]), [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ]);
+
         const { data: receivable, error } = await supabase
             .from('receivables')
-            .insert({
-                user_id: user.id,
-                given_to: encrypt(given_to),
-                relationship,
-                contact_number: encrypt(contact_number),
-                email: encrypt(email),
-                principal_amount: principal,
-                interest_rate: rate,
-                interest_type: rate && rate > 0 ? type : null,
-                interest_start_date: rate && rate > 0 ? (interest_start_date || given_date) : null,
-                interest_end_date: rate && rate > 0 ? interest_end_date : null,
-                interest_amount,
-                last_interest_calculated_at: rate && rate > 0 ? new Date().toISOString() : null,
-                total_receivable: finalTotalReceivable,
-                amount_received: finalAmountReceived,
-                given_date,
-                expected_return_date: expected_return_date || null,
-                actual_return_date,
-                purpose,
-                status,
-                has_written_agreement: !!has_written_agreement,
-                agreement_reference,
-                reminder_enabled: !!reminder_enabled,
-                notes: encrypt(notes)
-            })
+            .insert(newReceivableData)
             .select()
             .single()
 
@@ -177,13 +186,14 @@ export async function POST(request: Request) {
             )
         }
 
-        const decryptedReceivable = {
-            ...receivable,
-            contact_number: decrypt(receivable.contact_number),
-            email: decrypt(receivable.email),
-            notes: decrypt(receivable.notes),
-            given_to: decrypt(receivable.given_to)
-        }
+        let decryptedReceivable = decryptFields(receivable, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ])
+        
+        decryptedReceivable = decryptNumericFields(decryptedReceivable, [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ])
 
         return NextResponse.json({ receivable: decryptedReceivable }, { status: 201 })
     } catch (error) {

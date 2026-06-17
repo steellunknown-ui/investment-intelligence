@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { createAlert } from '@/lib/alerts'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -33,13 +33,14 @@ export async function GET() {
             )
         }
 
-        const decryptedLiabilities = liabilities?.map(liability => ({
-            ...liability,
-            account_number: decrypt(liability.account_number),
-            auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details),
-            notes: decrypt(liability.notes)
-        }))
+        let decryptedLiabilities = liabilities?.map(liability => decryptFields(liability, [
+            'loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 
+            'account_number', 'notes'
+        ]))
+        
+        decryptedLiabilities = decryptedLiabilities?.map(liability => decryptNumericFields(liability, [
+            'principal_amount', 'outstanding_amount', 'emi_amount'
+        ]))
 
         return NextResponse.json({ liabilities: decryptedLiabilities ?? [] })
     } catch (error) {
@@ -121,32 +122,41 @@ export async function POST(request: Request) {
             }
         }
 
+        let newLiabilityData = encryptFields({
+            user_id: user.id,
+            loan_type,
+            loan_name: loan_name || null,
+            taken_from,
+            lender_type,
+            principal_amount: Number(principal_amount),
+            interest_rate: interest_rate ? Number(interest_rate) : null,
+            interest_type,
+            outstanding_amount: Number(outstanding_amount),
+            emi_amount: emi_amount ? Number(emi_amount) : null,
+            loan_start_date: loan_start_date || null,
+            loan_end_date: loan_end_date || null,
+            tenure_months: tenure_months ? Number(tenure_months) : null,
+            emi_due_day: emi_due_day ? Number(emi_due_day) : null,
+            auto_debit_account: auto_debit_account || null,
+            is_secured: !!is_secured,
+            collateral_type: collateral_type || null,
+            collateral_details: collateral_details || null,
+            status: status || 'active',
+            linked_asset_id: linked_asset_id || null,
+            account_number: account_number || null,
+            notes: notes || null
+        }, [
+            'loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 
+            'account_number', 'notes'
+        ]);
+
+        newLiabilityData = encryptNumericFields(newLiabilityData, [
+            'principal_amount', 'outstanding_amount', 'emi_amount'
+        ]);
+
         const { data: liability, error } = await supabase
             .from('liabilities')
-            .insert({
-                user_id: user.id,
-                loan_type,
-                loan_name,
-                taken_from,
-                lender_type,
-                principal_amount: Number(principal_amount),
-                interest_rate: interest_rate ? Number(interest_rate) : null,
-                interest_type,
-                outstanding_amount: Number(outstanding_amount),
-                emi_amount: emi_amount ? Number(emi_amount) : null,
-                loan_start_date: loan_start_date || null,
-                loan_end_date: loan_end_date || null,
-                tenure_months: tenure_months ? Number(tenure_months) : null,
-                emi_due_day: emi_due_day ? Number(emi_due_day) : null,
-                auto_debit_account: encrypt(auto_debit_account),
-                is_secured: !!is_secured,
-                collateral_type: collateral_type || null,
-                collateral_details: encrypt(collateral_details || null),
-                status: status || 'active',
-                linked_asset_id: linked_asset_id || null,
-                account_number: encrypt(account_number),
-                notes: encrypt(notes || null)
-            })
+            .insert(newLiabilityData)
             .select()
             .single()
 
@@ -166,13 +176,14 @@ export async function POST(request: Request) {
             message: `New liability "${loan_name || loan_type}" from ${taken_from} has been recorded.`
         });
 
-        const decryptedLiability = {
-            ...liability,
-            account_number: decrypt(liability.account_number),
-            auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details),
-            notes: decrypt(liability.notes)
-        }
+        let decryptedLiability = decryptFields(liability, [
+            'loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 
+            'account_number', 'notes'
+        ])
+        
+        decryptedLiability = decryptNumericFields(decryptedLiability, [
+            'principal_amount', 'outstanding_amount', 'emi_amount'
+        ])
 
         return NextResponse.json({ liability: decryptedLiability }, { status: 201 })
     } catch (error) {

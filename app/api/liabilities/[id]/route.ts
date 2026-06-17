@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -40,11 +40,14 @@ export async function PATCH(
             return NextResponse.json({ error: 'Outstanding cannot be negative' }, { status: 400 })
         }
 
-        const updateData = { ...sanitizedBody }
-        if (updateData.account_number !== undefined) updateData.account_number = encrypt(updateData.account_number)
-        if (updateData.auto_debit_account !== undefined) updateData.auto_debit_account = encrypt(updateData.auto_debit_account)
-        if (updateData.collateral_details !== undefined) updateData.collateral_details = encrypt(updateData.collateral_details)
-        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
+        let updateData = encryptFields({ ...sanitizedBody }, [
+            'loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 
+            'account_number', 'notes'
+        ])
+        
+        updateData = encryptNumericFields(updateData, [
+            'principal_amount', 'outstanding_amount', 'emi_amount'
+        ])
 
         const { data: liability, error } = await supabase
             .from('liabilities')
@@ -62,13 +65,14 @@ export async function PATCH(
             )
         }
 
-        const decryptedLiability = {
-            ...liability,
-            account_number: decrypt(liability.account_number),
-            auto_debit_account: decrypt(liability.auto_debit_account),
-            collateral_details: decrypt(liability.collateral_details),
-            notes: decrypt(liability.notes)
-        }
+        let decryptedLiability = decryptFields(liability, [
+            'loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 
+            'account_number', 'notes'
+        ])
+        
+        decryptedLiability = decryptNumericFields(decryptedLiability, [
+            'principal_amount', 'outstanding_amount', 'emi_amount'
+        ])
 
         return NextResponse.json({ liability: decryptedLiability })
     } catch (error) {

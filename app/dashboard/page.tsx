@@ -39,11 +39,12 @@ import { toast } from "sonner";
 import type { NetWorthSummary } from "@/lib/types";
 
 // Format currency with ₹ symbol and commas
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | string | null | undefined): string {
   // Use absolute value for formatting, handle negative sign manually if needed
   // Net worth can be negative
-  const isNegative = value < 0;
-  const absVal = Math.abs(value);
+  const numValue = Number(value) || 0;
+  const isNegative = numValue < 0;
+  const absVal = Math.abs(numValue);
 
   const formatted = new Intl.NumberFormat("en-IN", {
     style: "currency",

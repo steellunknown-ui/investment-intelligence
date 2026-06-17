@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -31,10 +31,9 @@ export async function GET() {
                     .eq('user_id', member.member_user_id)
                     .single()
                 
+                const decryptedMember = decryptFields(member, ['member_name', 'relation'])
                 return {
-                    ...member,
-                    member_name: decrypt(member.member_name),
-                    relation: decrypt(member.relation),
+                    ...decryptedMember,
                     member_profile: profile
                 }
             })
@@ -84,15 +83,17 @@ export async function POST(request: Request) {
         }
 
         // Insert family member
+        const newMemberData = encryptFields({
+            owner_id: user.id,
+            member_user_id: memberUser.id,
+            member_name: name,
+            relation: relation,
+            role: 'viewer'
+        }, ['member_name', 'relation']);
+
         const { data: member, error } = await supabase
             .from('family_members')
-            .insert({
-                owner_id: user.id,
-                member_user_id: memberUser.id,
-                member_name: encrypt(name),
-                relation: encrypt(relation),
-                role: 'viewer'
-            })
+            .insert(newMemberData)
             .select()
             .single()
 
@@ -114,11 +115,11 @@ export async function POST(request: Request) {
             .eq('user_id', memberUser.id)
             .single()
 
+        const decryptedMember = decryptFields(member, ['member_name', 'relation'])
+
         return NextResponse.json({ 
             member: {
-                ...member,
-                member_name: decrypt(member.member_name),
-                relation: decrypt(member.relation),
+                ...decryptedMember,
                 member_profile: profile
             }
         }, { status: 201 })

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET(
     request: Request,
@@ -50,7 +51,13 @@ export async function GET(
             )
         }
 
-        return NextResponse.json({ payments: payments ?? [] })
+        let decryptedPayments = payments?.map(payment => decryptFields(payment, [
+            'reference_number', 'notes'
+        ]))
+        
+        decryptedPayments = decryptedPayments?.map(payment => decryptNumericFields(payment, ['amount']))
+
+        return NextResponse.json({ payments: decryptedPayments ?? [] })
     } catch (error) {
         console.error('Liability payments GET error:', error)
         return NextResponse.json(
@@ -121,22 +128,27 @@ export async function POST(
             )
         }
 
+        // Prepare Payment Data
+        let paymentData = encryptFields({
+            user_id: user.id,
+            liability_id: id,
+            payment_date,
+            amount: Number(amount),
+            principal_component: principal_component ? Number(principal_component) : null,
+            interest_component: interest_component ? Number(interest_component) : null,
+            payment_mode,
+            reference_number,
+            outstanding_after_payment: outstanding_after_payment ? Number(outstanding_after_payment) : null,
+            status: status || 'completed',
+            notes
+        }, ['reference_number', 'notes'])
+
+        paymentData = encryptNumericFields(paymentData, ['amount', 'principal_component', 'interest_component', 'outstanding_after_payment'])
+
         // Insert Payment
         const { data: payment, error: insertError } = await supabase
             .from('liability_payments')
-            .insert({
-                user_id: user.id,
-                liability_id: id,
-                payment_date,
-                amount: Number(amount),
-                principal_component: principal_component ? Number(principal_component) : null,
-                interest_component: interest_component ? Number(interest_component) : null,
-                payment_mode,
-                reference_number,
-                outstanding_after_payment: outstanding_after_payment ? Number(outstanding_after_payment) : null,
-                status: status || 'completed',
-                notes
-            })
+            .insert(paymentData)
             .select()
             .single()
 

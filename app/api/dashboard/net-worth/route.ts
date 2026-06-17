@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
+import { decryptNumber } from '@/src/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,11 +45,13 @@ export async function GET() {
         ])
 
         // Calculate Totals
-        const bankBalanceTotal = bankAccounts?.reduce((sum, acc) => sum + (acc.current_balance || 0), 0) || 0
-        const assetsTotalValue = assets?.reduce((sum, a) => sum + (a.current_market_value || 0), 0) || 0
-        const belongingsTotalValue = belongings?.reduce((sum, b) => sum + (b.current_estimated_value || 0), 0) || 0
-        const receivablesOutstandingTotal = receivables?.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0) || 0
-        const liabilitiesOutstandingTotal = liabilities?.reduce((sum, l) => sum + (l.outstanding_amount || 0), 0) || 0
+        const bankBalanceTotal = bankAccounts?.reduce((sum, acc) => sum + (decryptNumber(acc.current_balance as string) || 0), 0) || 0
+        const assetsTotalValue = assets?.reduce((sum, a) => sum + (decryptNumber(a.current_market_value as string) || 0), 0) || 0
+        const belongingsTotalValue = belongings?.reduce((sum, b) => sum + (decryptNumber(b.current_estimated_value as string) || 0), 0) || 0
+        const receivablesOutstandingTotal = receivables?.reduce((sum, r) => sum + (decryptNumber(r.outstanding_amount as string) || 0), 0) || 0
+        const liabilitiesOutstandingTotal = liabilities?.reduce((sum, l) => sum + (decryptNumber(l.outstanding_amount as string) || 0), 0) || 0
+
+
 
         // Net Worth Formula
         // (Liquid Cash + Investments/Assets + Valuables + Money Owed To You) - (Debts)
@@ -76,6 +79,8 @@ export async function GET() {
             netWorth,
             updatedAt: new Date().toISOString()
         }
+
+
 
         return NextResponse.json(summary)
     } catch (error) {

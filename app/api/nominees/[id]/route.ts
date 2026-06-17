@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -24,14 +24,18 @@ export async function PATCH(
 
         // Update only allowed fields (not email or is_verified)
         const updateData: Record<string, unknown> = {}
-        if (name !== undefined) updateData.name = encrypt(name)
+        if (name !== undefined) updateData.name = name
         if (relationship !== undefined) updateData.relationship = relationship
         if (access_level !== undefined) updateData.access_level = access_level
         updateData.updated_at = new Date().toISOString()
 
+        const encryptedUpdateData = encryptFields(updateData, [
+            'name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'
+        ])
+
         const { data: nominee, error } = await supabase
             .from('nominees')
-            .update(updateData)
+            .update(encryptedUpdateData)
             .eq('id', nomineeId)
             .eq('user_id', user.id)
             .select()
@@ -45,14 +49,9 @@ export async function PATCH(
             )
         }
 
-        const decryptedNominee = {
-            ...nominee,
-            name: decrypt(nominee.name),
-            email: decrypt(nominee.email),
-            nominee_phone: decrypt(nominee.nominee_phone),
-            aadhaar_hash: decrypt(nominee.aadhaar_hash),
-            pan_hash: decrypt(nominee.pan_hash)
-        }
+        const decryptedNominee = decryptFields(nominee, [
+            'name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'
+        ])
 
         return NextResponse.json({ nominee: decryptedNominee })
     } catch (error) {

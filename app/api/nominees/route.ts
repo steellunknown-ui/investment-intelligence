@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,14 +32,9 @@ export async function GET() {
             )
         }
 
-        const decryptedNominees = nominees?.map(nominee => ({
-            ...nominee,
-            name: decrypt(nominee.name),
-            email: decrypt(nominee.email),
-            nominee_phone: decrypt(nominee.nominee_phone),
-            aadhaar_hash: decrypt(nominee.aadhaar_hash),
-            pan_hash: decrypt(nominee.pan_hash)
-        }))
+        const decryptedNominees = nominees?.map(nominee => decryptFields(nominee, [
+            'name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'
+        ]))
 
         return NextResponse.json({ nominees: decryptedNominees ?? [] })
     } catch (error) {
@@ -98,20 +93,24 @@ export async function POST(request: Request) {
             )
         }
 
+        const newNomineeData = encryptFields({
+            user_id: user.id,
+            name,
+            email: email ? email.toLowerCase() : null,
+            nominee_phone,
+            aadhaar_hash: aadhaar_hash || null,
+            pan_hash: pan_hash || null,
+            verification_method: verificationMethod,
+            relationship: relationship || null,
+            access_level: access_level || 'view_only',
+            is_verified: false,
+        }, [
+            'name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'
+        ]);
+
         const { data: nominee, error } = await supabase
             .from('nominees')
-            .insert({
-                user_id: user.id,
-                name: encrypt(name),
-                email: email ? encrypt(email.toLowerCase()) : null,
-                nominee_phone: encrypt(nominee_phone),
-                aadhaar_hash: encrypt(aadhaar_hash || null),
-                pan_hash: encrypt(pan_hash || null),
-                verification_method: verificationMethod,
-                relationship: relationship || null,
-                access_level: access_level || 'view_only',
-                is_verified: false,
-            })
+            .insert(newNomineeData)
             .select()
             .single()
 
@@ -123,14 +122,9 @@ export async function POST(request: Request) {
             )
         }
 
-        const decryptedNominee = {
-            ...nominee,
-            name: decrypt(nominee.name),
-            email: decrypt(nominee.email),
-            nominee_phone: decrypt(nominee.nominee_phone),
-            aadhaar_hash: decrypt(nominee.aadhaar_hash),
-            pan_hash: decrypt(nominee.pan_hash)
-        }
+        const decryptedNominee = decryptFields(nominee, [
+            'name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'
+        ])
 
         return NextResponse.json({ nominee: decryptedNominee }, { status: 201 })
     } catch (error) {

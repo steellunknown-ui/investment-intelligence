@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -45,16 +45,20 @@ export async function GET() {
                 return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
             }
 
+            const decryptedNewProfile = decryptFields(newProfile, [
+                'full_name', 'contact_number', 'address', 'city', 'state', 'pincode'
+            ])
+
             return NextResponse.json({
                 profile: {
-                    full_name: newProfile.full_name || '',
-                    contact_number: decrypt(newProfile.contact_number) || '',
+                    full_name: decryptedNewProfile.full_name || '',
+                    contact_number: decryptedNewProfile.contact_number || '',
                     gender: newProfile.gender || '',
                     date_of_birth: newProfile.date_of_birth || '',
-                    address: decrypt(newProfile.address) || '',
-                    city: newProfile.city || '',
-                    state: newProfile.state || '',
-                    pincode: newProfile.pincode || '',
+                    address: decryptedNewProfile.address || '',
+                    city: decryptedNewProfile.city || '',
+                    state: decryptedNewProfile.state || '',
+                    pincode: decryptedNewProfile.pincode || '',
                     country: newProfile.country || 'India',
                     // Priority: Stored avatar_url > Google OAuth picture
                     avatar_url: newProfile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null
@@ -62,16 +66,20 @@ export async function GET() {
             })
         }
 
+        const decryptedProfile = decryptFields(profile, [
+            'full_name', 'contact_number', 'address', 'city', 'state', 'pincode'
+        ])
+
         return NextResponse.json({
             profile: {
-                full_name: profile.full_name || '',
-                contact_number: decrypt(profile.contact_number) || '',
+                full_name: decryptedProfile.full_name || '',
+                contact_number: decryptedProfile.contact_number || '',
                 gender: profile.gender || '',
                 date_of_birth: profile.date_of_birth || '',
-                address: decrypt(profile.address) || '',
-                city: profile.city || '',
-                state: profile.state || '',
-                pincode: profile.pincode || '',
+                address: decryptedProfile.address || '',
+                city: decryptedProfile.city || '',
+                state: decryptedProfile.state || '',
+                pincode: decryptedProfile.pincode || '',
                 country: profile.country || 'India',
                 // Priority: Stored avatar_url > Google OAuth picture
                 avatar_url: profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null
@@ -119,22 +127,26 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: 'Invalid date of birth' }, { status: 400 })
         }
 
+        const upsertData = encryptFields({
+            id: user.id,
+            full_name: full_name.trim(),
+            contact_number: contact_number || null,
+            gender: gender || null,
+            date_of_birth: date_of_birth || null,
+            address: address || null,
+            city: city || null,
+            state: state || null,
+            pincode: pincode || null,
+            country: country || 'India',
+            updated_at: new Date().toISOString()
+        }, [
+            'full_name', 'contact_number', 'address', 'city', 'state', 'pincode'
+        ])
+
         // Update profile
         const { error: updateError } = await supabase
             .from('profiles')
-            .upsert({
-                id: user.id,
-                full_name: full_name.trim(),
-                contact_number: contact_number ? encrypt(contact_number) : null,
-                gender: gender || null,
-                date_of_birth: date_of_birth || null,
-                address: address ? encrypt(address) : null,
-                city: city || null,
-                state: state || null,
-                pincode: pincode || null,
-                country: country || 'India',
-                updated_at: new Date().toISOString()
-            })
+            .upsert(upsertData)
 
         if (updateError) {
             console.error('Profile update error:', updateError)

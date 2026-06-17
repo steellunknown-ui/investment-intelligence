@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server';
 import { generateInsights } from '@/lib/ai';
+import { decryptNumber } from '@/src/lib/encryption';
 
 export const maxDuration = 60; // Allow AI responses to take up to 60s
 export const dynamic = 'force-dynamic';
@@ -61,7 +62,7 @@ async function fetchUserContext(supabase: any, userId: string) {
 
         const totalBankBalance = bankAccounts
             ?.filter((acc: any) => acc.status === 'active')
-            .reduce((sum: number, acc: any) => sum + (acc.current_balance || 0), 0) || 0;
+            .reduce((sum: number, acc: any) => sum + (decryptNumber(acc.current_balance as string) || 0), 0) || 0;
 
         // Fetch assets
         const { data: assets } = await supabase
@@ -70,7 +71,7 @@ async function fetchUserContext(supabase: any, userId: string) {
             .eq('user_id', userId);
 
         const totalAssets = assets?.reduce(
-            (sum: number, asset: any) => sum + (asset.current_market_value || 0),
+            (sum: number, asset: any) => sum + (decryptNumber(asset.current_market_value as string) || 0),
             0
         ) || 0;
 
@@ -81,7 +82,7 @@ async function fetchUserContext(supabase: any, userId: string) {
             .eq('user_id', userId);
 
         const totalBelongings = belongings?.reduce(
-            (sum: number, item: any) => sum + (item.current_estimated_value || 0),
+            (sum: number, item: any) => sum + (decryptNumber(item.current_estimated_value as string) || 0),
             0
         ) || 0;
 
@@ -93,7 +94,7 @@ async function fetchUserContext(supabase: any, userId: string) {
 
         const totalReceivables = receivables
             ?.filter((r: any) => r.status === 'pending' || r.status === 'partial')
-            .reduce((sum: number, r: any) => sum + (r.outstanding_amount || 0), 0) || 0;
+            .reduce((sum: number, r: any) => sum + (decryptNumber(r.outstanding_amount as string) || 0), 0) || 0;
 
         // Fetch liabilities
         const { data: liabilities } = await supabase
@@ -103,7 +104,7 @@ async function fetchUserContext(supabase: any, userId: string) {
 
         const totalLiabilities = liabilities
             ?.filter((l: any) => l.status === 'active')
-            .reduce((sum: number, l: any) => sum + (l.outstanding_amount || 0), 0) || 0;
+            .reduce((sum: number, l: any) => sum + (decryptNumber(l.outstanding_amount as string) || 0), 0) || 0;
 
         // Fetch insurance policies
         const { data: insurance } = await supabase

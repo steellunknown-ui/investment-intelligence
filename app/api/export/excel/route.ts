@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server';
 import { NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
+import { decryptNumericFields } from '@/src/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,25 +47,31 @@ export async function GET() {
             supabase.from('inactivity_config').select('*').eq('user_id', user.id).single()
         ]);
 
-        const banking = bankingData.data || [];
-        const insurance = insuranceData.data || [];
-        const insurancePayments = insurancePaymentsData.data || [];
-        const assets = assetsData.data || [];
-        const liabilities = liabilitiesData.data || [];
-        const liabilityPayments = liabilityPaymentsData.data || [];
-        const receivables = receivablesData.data || [];
-        const belongings = belongingsData.data || [];
+        const banking = bankingData.data?.map((r: any) => decryptNumericFields(r, ['current_balance'])) || [];
+        const insurance = insuranceData.data?.map((r: any) => decryptNumericFields(r, ['sum_insured', 'premium_amount'])) || [];
+        const insurancePayments = insurancePaymentsData.data?.map((r: any) => decryptNumericFields(r, ['amount'])) || [];
+        const assets = assetsData.data?.map((r: any) => decryptNumericFields(r, ['current_market_value', 'purchase_value'])) || [];
+        const liabilities = liabilitiesData.data?.map((r: any) => decryptNumericFields(r, ['principal_amount', 'outstanding_amount', 'emi_amount'])) || [];
+        const liabilityPayments = liabilityPaymentsData.data?.map((r: any) => decryptNumericFields(r, ['amount'])) || [];
+        const receivables = receivablesData.data?.map((r: any) => decryptNumericFields(r, ['principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'])) || [];
+        const belongings = belongingsData.data?.map((r: any) => decryptNumericFields(r, ['quantity', 'purchase_value', 'current_estimated_value', 'weight_grams'])) || [];
         const documents = documentsData.data || [];
-        const holdings = holdingsData.data || [];
+        const holdings = holdingsData.data?.map((r: any) => decryptNumericFields(r, ['quantity', 'avg_buy_price'])) || [];
         const nominees = nomineesData.data || [];
         const inactivityConfig = inactivityData.data;
 
-        // Calculate summary
-        const totalBanking = banking.reduce((sum: number, acc: any) => sum + Number(acc.current_balance || 0), 0);
-        const totalAssets = assets.reduce((sum: number, asset: any) => sum + Number(asset.current_market_value || 0), 0);
-        const totalLiabilities = liabilities.reduce((sum: number, lib: any) => sum + Number(lib.outstanding_amount || 0), 0);
-        const totalReceivables = receivables.reduce((sum: number, rec: any) => sum + Number(rec.outstanding_amount || 0), 0);
-        const totalBelongings = belongings.reduce((sum: number, bel: any) => sum + Number(bel.current_estimated_value || 0), 0);
+        // Calculate summary safely
+        const safeNumber = (val: any) => {
+            if (val === null || val === undefined) return 0;
+            const num = Number(val);
+            return isNaN(num) ? 0 : num;
+        };
+
+        const totalBanking = banking.reduce((sum: number, acc: any) => sum + safeNumber(acc.current_balance), 0);
+        const totalAssets = assets.reduce((sum: number, asset: any) => sum + safeNumber(asset.current_market_value), 0);
+        const totalLiabilities = liabilities.reduce((sum: number, lib: any) => sum + safeNumber(lib.outstanding_amount), 0);
+        const totalReceivables = receivables.reduce((sum: number, rec: any) => sum + safeNumber(rec.outstanding_amount), 0);
+        const totalBelongings = belongings.reduce((sum: number, bel: any) => sum + safeNumber(bel.current_estimated_value), 0);
         const netWorth = totalBanking + totalAssets + totalBelongings + totalReceivables - totalLiabilities;
         const insuranceCount = insurance.length;
         const insuranceOverdue = insurance.filter((p: any) =>
@@ -99,6 +106,49 @@ export async function GET() {
             return '****' + accNum.slice(-4);
         };
 
+        const applyPremiumStyling = (sheet: ExcelJS.Worksheet, title: string) => {
+            sheet.insertRow(1, [title.toUpperCase()]);
+            sheet.mergeCells(1, 1, 1, sheet.columns.length || 5);
+            const titleRow = sheet.getRow(1);
+            titleRow.height = 30;
+            titleRow.getCell(1).font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+            titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+            titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+            const headerRow = sheet.getRow(2);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'left' };
+            headerRow.height = 25;
+
+            if (sheet.columns.length > 0) {
+                sheet.autoFilter = {
+                    from: { row: 2, column: 1 },
+                    to: { row: 2, column: sheet.columns.length }
+                };
+            }
+
+            sheet.eachRow((row, rowNumber) => {
+                if (rowNumber > 2) {
+                    const isEven = rowNumber % 2 === 0;
+                    row.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: isEven ? 'FFF8FAFC' : 'FFFFFFFF' }
+                    };
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.border = {
+                            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                        };
+                    });
+                }
+            });
+        };
+
+
         // Sheet 1: Summary
         const summarySheet = workbook.addWorksheet('Summary');
         summarySheet.columns = [
@@ -119,13 +169,7 @@ export async function GET() {
         ]);
 
         // Style summary sheet
-        summarySheet.getRow(1).font = { bold: true, size: 12 };
-        summarySheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FF4472C4' }
-        };
-        summarySheet.getRow(1).font = { ...summarySheet.getRow(1).font, color: { argb: 'FFFFFFFF' } };
+        applyPremiumStyling(summarySheet, 'Summary');
 
         // Sheet 2: Banking
         const bankingSheet = workbook.addWorksheet('Banking');
@@ -153,12 +197,7 @@ export async function GET() {
             });
         });
 
-        bankingSheet.getRow(1).font = { bold: true };
-        bankingSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(bankingSheet, 'Banking');
 
         // Sheet 3: Insurance
         const insuranceSheet = workbook.addWorksheet('Insurance');
@@ -190,12 +229,7 @@ export async function GET() {
             });
         });
 
-        insuranceSheet.getRow(1).font = { bold: true };
-        insuranceSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(insuranceSheet, 'Insurance');
 
         // Insurance Payments
         if (insurancePayments.length > 0) {
@@ -218,12 +252,7 @@ export async function GET() {
                 });
             });
 
-            insurancePaymentsSheet.getRow(1).font = { bold: true };
-            insurancePaymentsSheet.getRow(1).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD9E1F2' }
-            };
+            applyPremiumStyling(insurancePaymentsSheet, 'Insurance Payments');
         }
 
         // Sheet 4: Assets
@@ -260,12 +289,7 @@ export async function GET() {
             });
         });
 
-        assetsSheet.getRow(1).font = { bold: true };
-        assetsSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(assetsSheet, 'Assets');
 
         // Sheet 5: Liabilities
         const liabilitiesSheet = workbook.addWorksheet('Liabilities');
@@ -299,12 +323,7 @@ export async function GET() {
             });
         });
 
-        liabilitiesSheet.getRow(1).font = { bold: true };
-        liabilitiesSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(liabilitiesSheet, 'Liabilities');
 
         // Liability Payments
         if (liabilityPayments.length > 0) {
@@ -327,12 +346,7 @@ export async function GET() {
                 });
             });
 
-            liabilityPaymentsSheet.getRow(1).font = { bold: true };
-            liabilityPaymentsSheet.getRow(1).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD9E1F2' }
-            };
+            applyPremiumStyling(liabilityPaymentsSheet, 'Liability Payments');
         }
 
         // Sheet 6: Receivables
@@ -373,12 +387,7 @@ export async function GET() {
             });
         });
 
-        receivablesSheet.getRow(1).font = { bold: true };
-        receivablesSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(receivablesSheet, 'Receivables');
 
         // Sheet 7: Belongings
         const belongingsSheet = workbook.addWorksheet('Belongings');
@@ -412,12 +421,7 @@ export async function GET() {
             });
         });
 
-        belongingsSheet.getRow(1).font = { bold: true };
-        belongingsSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(belongingsSheet, 'Belongings');
 
         // Sheet 8: Documents
         const documentsSheet = workbook.addWorksheet('Documents');
@@ -443,12 +447,7 @@ export async function GET() {
             });
         });
 
-        documentsSheet.getRow(1).font = { bold: true };
-        documentsSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(documentsSheet, 'Documents');
 
         // Sheet 9: Holdings
         const holdingsSheet = workbook.addWorksheet('Holdings');
@@ -476,12 +475,7 @@ export async function GET() {
             });
         });
 
-        holdingsSheet.getRow(1).font = { bold: true };
-        holdingsSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(holdingsSheet, 'Holdings');
 
         // Sheet 10: Nominees
         const nomineesSheet = workbook.addWorksheet('Nominees');
@@ -507,12 +501,7 @@ export async function GET() {
             });
         });
 
-        nomineesSheet.getRow(1).font = { bold: true };
-        nomineesSheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFD9E1F2' }
-        };
+        applyPremiumStyling(nomineesSheet, 'Nominees');
 
         // Sheet 11: Legacy Config
         if (inactivityConfig) {
@@ -530,12 +519,7 @@ export async function GET() {
                 { setting: 'Updated At', value: formatDate(inactivityConfig.updated_at) }
             ]);
 
-            legacySheet.getRow(1).font = { bold: true };
-            legacySheet.getRow(1).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD9E1F2' }
-            };
+            applyPremiumStyling(legacySheet, 'Legacy Config');
         }
 
         // Generate Excel file

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { IFSC_REGEX, validateBankAccountNumber } from '@/src/lib/financialValidationRules'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -58,13 +58,14 @@ export async function PATCH(
         // Actually, let's just do basic checks for PATCH to avoid breaking partial updates
         // but IFSC is safe to check if present.
 
-        const updateData = { ...body }
-        if (updateData.account_number !== undefined) updateData.account_number = encrypt(updateData.account_number)
-        if (updateData.linked_mobile !== undefined) updateData.linked_mobile = encrypt(updateData.linked_mobile)
-        if (updateData.debit_card_number !== undefined) updateData.debit_card_number = encrypt(updateData.debit_card_number)
-        if (updateData.joint_holder_name !== undefined) updateData.joint_holder_name = encrypt(updateData.joint_holder_name)
-        if (updateData.account_holder_name !== undefined) updateData.account_holder_name = encrypt(updateData.account_holder_name)
-        if (updateData.account_nominee_name !== undefined) updateData.account_nominee_name = encrypt(updateData.account_nominee_name)
+        let updateData = encryptFields({ ...body }, [
+            'account_number', 'bank_name', 'branch_name', 'ifsc_code', 
+            'account_holder_name', 'joint_holder_name', 'account_nominee_name', 
+            'account_nominee_relationship', 'linked_mobile', 'debit_card_number', 
+            'notes', 'city', 'state'
+        ])
+        
+        updateData = encryptNumericFields(updateData, ['current_balance'])
 
         const { data: account, error } = await supabase
             .from('bank_accounts')
@@ -82,15 +83,14 @@ export async function PATCH(
             )
         }
 
-        const decryptedAccount = {
-            ...account,
-            account_number: decrypt(account.account_number),
-            linked_mobile: decrypt(account.linked_mobile),
-            debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name),
-            account_holder_name: decrypt(account.account_holder_name),
-            account_nominee_name: decrypt(account.account_nominee_name)
-        }
+        let decryptedAccount = decryptFields(account, [
+            'account_number', 'bank_name', 'branch_name', 'ifsc_code', 
+            'account_holder_name', 'joint_holder_name', 'account_nominee_name', 
+            'account_nominee_relationship', 'linked_mobile', 'debit_card_number', 
+            'notes', 'city', 'state'
+        ])
+        
+        decryptedAccount = decryptNumericFields(decryptedAccount, ['current_balance'])
 
         return NextResponse.json({ account: decryptedAccount })
     } catch (error) {

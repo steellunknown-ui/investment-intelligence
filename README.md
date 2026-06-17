@@ -13,9 +13,10 @@ Investment Intelligence Office acts as a centralized hub for managing personal f
 *   **Family & Nominee Management**: Securely add family members and assign nominees to specific assets or insurance policies.
 *   **Insurance Tracking**: Keep a detailed record of life, health, and property insurance policies.
 *   **Document Vault**: Securely upload, encrypt, and store financial documents.
-*   **AI-Powered Insights**: Uses Google Generative AI to provide smart financial insights, summaries, and alerts.
+*   **AI-Powered Insights**: Uses powerful open-source models via OpenRouter to provide smart, personalized financial insights and summaries.
 *   **Inactivity & Nominee Access**: Automated workflows to handle prolonged user inactivity and grant secure, limited access to nominees when necessary.
-*   **Export & Reporting**: Generate detailed financial reports and export data easily.
+*   **100% End-to-End Encryption**: All financial numbers, balances, and history snapshots are encrypted at rest using AES-256-CBC, dynamically decrypted only when requested by authorized users.
+*   **Export & Reporting**: Generate beautiful, detailed, and securely decrypted financial reports in Excel.
 *   **Mobile Ready**: Cross-platform mobile app support via Capacitor.
 
 ## 🛠️ Technology Stack
@@ -26,7 +27,8 @@ Investment Intelligence Office acts as a centralized hub for managing personal f
 *   **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage, and Row Level Security)
 *   **Mobile App**: [Capacitor](https://capacitorjs.com/) for building native Android/iOS apps from web code.
 *   **Emails & Notifications**: Resend / SendGrid
-*   **AI Integration**: Google Generative AI (`@google/generative-ai`)
+*   **AI Integration**: OpenRouter API (`openrouter.ai`)
+*   **Security Engine**: Native Node.js `crypto` module for AES-256 End-to-End Encryption
 *   **Validation**: Zod
 
 ## 📂 Project Structure
@@ -79,7 +81,7 @@ npx cap open android
 ## 🔒 Security
 
 *   **Row Level Security (RLS)**: Enforced via Supabase to ensure users can only access their own data.
-*   **Encryption**: Sensitive data like document links and financial details are encrypted before storage.
+*   **End-to-End Database Encryption**: All sensitive financial figures, bank balances, asset values, and document links are encrypted using `AES-256-CBC` encryption before storage. They are never stored in plain text, ensuring maximum privacy.
 
 ## 🤝 Contributing
 

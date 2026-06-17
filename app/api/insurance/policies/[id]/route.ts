@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { validateInsurancePolicyNumber } from '@/src/lib/financialValidationRules'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function PATCH(
     request: Request,
@@ -62,13 +62,15 @@ export async function PATCH(
             }
         }
 
-        const updateData = { ...sanitizedBody }
-        if (updateData.policy_number !== undefined) updateData.policy_number = encrypt(updateData.policy_number)
-        if (updateData.agent_contact !== undefined) updateData.agent_contact = encrypt(updateData.agent_contact)
-        if (updateData.policy_nominee_name !== undefined) updateData.policy_nominee_name = encrypt(updateData.policy_nominee_name)
-        if (updateData.insured_name !== undefined) updateData.insured_name = encrypt(updateData.insured_name)
-        if (updateData.agent_name !== undefined) updateData.agent_name = encrypt(updateData.agent_name)
-        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
+        let updateData = encryptFields({ ...sanitizedBody }, [
+            'policy_number', 'policy_name', 'insured_name', 'insured_relationship', 
+            'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 
+            'agent_contact', 'notes'
+        ])
+
+        updateData = encryptNumericFields(updateData, [
+            'sum_insured', 'premium_amount'
+        ])
 
         const { data: policy, error } = await supabase
             .from('insurance_policies')
@@ -86,15 +88,15 @@ export async function PATCH(
             )
         }
 
-        const decryptedPolicy = {
-            ...policy,
-            policy_number: decrypt(policy.policy_number),
-            agent_contact: decrypt(policy.agent_contact),
-            policy_nominee_name: decrypt(policy.policy_nominee_name),
-            insured_name: decrypt(policy.insured_name),
-            agent_name: decrypt(policy.agent_name),
-            notes: decrypt(policy.notes)
-        }
+        let decryptedPolicy = decryptFields(policy, [
+            'policy_number', 'policy_name', 'insured_name', 'insured_relationship', 
+            'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 
+            'agent_contact', 'notes'
+        ])
+
+        decryptedPolicy = decryptNumericFields(decryptedPolicy, [
+            'sum_insured', 'premium_amount'
+        ])
 
         return NextResponse.json({ policy: decryptedPolicy })
     } catch (error) {

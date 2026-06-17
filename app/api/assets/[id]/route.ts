@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,13 +39,13 @@ export async function PATCH(
             return NextResponse.json({ error: 'Ownership percentage must be between 0 and 100' }, { status: 400 })
         }
 
-        const updateData = { ...sanitizedBody }
-        if (updateData.registration_number !== undefined) updateData.registration_number = encrypt(updateData.registration_number)
-        if (updateData.vehicle_registration !== undefined) updateData.vehicle_registration = encrypt(updateData.vehicle_registration)
-        if (updateData.property_address !== undefined) updateData.property_address = encrypt(updateData.property_address)
-        if (updateData.owner_name !== undefined) updateData.owner_name = encrypt(updateData.owner_name)
-        if (updateData.location !== undefined) updateData.location = encrypt(updateData.location)
-        if (updateData.notes !== undefined) updateData.notes = encrypt(updateData.notes)
+        let updateData = encryptFields({ ...sanitizedBody }, [
+            'asset_name', 'owner_name', 'property_address', 'registration_number', 
+            'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 
+            'document_reference', 'location', 'notes'
+        ])
+        
+        updateData = encryptNumericFields(updateData, ['current_market_value'])
 
         const { data: asset, error } = await supabase
             .from('assets')
@@ -63,15 +63,13 @@ export async function PATCH(
             )
         }
 
-        const decryptedAsset = {
-            ...asset,
-            registration_number: decrypt(asset.registration_number),
-            vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address),
-            owner_name: decrypt(asset.owner_name),
-            location: decrypt(asset.location),
-            notes: decrypt(asset.notes)
-        }
+        let decryptedAsset = decryptFields(asset, [
+            'asset_name', 'owner_name', 'property_address', 'registration_number', 
+            'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 
+            'document_reference', 'location', 'notes'
+        ])
+        
+        decryptedAsset = decryptNumericFields(decryptedAsset, ['current_market_value'])
 
         return NextResponse.json({ asset: decryptedAsset })
     } catch (error) {

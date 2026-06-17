@@ -4,7 +4,7 @@ import { updateLastActivity } from '@/src/lib/activity'
 import { IFSC_REGEX, validateBankAccountNumber } from '@/src/lib/financialValidationRules'
 import { getIFSCDetails } from '@/src/lib/ifsc-service'
 import { createAlert } from '@/lib/alerts'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -35,15 +35,14 @@ export async function GET() {
             )
         }
 
-        const decryptedAccounts = accounts?.map(account => ({
-            ...account,
-            account_number: decrypt(account.account_number),
-            linked_mobile: decrypt(account.linked_mobile),
-            debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name),
-            account_holder_name: decrypt(account.account_holder_name),
-            account_nominee_name: decrypt(account.account_nominee_name)
-        }))
+        let decryptedAccounts = accounts?.map(account => decryptFields(account, [
+            'account_number', 'bank_name', 'branch_name', 'ifsc_code', 
+            'account_holder_name', 'joint_holder_name', 'account_nominee_name', 
+            'account_nominee_relationship', 'linked_mobile', 'debit_card_number', 
+            'notes', 'city', 'state'
+        ]))
+        
+        decryptedAccounts = decryptedAccounts?.map(account => decryptNumericFields(account, ['current_balance']))
 
         return NextResponse.json({ accounts: decryptedAccounts ?? [] })
     } catch (error) {
@@ -144,31 +143,40 @@ export async function POST(request: Request) {
             )
         }
 
+        let newAccountData = encryptFields({
+            user_id: user.id,
+            account_number,
+            bank_name,
+            branch_name,
+            ifsc_code,
+            account_type: account_type || 'savings',
+            account_holder_name,
+            is_joint_account: !!is_joint_account,
+            joint_holder_name: joint_holder_name || null,
+            joint_holders: joint_holders || [],
+            current_balance: Number(current_balance) || 0,
+            balance_as_of: balance_as_of || new Date().toISOString().split('T')[0],
+            account_nominee_name: account_nominee_name || null,
+            account_nominee_relationship,
+            status: status || 'active',
+            linked_mobile,
+            net_banking_enabled: !!net_banking_enabled,
+            debit_card_number,
+            notes,
+            city,
+            state
+        }, [
+            'account_number', 'bank_name', 'branch_name', 'ifsc_code', 
+            'account_holder_name', 'joint_holder_name', 'account_nominee_name', 
+            'account_nominee_relationship', 'linked_mobile', 'debit_card_number', 
+            'notes', 'city', 'state'
+        ]);
+
+        newAccountData = encryptNumericFields(newAccountData, ['current_balance']);
+
         const { data: account, error } = await supabase
             .from('bank_accounts')
-            .insert({
-                user_id: user.id,
-                account_number: encrypt(account_number),
-                bank_name,
-                branch_name,
-                ifsc_code,
-                account_type: account_type || 'savings',
-                account_holder_name: encrypt(account_holder_name),
-                is_joint_account: !!is_joint_account,
-                joint_holder_name: encrypt(joint_holder_name || null),
-                joint_holders: joint_holders || [],
-                current_balance: Number(current_balance) || 0,
-                balance_as_of: balance_as_of || new Date().toISOString().split('T')[0],
-                account_nominee_name: encrypt(account_nominee_name || null),
-                account_nominee_relationship,
-                status: status || 'active',
-                linked_mobile: encrypt(linked_mobile),
-                net_banking_enabled: !!net_banking_enabled,
-                debit_card_number: encrypt(debit_card_number),
-                notes,
-                city,
-                state
-            })
+            .insert(newAccountData)
             .select()
             .single()
 
@@ -188,15 +196,14 @@ export async function POST(request: Request) {
             message: `Bank account ${account_number} (${bank_name}) has been successfully linked.`
         });
 
-        const decryptedAccount = {
-            ...account,
-            account_number: decrypt(account.account_number),
-            linked_mobile: decrypt(account.linked_mobile),
-            debit_card_number: decrypt(account.debit_card_number),
-            joint_holder_name: decrypt(account.joint_holder_name),
-            account_holder_name: decrypt(account.account_holder_name),
-            account_nominee_name: decrypt(account.account_nominee_name)
-        }
+        let decryptedAccount = decryptFields(account, [
+            'account_number', 'bank_name', 'branch_name', 'ifsc_code', 
+            'account_holder_name', 'joint_holder_name', 'account_nominee_name', 
+            'account_nominee_relationship', 'linked_mobile', 'debit_card_number', 
+            'notes', 'city', 'state'
+        ])
+        
+        decryptedAccount = decryptNumericFields(decryptedAccount, ['current_balance'])
 
         return NextResponse.json({ account: decryptedAccount }, { status: 201 })
     } catch (error) {

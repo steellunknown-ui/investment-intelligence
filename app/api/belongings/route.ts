@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -32,14 +32,14 @@ export async function GET() {
             )
         }
 
-        const decryptedBelongings = belongings?.map(belonging => ({
-            ...belonging,
-            storage_location: decrypt(belonging.storage_location),
-            bank_locker_details: decrypt(belonging.bank_locker_details),
-            location_details: decrypt(belonging.location_details),
-            notes: decrypt(belonging.notes),
-            insurance_policy_reference: decrypt(belonging.insurance_policy_reference)
-        }))
+        let decryptedBelongings = belongings?.map(belonging => decryptFields(belonging, [
+            'item_name', 'description', 'storage_location', 'bank_locker_details', 'location_details', 
+            'notes', 'insurance_policy_reference'
+        ]))
+
+        decryptedBelongings = decryptedBelongings?.map(belonging => decryptNumericFields(belonging, [
+            'weight_grams', 'quantity', 'purchase_value', 'current_estimated_value'
+        ]))
 
         return NextResponse.json({ belongings: decryptedBelongings ?? [] })
     } catch (error) {
@@ -103,31 +103,40 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
         }
 
+        let newBelongingData = encryptFields({
+            user_id: user.id,
+            category,
+            item_name,
+            description,
+            material: material || null,
+            purity: purity || null,
+            weight_grams: weight_grams ? Number(weight_grams) : null,
+            quantity: quantity !== undefined ? Number(quantity) : 1,
+            purchase_value: purchase_value ? Number(purchase_value) : null,
+            purchase_date: purchase_date || null,
+            current_estimated_value: current_estimated_value ? Number(current_estimated_value) : null,
+            valuation_date: valuation_date || null,
+            storage_location: storage_location,
+            location_details: location_details || null,
+            is_insured: !!is_insured,
+            insurance_policy_reference: insurance_policy_reference || null,
+            has_invoice: !!has_invoice,
+            has_certificate: !!has_certificate,
+            bank_locker_details: bank_locker_details || null,
+            status: status || 'in_possession',
+            notes: notes || null
+        }, [
+            'item_name', 'description', 'storage_location', 'bank_locker_details', 'location_details', 
+            'notes', 'insurance_policy_reference'
+        ]);
+
+        newBelongingData = encryptNumericFields(newBelongingData, [
+            'weight_grams', 'quantity', 'purchase_value', 'current_estimated_value'
+        ]);
+
         const { data: belonging, error } = await supabase
             .from('belongings')
-            .insert({
-                user_id: user.id,
-                category,
-                item_name,
-                description,
-                material: material || null,
-                purity: purity || null,
-                weight_grams: weight_grams ? Number(weight_grams) : null,
-                quantity: quantity !== undefined ? Number(quantity) : 1,
-                purchase_value: purchase_value ? Number(purchase_value) : null,
-                purchase_date: purchase_date || null,
-                current_estimated_value: current_estimated_value ? Number(current_estimated_value) : null,
-                valuation_date: valuation_date || null,
-                storage_location: encrypt(storage_location),
-                location_details: encrypt(location_details || null),
-                is_insured: !!is_insured,
-                insurance_policy_reference: encrypt(insurance_policy_reference || null),
-                has_invoice: !!has_invoice,
-                has_certificate: !!has_certificate,
-                bank_locker_details: encrypt(bank_locker_details || null),
-                status: status || 'in_possession',
-                notes: encrypt(notes || null)
-            })
+            .insert(newBelongingData)
             .select()
             .single()
 
@@ -158,14 +167,14 @@ export async function POST(request: Request) {
             }
         }
 
-        const decryptedBelonging = {
-            ...belonging,
-            storage_location: decrypt(belonging.storage_location),
-            bank_locker_details: decrypt(belonging.bank_locker_details),
-            location_details: decrypt(belonging.location_details),
-            notes: decrypt(belonging.notes),
-            insurance_policy_reference: decrypt(belonging.insurance_policy_reference)
-        }
+        let decryptedBelonging = decryptFields(belonging, [
+            'item_name', 'description', 'storage_location', 'bank_locker_details', 'location_details', 
+            'notes', 'insurance_policy_reference'
+        ])
+        
+        decryptedBelonging = decryptNumericFields(decryptedBelonging, [
+            'weight_grams', 'quantity', 'purchase_value', 'current_estimated_value'
+        ])
 
         return NextResponse.json({ belonging: decryptedBelonging }, { status: 201 })
     } catch (error) {

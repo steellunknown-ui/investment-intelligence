@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/lib/supabase/supabase-server'
 import { updateLastActivity } from '@/src/lib/activity'
 import { createAlert } from '@/lib/alerts'
-import { encrypt, decrypt } from '@/src/lib/encryption'
+import { encrypt, decrypt, encryptFields, decryptFields, encryptNumericFields, decryptNumericFields } from '@/src/lib/encryption'
 
 export async function GET() {
     try {
@@ -33,15 +33,13 @@ export async function GET() {
             )
         }
 
-        const decryptedAssets = assets?.map(asset => ({
-            ...asset,
-            registration_number: decrypt(asset.registration_number),
-            vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address),
-            owner_name: decrypt(asset.owner_name),
-            location: decrypt(asset.location),
-            notes: decrypt(asset.notes)
-        }))
+        let decryptedAssets = assets?.map(asset => decryptFields(asset, [
+            'asset_name', 'owner_name', 'property_address', 'registration_number', 
+            'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 
+            'document_reference', 'location', 'notes'
+        ]))
+        
+        decryptedAssets = decryptedAssets?.map(asset => decryptNumericFields(asset, ['current_market_value']))
 
         return NextResponse.json({ assets: decryptedAssets ?? [] })
     } catch (error) {
@@ -116,39 +114,47 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Values cannot be negative' }, { status: 400 })
         }
 
+        const newAssetData = encryptFields({
+            user_id: user.id,
+            asset_category,
+            asset_type,
+            asset_name,
+            ownership_type: ownership_type || 'sole',
+            owner_name: owner_name || null,
+            co_owner_names: co_owner_names || null,
+            ownership_percentage: ownership_percentage !== undefined ? Number(ownership_percentage) : 100,
+            purchase_value: purchase_value ? Number(purchase_value) : null,
+            purchase_date: purchase_date || null,
+            current_market_value: current_market_value ? Number(current_market_value) : null,
+            valuation_date: valuation_date || null,
+            property_address,
+            property_area: property_area ? Number(property_area) : null,
+            property_area_unit,
+            registration_number,
+            vehicle_registration,
+            vehicle_make,
+            vehicle_model,
+            vehicle_year: vehicle_year ? Number(vehicle_year) : null,
+            is_under_loan: !!is_under_loan,
+            loan_provider,
+            loan_outstanding: loan_outstanding ? Number(loan_outstanding) : null,
+            loan_emi: loan_emi ? Number(loan_emi) : null,
+            loan_end_date: loan_end_date || null,
+            document_reference,
+            status: status || 'owned',
+            location: location || null,
+            notes: notes || null
+        }, [
+            'asset_name', 'owner_name', 'property_address', 'registration_number', 
+            'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 
+            'document_reference', 'location', 'notes'
+        ]);
+
+        newAssetData = encryptNumericFields(newAssetData, ['current_market_value']);
+
         const { data: asset, error } = await supabase
             .from('assets')
-            .insert({
-                user_id: user.id,
-                asset_category,
-                asset_type,
-                asset_name,
-                ownership_type: ownership_type || 'sole',
-                owner_name: encrypt(owner_name || null),
-                co_owner_names: co_owner_names || null,
-                ownership_percentage: ownership_percentage !== undefined ? Number(ownership_percentage) : 100,
-                purchase_value: purchase_value ? Number(purchase_value) : null,
-                purchase_date: purchase_date || null,
-                current_market_value: current_market_value ? Number(current_market_value) : null,
-                valuation_date: valuation_date || null,
-                property_address: encrypt(property_address),
-                property_area: property_area ? Number(property_area) : null,
-                property_area_unit,
-                registration_number: encrypt(registration_number),
-                vehicle_registration: encrypt(vehicle_registration),
-                vehicle_make,
-                vehicle_model,
-                vehicle_year: vehicle_year ? Number(vehicle_year) : null,
-                is_under_loan: !!is_under_loan,
-                loan_provider,
-                loan_outstanding: loan_outstanding ? Number(loan_outstanding) : null,
-                loan_emi: loan_emi ? Number(loan_emi) : null,
-                loan_end_date: loan_end_date || null,
-                document_reference,
-                status: status || 'owned',
-                location: encrypt(location || null),
-                notes: encrypt(notes || null)
-            })
+            .insert(newAssetData)
             .select()
             .single()
 
@@ -168,15 +174,13 @@ export async function POST(request: Request) {
             message: `New asset "${asset_name}" (${asset_type}) has been added to your vault.`
         });
 
-        const decryptedAsset = {
-            ...asset,
-            registration_number: decrypt(asset.registration_number),
-            vehicle_registration: decrypt(asset.vehicle_registration),
-            property_address: decrypt(asset.property_address),
-            owner_name: decrypt(asset.owner_name),
-            location: decrypt(asset.location),
-            notes: decrypt(asset.notes)
-        }
+        let decryptedAsset = decryptFields(asset, [
+            'asset_name', 'owner_name', 'property_address', 'registration_number', 
+            'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 
+            'document_reference', 'location', 'notes'
+        ])
+        
+        decryptedAsset = decryptNumericFields(decryptedAsset, ['current_market_value'])
 
         return NextResponse.json({ asset: decryptedAsset }, { status: 201 })
     } catch (error) {

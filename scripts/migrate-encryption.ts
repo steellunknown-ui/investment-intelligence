@@ -1,141 +1,207 @@
 import { createClient } from '@supabase/supabase-js'
-import * as fs from 'fs'
-import * as path from 'path'
-import * as crypto from 'crypto'
+import crypto from 'crypto'
+import { loadEnvConfig } from '@next/env'
 
-// 1. Manually parse .env.local
-const envPath = path.resolve(process.cwd(), '.env.local')
-if (fs.existsSync(envPath)) {
-    const envConfig = fs.readFileSync(envPath, 'utf8')
-    envConfig.split('\n').forEach(line => {
-        const match = line.match(/^([^=:#]+?)[=:](.*)/)
-        if (match) {
-            const key = match[1].trim()
-            let value = match[2].trim()
-            if (value.startsWith('"') && value.endsWith('"')) {
-                value = value.slice(1, -1)
-            }
-            if (value.startsWith("'") && value.endsWith("'")) {
-                value = value.slice(1, -1)
-            }
-            process.env[key] = value
-        }
-    })
-}
+// Load environment variables from .env.local
+loadEnvConfig(process.cwd())
 
-// 2. Load Encryption Key and Supabase config
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || ''
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '' // Use service role for admin access
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+const encryptionKey = process.env.ENCRYPTION_KEY?.trim()
 
-if (!ENCRYPTION_KEY) {
-    console.error('Error: ENCRYPTION_KEY is missing from .env.local')
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Missing Supabase credentials in .env.local')
     process.exit(1)
 }
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    console.error('Error: Supabase URL or Service Role Key is missing')
+if (!encryptionKey || encryptionKey.length !== 32) {
+    console.error('Error: ENCRYPTION_KEY must be 32 characters')
     process.exit(1)
 }
 
-// 3. Duplicate encryption logic to avoid next.js specific imports
-const ALGORITHM = 'aes-256-cbc'
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-function encrypt(text: string | null | undefined): string {
-    if (!text) return ''
-    
-    if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
-        console.warn('⚠️ ENCRYPTION_KEY is missing or invalid (must be 32 characters). Data will not be encrypted.')
-        return text
-    }
+// Encryption utility functions
+const ENCRYPTION_ALGORITHM = 'aes-256-cbc'
 
-    // Don't encrypt if it already looks like our encrypted format (hex:hex)
-    if (typeof text === 'string' && text.includes(':') && text.split(':')[0].length === 32) {
-        return text
-    }
-
+function encrypt(text: string | null | undefined): string | null {
+    if (!text) return null
     try {
         const iv = crypto.randomBytes(16)
-        const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv)
-        
+        const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, Buffer.from(encryptionKey as string), iv)
         let encrypted = cipher.update(text)
         encrypted = Buffer.concat([encrypted, cipher.final()])
-        
         return iv.toString('hex') + ':' + encrypted.toString('hex')
-    } catch (err) {
-        console.error('Encryption failed:', err)
+    } catch (error) {
+        console.error('Encryption failed:', error)
         return text
     }
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
-    }
-})
-
-async function migrateTable(tableName: string, fieldsToEncrypt: string[]) {
-    console.log(`\n--- Migrating ${tableName} ---`)
-    let { data: rows, error } = await supabase.from(tableName).select('*')
-    
-    if (error) {
-        console.error(`Failed to fetch ${tableName}:`, error)
-        return
-    }
-
-    if (!rows || rows.length === 0) {
-        console.log(`No records found in ${tableName}.`)
-        return
-    }
-
-    let updatedCount = 0
-
-    for (const row of rows) {
-        let needsUpdate = false
-        const updateData: any = {}
-
-        for (const field of fieldsToEncrypt) {
-            const val = row[field]
-            // If value exists and isn't already encrypted (doesn't look like iv:encrypted_data)
-            if (val && typeof val === 'string' && !(val.includes(':') && val.split(':')[0].length === 32)) {
-                updateData[field] = encrypt(val)
-                needsUpdate = true
-            }
-        }
-
-        if (needsUpdate) {
-            const { error: updateError } = await supabase
-                .from(tableName)
-                .update(updateData)
-                .eq('id', row.id)
-            
-            if (updateError) {
-                console.error(`Error updating row ${row.id} in ${tableName}:`, updateError)
-            } else {
-                updatedCount++
-            }
-        }
-    }
-
-    console.log(`Successfully encrypted ${updatedCount} records in ${tableName}.`)
+function encryptNumber(num: number | null | undefined): string | null {
+    if (num === null || num === undefined) return null
+    return encrypt(num.toString())
 }
 
+function isEncrypted(value: any): boolean {
+    if (typeof value !== 'string') return false
+    const parts = value.split(':')
+    return parts.length === 2 && parts[0].length === 32
+}
+
+const TABLES_TO_MIGRATE = [
+    {
+        name: 'bank_accounts',
+        stringFields: ['bank_name', 'account_number', 'ifsc_code', 'branch_name', 'account_holder_name', 'joint_holder_name', 'nominee_name', 'nominee_relationship', 'customer_id', 'notes'],
+        numericFields: ['current_balance']
+    },
+    {
+        name: 'assets',
+        stringFields: ['asset_name', 'owner_name', 'property_address', 'registration_number', 'vehicle_registration', 'vehicle_make', 'vehicle_model', 'loan_provider', 'document_reference', 'location', 'notes'],
+        numericFields: ['current_market_value']
+    },
+    {
+        name: 'liabilities',
+        stringFields: ['loan_name', 'taken_from', 'auto_debit_account', 'collateral_details', 'account_number', 'notes'],
+        numericFields: ['principal_amount', 'outstanding_amount', 'emi_amount']
+    },
+    {
+        name: 'insurance_policies',
+        stringFields: ['policy_number', 'policy_name', 'insured_name', 'insured_relationship', 'policy_nominee_name', 'policy_nominee_relationship', 'agent_name', 'agent_contact', 'notes'],
+        numericFields: ['sum_insured', 'premium_amount']
+    },
+    {
+        name: 'receivables',
+        stringFields: ['given_to', 'relationship', 'contact_number', 'email', 'purpose', 'agreement_reference', 'notes'],
+        numericFields: ['principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount']
+    },
+    {
+        name: 'nominees',
+        stringFields: ['name', 'email', 'nominee_phone', 'aadhaar_hash', 'pan_hash'],
+        numericFields: []
+    },
+    {
+        name: 'holdings',
+        stringFields: ['symbol', 'name', 'notes'],
+        numericFields: ['quantity', 'avg_buy_price']
+    },
+    {
+        name: 'profiles',
+        stringFields: ['full_name', 'contact_number', 'address', 'city', 'state', 'pincode'],
+        numericFields: []
+    },
+    {
+        name: 'family_members',
+        stringFields: ['member_name', 'relation'],
+        numericFields: []
+    },
+    {
+        name: 'belongings',
+        stringFields: ['item_name', 'description', 'storage_location', 'bank_locker_details', 'location_details', 'notes', 'insurance_policy_reference'],
+        numericFields: ['quantity', 'purchase_value', 'current_estimated_value', 'weight_grams']
+    }
+]
+
 async function runMigration() {
-    console.log('Starting Encryption Migration...\n')
+    console.log('Starting encryption migration...')
+    const BATCH_SIZE = 100
 
-    await migrateTable('bank_accounts', ['account_number', 'linked_mobile', 'debit_card_number', 'joint_holder_name', 'account_holder_name', 'account_nominee_name'])
-    await migrateTable('insurance_policies', ['policy_number', 'agent_contact', 'policy_nominee_name', 'insured_name', 'agent_name', 'notes'])
-    await migrateTable('assets', ['registration_number', 'vehicle_registration', 'property_address', 'owner_name', 'location', 'notes'])
-    await migrateTable('liabilities', ['account_number', 'auto_debit_account', 'collateral_details', 'notes'])
-    await migrateTable('receivables', ['contact_number', 'email', 'notes', 'given_to'])
-    await migrateTable('belongings', ['storage_location', 'bank_locker_details', 'location_details', 'notes', 'insurance_policy_reference'])
-    await migrateTable('profiles', ['contact_number', 'address'])
-    await migrateTable('nominees', ['email', 'nominee_phone', 'name', 'aadhaar_hash', 'pan_hash'])
-    await migrateTable('family_members', ['member_name', 'relation'])
-    await migrateTable('holdings', ['notes'])
+    for (const tableConfig of TABLES_TO_MIGRATE) {
+        console.log(`\nMigrating table: ${tableConfig.name}...`)
+        
+        let lastId = '00000000-0000-0000-0000-000000000000'
+        let hasMore = true
+        let updatedCount = 0
 
-    console.log('\nMigration Complete! All sensitive data is now encrypted.')
+        while (hasMore) {
+            const { data: records, error } = await supabase
+                .from(tableConfig.name)
+                .select('*')
+                .gt('id', lastId)
+                .order('id', { ascending: true })
+                .limit(BATCH_SIZE)
+
+            if (error) {
+                console.error(`Failed to fetch records:`, error)
+                break
+            }
+
+            if (!records || records.length === 0) {
+                hasMore = false
+                break
+            }
+
+            for (const record of records) {
+                lastId = record.id
+                let needsUpdate = false
+                const updateData: Record<string, any> = {}
+
+                // Process string fields
+                if (tableConfig.stringFields) {
+                    for (const field of tableConfig.stringFields) {
+                        const val = record[field]
+                        if (val && typeof val === 'string' && !isEncrypted(val)) {
+                            updateData[field] = encrypt(val)
+                            needsUpdate = true
+                        }
+                    }
+                }
+
+                // Process numeric fields
+                if (tableConfig.numericFields) {
+                    for (const field of tableConfig.numericFields) {
+                        let val = record[field]
+                        
+                        // Special case: if we are migrating receivables and outstanding_amount is missing (because we just recreated it)
+                        if (tableConfig.name === 'receivables' && field === 'outstanding_amount' && (val === null || val === undefined)) {
+                            const total = Number(record['total_receivable']) || 0
+                            const received = Number(record['amount_received']) || 0
+                            val = total - received
+                        }
+
+                        if (val !== null && val !== undefined && val !== '') {
+                            if (typeof val === 'string' && isEncrypted(val)) {
+                                continue
+                            }
+                            const parsed = Number(val)
+                            if (!isNaN(parsed)) {
+                                const encryptedVal = encryptNumber(parsed)
+                                if (encryptedVal) {
+                                    updateData[field] = encryptedVal
+                                    needsUpdate = true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!needsUpdate) {
+                    continue
+                }
+
+                const idField = record.id ? 'id' : (record.user_id ? 'user_id' : null)
+                if (!idField) {
+                    console.error(`Could not determine primary key for record in ${tableConfig.name}`, record)
+                    continue
+                }
+
+                const { error: updateError } = await supabase
+                    .from(tableConfig.name)
+                    .update(updateData)
+                    .eq(idField, record[idField])
+
+                if (updateError) {
+                    console.error(`Failed to update record ${record[idField]} in ${tableConfig.name}:`, updateError)
+                } else {
+                    updatedCount++
+                }
+            }
+        }
+
+        console.log(`Successfully migrated ${updatedCount} records in ${tableConfig.name}.`)
+    }
+
+    console.log('\nMigration complete.')
 }
 
 runMigration().catch(console.error)

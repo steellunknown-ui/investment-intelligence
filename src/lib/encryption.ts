@@ -12,6 +12,9 @@ export function encrypt(text: string | null | undefined): string | null {
     if (!text) return text as any;
     
     if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('CRITICAL: ENCRYPTION_KEY is missing or invalid in production.');
+        }
         console.warn('⚠️ ENCRYPTION_KEY is missing or invalid (must be 32 characters). Data will not be encrypted.');
         return text;
     }
@@ -75,4 +78,95 @@ export function decrypt(text: string | null | undefined): string | null {
         console.error('Decryption failed for a string:', err);
         return text;
     }
+}
+
+/**
+ * Utility to encrypt multiple string fields in an object.
+ */
+export function encryptFields<T extends Record<string, any>>(record: T, fields: (keyof T)[]): T {
+    const result = { ...record };
+    for (const field of fields) {
+        if (result[field] !== undefined && result[field] !== null) {
+            result[field] = encrypt(String(result[field])) as any;
+        }
+    }
+    return result;
+}
+
+/**
+ * Utility to decrypt multiple string fields in an object.
+ */
+export function decryptFields<T extends Record<string, any>>(data: T, fields: (keyof T)[]): T {
+    if (!data) return data;
+    
+    const result = { ...data };
+    for (const field of fields) {
+        if (result[field] !== undefined && typeof result[field] === 'string') {
+            const decryptedValue = decrypt(result[field] as string);
+            if (decryptedValue !== null) {
+                result[field] = decryptedValue as any;
+            }
+        }
+    }
+    return result;
+}
+
+// ----------------------------------------------------
+// Helpers for Numeric Fields
+// ----------------------------------------------------
+
+export function encryptNumber(num: number | string | null | undefined): string | null {
+    if (num === null || num === undefined || num === '') return null;
+    return encrypt(num.toString());
+}
+
+export function decryptNumber(text: string | null | undefined): number | null {
+    if (!text) return null;
+    const decryptedStr = decrypt(text);
+    if (decryptedStr === null || decryptedStr === text) {
+        // If decrypt returned null, or returned the original string (meaning it wasn't encrypted)
+        const parsed = Number(text);
+        return isNaN(parsed) ? null : parsed;
+    }
+    const parsed = Number(decryptedStr);
+    return isNaN(parsed) ? null : parsed;
+}
+
+export function encryptNumericFields<T extends Record<string, any>>(data: T, fields: (keyof T)[]): T {
+    if (!data) return data;
+    
+    const result = { ...data };
+    for (const field of fields) {
+        if (result[field] !== undefined && result[field] !== null && result[field] !== '') {
+            const val = result[field];
+            if (typeof val === 'number') {
+                result[field] = encryptNumber(val) as any;
+            } else if (typeof val === 'string') {
+                const parsed = Number(val);
+                if (!isNaN(parsed)) {
+                    result[field] = encryptNumber(parsed) as any;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+export function decryptNumericFields<T extends Record<string, any>>(data: T, fields: (keyof T)[]): T {
+    if (!data) return data;
+    
+    const result = { ...data };
+    for (const field of fields) {
+        if (result[field] !== undefined && result[field] !== null) {
+            if (typeof result[field] === 'string') {
+                const decryptedValue = decryptNumber(result[field] as string);
+                if (decryptedValue !== null) {
+                    result[field] = decryptedValue as any;
+                }
+            } else if (typeof result[field] === 'number') {
+                // Already a number (maybe unencrypted row), just keep it
+            }
+        }
+    }
+    return result;
 }
