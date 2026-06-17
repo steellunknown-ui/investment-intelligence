@@ -114,7 +114,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Values cannot be negative' }, { status: 400 })
         }
 
-        const newAssetData = encryptFields({
+        let newAssetData = encryptFields({
             user_id: user.id,
             asset_category,
             asset_type,
