@@ -86,8 +86,7 @@ export async function POST(request: Request) {
             purchase_date: purchase_date || null,
             broker: broker || null,
             notes: notes || null,
-            account_number: account_number || null,
-            is_active: true
+            account_number: account_number || null
         }, [
             'symbol', 'name', 'broker', 'notes', 'account_number'
         ]);
