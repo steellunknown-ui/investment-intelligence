@@ -33,7 +33,7 @@ export async function GET() {
         }
 
         let decryptedHoldings = holdings?.map(holding => decryptFields(holding, [
-            'symbol', 'name', 'broker', 'notes', 'account_number'
+            'symbol', 'name', 'notes'
         ]))
         
         decryptedHoldings = decryptedHoldings?.map(holding => decryptNumericFields(holding, [
@@ -83,12 +83,9 @@ export async function POST(request: Request) {
             name,
             quantity: Number(quantity) || 0,
             avg_buy_price: Number(avg_buy_price) || 0,
-            purchase_date: purchase_date || null,
-            broker: broker || null,
-            notes: notes || null,
-            account_number: account_number || null
+            notes: notes || null
         }, [
-            'symbol', 'name', 'broker', 'notes', 'account_number'
+            'symbol', 'name', 'notes'
         ]);
 
         newHoldingData = encryptNumericFields(newHoldingData, [
@@ -110,7 +107,7 @@ export async function POST(request: Request) {
         }
 
         let decryptedHolding = decryptFields(holding, [
-            'symbol', 'name', 'broker', 'notes', 'account_number'
+            'symbol', 'name', 'notes'
         ])
         
         decryptedHolding = decryptNumericFields(decryptedHolding, [
