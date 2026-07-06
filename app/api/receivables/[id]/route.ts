@@ -44,6 +44,16 @@ export async function PATCH(
             return NextResponse.json({ error: 'Receivable not found' }, { status: 404 })
         }
 
+        // Decrypt current record before using its values
+        let decryptedCurrent = decryptFields(current, [
+            'given_to', 'relationship', 'contact_number', 'email', 'purpose', 
+            'agreement_reference', 'notes'
+        ])
+        
+        decryptedCurrent = decryptNumericFields(decryptedCurrent, [
+            'principal_amount', 'interest_amount', 'total_receivable', 'amount_received', 'outstanding_amount'
+        ])
+
         // Logic for Amount Updates
         let updates = { ...body }
 
@@ -52,11 +62,11 @@ export async function PATCH(
             body.interest_type !== undefined || body.interest_start_date !== undefined ||
             body.interest_end_date !== undefined) {
 
-            const principal = body.principal_amount !== undefined ? Number(body.principal_amount) : current.principal_amount
-            const rate = body.interest_rate !== undefined ? Number(body.interest_rate) : current.interest_rate
-            const type = body.interest_type || current.interest_type || 'simple'
-            const startDate = body.interest_start_date || current.interest_start_date
-            const endDate = body.interest_end_date || current.interest_end_date
+            const principal = body.principal_amount !== undefined ? Number(body.principal_amount) : decryptedCurrent.principal_amount
+            const rate = body.interest_rate !== undefined ? Number(body.interest_rate) : decryptedCurrent.interest_rate
+            const type = body.interest_type || decryptedCurrent.interest_type || 'simple'
+            const startDate = body.interest_start_date || decryptedCurrent.interest_start_date
+            const endDate = body.interest_end_date || decryptedCurrent.interest_end_date
 
             if (rate && rate > 0 && startDate) {
                 const interest_amount = calculateInterest(principal, rate, type, startDate, endDate)
@@ -78,7 +88,7 @@ export async function PATCH(
         // If amount_received is being updated
         if (body.amount_received !== undefined) {
             const newReceived = Number(body.amount_received)
-            const total = updates.total_receivable !== undefined ? Number(updates.total_receivable) : Number(current.total_receivable)
+            const total = updates.total_receivable !== undefined ? Number(updates.total_receivable) : Number(decryptedCurrent.total_receivable)
 
             if (newReceived < 0) return NextResponse.json({ error: 'Received amount cannot be negative' }, { status: 400 })
             if (newReceived > total) return NextResponse.json({ error: 'Received amount cannot exceed total' }, { status: 400 })
@@ -96,7 +106,7 @@ export async function PATCH(
                 updates.status = 'partial'
                 // If moving back from received, clear return date? Maybe user wants to keep history, but typically if it's partial it's not "returned".
                 // Let's decide to clear actual_return_date if status goes back to partial/pending
-                if (current.status === 'received') {
+                if (decryptedCurrent.status === 'received') {
                     updates.actual_return_date = null
                 }
             } else {
