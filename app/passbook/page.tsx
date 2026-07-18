@@ -66,17 +66,12 @@ export default function PassbookPage() {
     fetchTransactions();
 
     const PassbookPlugin = getPassbookPlugin();
-    // Setup Listener for live detection
+    // Auto-save: The moment a transaction is detected, save it immediately.
+    // No user action required.
     if (PassbookPlugin) {
       PassbookPlugin.addListener('onTransactionDetected', (data: any) => {
-        toast.info("New transaction detected!", {
-          description: `₹${data.amount} at ${data.merchant}. Tap to save.`,
-          action: {
-            label: "Save",
-            onClick: () => handleSaveLive(data)
-          },
-          duration: 10000
-        });
+        // Fire-and-forget — auto save in the background
+        handleSaveLive(data);
       });
     }
   }, []);
@@ -94,12 +89,18 @@ export default function PassbookPage() {
         amount: data.amount,
         payment_mode: data.type,
         raw_message: data.raw,
-        category: "Pending"
+        transaction_date: new Date().toISOString(),
+        category: "Auto-Detected"
       });
 
       if (!error) {
-        toast.success("Transaction saved to Passbook!");
-        fetchTransactions();
+        toast.success(`✅ Auto-saved: ₹${Number(data.amount).toLocaleString('en-IN')} at ${data.merchant}`, {
+          description: `${data.type} transaction detected and recorded automatically.`,
+          duration: 5000
+        });
+        fetchTransactions(); // Refresh the list in real-time
+      } else {
+        toast.error("Auto-save failed", { description: error.message });
       }
     } catch (err) {
       toast.error("Failed to save transaction");
