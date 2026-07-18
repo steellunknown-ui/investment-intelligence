@@ -55,9 +55,6 @@ public class TransactionParser {
             return result;
         }
 
-        return null;
-    }
-
         return null; // No match found
     }
 
