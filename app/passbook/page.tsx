@@ -145,29 +145,6 @@ export default function PassbookPage() {
     <DashboardShell
       title="Smart Passbook"
       description="Automatically tracked card and UPI expenses"
-      action={
-        <div className="flex gap-2">
-          {/* DEBUG BUTTON — tap this first to verify Supabase table exists */}
-          <Button
-            variant="outline"
-            className="gap-2 border-orange-400 text-orange-500 hover:bg-orange-50"
-            onClick={handleTestEntry}
-            disabled={testLoading}
-            id="test-db-entry-btn"
-          >
-            <FlaskConical className="h-4 w-4" />
-            {testLoading ? "Testing..." : "Test DB Entry"}
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => toast.info("Export started...")}
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      }
     >
       <div className="space-y-6">
 
@@ -198,6 +175,28 @@ export default function PassbookPage() {
               Live Tracking Active
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons — placed in body so they are always visible on mobile */}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 gap-2 border-orange-400 text-orange-500 active:bg-orange-50"
+            onClick={handleTestEntry}
+            disabled={testLoading}
+            id="test-db-entry-btn"
+          >
+            <FlaskConical className="h-4 w-4" />
+            {testLoading ? "Testing..." : "Test DB Entry"}
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 gap-2"
+            onClick={() => toast.info("Export started...")}
+          >
+            <Download className="h-4 w-4" />
+            Export Data
+          </Button>
         </div>
 
         {/* Filters & Tabs */}
