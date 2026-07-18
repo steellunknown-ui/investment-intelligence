@@ -15,8 +15,11 @@ public class TransactionParser {
     // Regex for Received Money (UPI/Bank)
     private static final String CREDIT_PATTERN = "(?i)(?:received|credited|refunded|received of)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+(?:from|in|to)\\s+(.*?)(?:\\s|$)";
 
-    // Regex for Incoming Payments (FamPay style: "Name sent ₹5.0")
-    private static final String FAM_INCOMING_PATTERN = "(?i)(.*?)\\s+(?:sent|gave|transferred)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)";
+    // FamPay: "You received ₹5.0 in your FamX account"
+    private static final String FAMAPP_CREDIT_PATTERN = "(?i)you\\s+received\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+in\\s+your\\s+fam";
+
+    // FamPay: "DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0"  (with or without #fampaid in title)
+    private static final String FAM_INCOMING_PATTERN = "(?i)(.+?)\\s+sent\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)";
 
     public static JSObject parse(String text) {
         if (text == null) return null;
@@ -25,7 +28,18 @@ public class TransactionParser {
         // Cleanup text: remove common fillers and hashtags
         String cleanText = text.replace("!", "").replace("#fampaid", "").replace(",", "").trim();
 
-        // 1. Try FamPay Incoming Pattern (Received Money)
+        // 0. FamApp Email/Credit notification: "You received ₹5.0 in your FamX account"
+        Pattern famAppPattern = Pattern.compile(FAMAPP_CREDIT_PATTERN);
+        Matcher famAppMatcher = famAppPattern.matcher(cleanText);
+        if (famAppMatcher.find()) {
+            result.put("amount", parseAmount(famAppMatcher.group(1)));
+            result.put("merchant", "FamPay / FamX");
+            result.put("source", "FamApp");
+            result.put("type", "CREDIT");
+            return result;
+        }
+
+        // 1. FamPay Incoming: "DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0"
         Pattern famInPattern = Pattern.compile(FAM_INCOMING_PATTERN);
         Matcher famInMatcher = famInPattern.matcher(cleanText);
         if (famInMatcher.find()) {
