@@ -21,7 +21,8 @@ import {
   FileText,
   Sparkles,
   Home,
-  UsersRound
+  UsersRound,
+  History
 } from "lucide-react";
 import {
   Sheet,
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
+  { name: "Smart Passbook", href: "/passbook", icon: History },
   { name: "Assets", href: "/assets", icon: Building2 },
   { name: "Liabilities", href: "/liabilities", icon: Wallet },
   { name: "Receivables", href: "/receivables", icon: Coins },

@@ -1,12 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    serverActions: true,
-  },
-  // Force all pages to be dynamic (required for cookie-based auth)
-  staticPageGenerationTimeout: 0,
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

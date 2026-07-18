@@ -1,0 +1,19 @@
+{
+  "bankBalanceTotal": 219979,
+  "assetsTotalValue": 460000,
+  "belongingsTotalValue": 500000,
+  "receivablesOutstandingTotal": 6022.602739726028,
+  "liabilitiesOutstandingTotal": 515000,
+  "assets_value": 460000,
+  "assets_count": 2,
+  "belongings_value": 500000,
+  "belongings_count": 1,
+  "bank_balance": 219979,
+  "bank_accounts": 3,
+  "receivables_total": 6022.602739726028,
+  "receivables_count": 1,
+  "liabilities_total": 515000,
+  "liabilities_count": 2,
+  "netWorth": 671001.602739726,
+  "updatedAt": "2026-06-17T17:14:29.522Z"
+}
