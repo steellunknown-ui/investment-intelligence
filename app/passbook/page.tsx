@@ -136,21 +136,21 @@ export default function PassbookPage() {
       <div className="space-y-6">
 
         {/* Monthly Summary Card */}
-        <div className="rounded-2xl p-6 shadow-xl flex flex-col justify-between min-h-[160px] bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        <div className="rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[160px] bg-white dark:bg-slate-900 border border-border text-slate-900 dark:text-white">
           <div>
-            <h2 className="opacity-80 font-medium text-sm uppercase tracking-wider mb-2">Total Detected Spend</h2>
+            <h2 className="text-muted-foreground font-medium text-sm uppercase tracking-wider mb-2">Total Detected Spend</h2>
             {loading ? (
-              <div className="h-10 w-32 bg-white/10 animate-pulse rounded" />
+              <div className="h-10 w-32 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
             ) : (
-              <h1 className="text-4xl font-bold tracking-tight">₹{totalSpend.toLocaleString('en-IN')}</h1>
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">₹{totalSpend.toLocaleString('en-IN')}</h1>
             )}
           </div>
-          <div className="pt-3 border-t border-white/10 flex justify-between items-end">
-            <div className="text-sm opacity-80">
+          <div className="pt-3 border-t border-border flex justify-between items-end">
+            <div className="text-sm text-muted-foreground">
               {filteredTransactions.length} Transactions tracked
             </div>
-            <div className="bg-emerald-500/20 px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="bg-emerald-500/10 px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Live Tracking Active
             </div>
           </div>
