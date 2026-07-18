@@ -114,7 +114,13 @@ export default function PassbookPage() {
     return matchesTab && matchesSearch;
   });
 
-  const totalSpend = filteredTransactions.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  const totalDebit = filteredTransactions
+    .filter(t => t.payment_mode !== 'CREDIT')
+    .reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+  const totalCredit = filteredTransactions
+    .filter(t => t.payment_mode === 'CREDIT')
+    .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   return (
     <DashboardShell
@@ -137,15 +143,25 @@ export default function PassbookPage() {
 
         {/* Monthly Summary Card */}
         <div className="rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[160px] bg-white dark:bg-slate-900 border border-border text-slate-900 dark:text-white">
-          <div>
-            <h2 className="text-muted-foreground font-medium text-sm uppercase tracking-wider mb-2">Total Detected Spend</h2>
-            {loading ? (
-              <div className="h-10 w-32 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
-            ) : (
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">₹{totalSpend.toLocaleString('en-IN')}</h1>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Spent (Out)</h2>
+              {loading ? (
+                <div className="h-8 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+              ) : (
+                <h1 className="text-2xl font-bold tracking-tight text-red-600">₹{totalDebit.toLocaleString('en-IN')}</h1>
+              )}
+            </div>
+            <div className="text-right border-l border-border pl-4">
+              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Received (In)</h2>
+              {loading ? (
+                <div className="h-8 w-24 ml-auto bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
+              ) : (
+                <h1 className="text-2xl font-bold tracking-tight text-emerald-600">₹{totalCredit.toLocaleString('en-IN')}</h1>
+              )}
+            </div>
           </div>
-          <div className="pt-3 border-t border-border flex justify-between items-end">
+          <div className="pt-3 border-t border-border flex justify-between items-end mt-4">
             <div className="text-sm text-muted-foreground">
               {filteredTransactions.length} Transactions tracked
             </div>
@@ -232,9 +248,18 @@ export default function PassbookPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-red-600">-₹{Number(t.amount).toLocaleString('en-IN')}</p>
+                    <p className={cn(
+                      "text-sm font-bold",
+                      t.payment_mode === 'CREDIT' ? "text-emerald-600" : "text-red-600"
+                    )}>
+                      {t.payment_mode === 'CREDIT' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN')}
+                    </p>
                     <div className="flex items-center gap-1 justify-end mt-0.5">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      {t.payment_mode === 'CREDIT' ? (
+                        <ArrowDownRight className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      )}
                       <p className="text-[10px] text-muted-foreground uppercase">{t.category}</p>
                     </div>
                   </div>
