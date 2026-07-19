@@ -34,11 +34,11 @@ import {
 // Navigation order:
 // Home, Dashboard, Insurance, Banking, Assets, Liabilities, Receivables, Belongings,
 // Holdings, Documents, AI Assistant, Family Hub, Nominee, Activity & Alerts, Settings
-const navigation = [
+const allNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Insurance", href: "/insurance", icon: Shield },
   { name: "Banking", href: "/banking", icon: Landmark },
-  { name: "Smart Passbook", href: "/passbook", icon: History },
+  { name: "Smart Passbook", href: "/passbook", icon: History, androidOnly: true },
   { name: "Assets", href: "/assets", icon: Building2 },
   { name: "Liabilities", href: "/liabilities", icon: Wallet },
   { name: "Receivables", href: "/receivables", icon: Coins },
@@ -60,7 +60,15 @@ interface SidebarProps {
 // Navigation content - shared between desktop and mobile
 function NavigationContent({ expanded, onClose, isMobile }: { expanded?: boolean; onClose?: () => void; isMobile?: boolean }) {
   const pathname = usePathname();
-  const items = navigation;
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    // Check if running inside the Capacitor Android app
+    setIsNative(!!(window as any).Capacitor?.isNativePlatform?.());
+  }, []);
+
+  // Smart Passbook is Android-only — hide it on the web version
+  const items = allNavigation.filter(item => !item.androidOnly || isNative);
 
   return (
     <nav className={cn("flex flex-col gap-0.5", expanded ? "p-3" : "p-2")}>
