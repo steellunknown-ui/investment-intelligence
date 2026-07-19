@@ -19,14 +19,11 @@ import {
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { toast } from "sonner";
+import { registerPlugin } from "@capacitor/core";
 
 // --- Capacitor Plugin bridge ---
-const getPassbookPlugin = () => {
-  if (typeof window !== "undefined") {
-    return (window as any).Capacitor?.Plugins?.PassbookPlugin;
-  }
-  return null;
-};
+// Registering it properly ensures Capacitor instantiates it on the native side.
+const PassbookPlugin = registerPlugin<any>("PassbookPlugin");
 
 export default function PassbookPage() {
   const [filter, setFilter] = useState("ALL");
@@ -113,12 +110,14 @@ export default function PassbookPage() {
   useEffect(() => {
     fetchTransactions();
 
-    const plugin = getPassbookPlugin();
-    if (plugin) {
-      plugin.addListener("onTransactionDetected", (data: any) => {
+    if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
+      PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
         console.log("🔔 onTransactionDetected fired:", JSON.stringify(data));
         handleSaveLive(data);
       });
+      
+      // Force native plugin instantiation and drain any pending queue
+      PassbookPlugin.sync().catch(console.error);
     } else {
       console.warn("PassbookPlugin not available (running in browser / not on Android)");
     }

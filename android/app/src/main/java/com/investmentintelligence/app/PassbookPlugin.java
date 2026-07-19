@@ -23,8 +23,14 @@ public class PassbookPlugin extends Plugin {
         super.load();
         instance = this;
         Log.d(TAG, "✅ PassbookPlugin loaded — draining pending queue...");
-        // Drain any transactions that were captured while app was closed
         drainPendingQueue();
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void sync(com.getcapacitor.PluginCall call) {
+        Log.d(TAG, "🔄 Sync called from JS — ensuring queue is drained.");
+        drainPendingQueue();
+        call.resolve();
     }
 
     /**
