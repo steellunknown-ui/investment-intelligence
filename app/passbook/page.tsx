@@ -125,11 +125,18 @@ export default function PassbookPage() {
 
   // ── Filter logic ───────────────────────────────────────────────────────────
   const filteredTransactions = transactions.filter((t) => {
-    const matchesTab = filter === "ALL" || t.payment_mode === filter;
     const matchesSearch =
       (t.merchant_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (t.source_name?.toLowerCase() || "").includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
+      
+    if (!matchesSearch) return false;
+    
+    if (filter === "ALL") return true;
+    if (filter === "UPI") {
+      const source = t.source_name?.toLowerCase() || "";
+      return source.includes("upi") || source.includes("fam");
+    }
+    return t.payment_mode === filter;
   });
 
   const totalDebit = filteredTransactions
