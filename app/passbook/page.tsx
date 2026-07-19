@@ -30,7 +30,6 @@ export default function PassbookPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [testLoading, setTestLoading] = useState(false);
 
   // ── Fetch from Supabase ────────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
@@ -92,32 +91,31 @@ export default function PassbookPage() {
     }
   }, [fetchTransactions]);
 
-  // ── DEBUG: Directly insert a fake FamPay transaction to test Supabase ─────
-  const handleTestEntry = async () => {
-    setTestLoading(true);
-    toast.info("🧪 Testing Supabase insert...");
-    await handleSaveLive({
-      source: "FamPay (Received)",
-      merchant: "TEST - Deepnarayan",
-      amount: 5.0,
-      type: "CREDIT",
-      raw: "TEST: DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0 #fampaid",
-    });
-    setTestLoading(false);
-  };
+
 
   // ── Wire up Capacitor listener ─────────────────────────────────────────────
   useEffect(() => {
     fetchTransactions();
 
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
+      // Register listener FIRST, then sync — order matters
       PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
         console.log("🔔 onTransactionDetected fired:", JSON.stringify(data));
         handleSaveLive(data);
       });
-      
-      // Force native plugin instantiation and drain any pending queue
+
+      // Drain any queued transactions immediately on mount
       PassbookPlugin.sync().catch(console.error);
+
+      // Poll every 5 seconds — catches notifications that arrived in background
+      const interval = setInterval(() => {
+        PassbookPlugin.sync().catch(console.error);
+      }, 5000);
+
+      return () => {
+        clearInterval(interval);
+        PassbookPlugin.removeAllListeners().catch(console.error);
+      };
     } else {
       console.warn("PassbookPlugin not available (running in browser / not on Android)");
     }
@@ -185,16 +183,6 @@ export default function PassbookPage() {
 
         {/* Action Buttons — placed in body so they are always visible on mobile */}
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 gap-2 border-orange-400 text-orange-500 active:bg-orange-50"
-            onClick={handleTestEntry}
-            disabled={testLoading}
-            id="test-db-entry-btn"
-          >
-            <FlaskConical className="h-4 w-4" />
-            {testLoading ? "Testing..." : "Test DB Entry"}
-          </Button>
           <Button
             variant="outline"
             className="flex-1 gap-2"
@@ -300,9 +288,6 @@ export default function PassbookPage() {
                 <SearchX className="h-6 w-6 text-muted-foreground" />
               </div>
               <h3 className="text-sm font-semibold text-foreground">No transactions found</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tap <span className="text-orange-500 font-semibold">Test DB Entry</span> above to verify Supabase is connected.
-              </p>
             </div>
           )}
         </Card>

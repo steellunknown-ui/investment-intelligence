@@ -22,11 +22,13 @@ public class PassbookPlugin extends Plugin {
     public void load() {
         super.load();
         instance = this;
-        Log.d(TAG, "✅ PassbookPlugin loaded — draining pending queue...");
-        drainPendingQueue();
+        Log.d(TAG, "✅ PassbookPlugin loaded — instance ready.");
+        // NOTE: We do NOT drain the queue here.
+        // The WebView JS listener is not registered yet at this point.
+        // Draining happens via sync() which is called from React AFTER addListener().
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @com.getcapacitor.PluginMethod
     public void sync(com.getcapacitor.PluginCall call) {
         Log.d(TAG, "🔄 Sync called from JS — ensuring queue is drained.");
         drainPendingQueue();

@@ -36,38 +36,38 @@ public class NotificationService extends NotificationListenerService {
         Log.d(TAG, "Title   : " + title);
         Log.d(TAG, "Body    : " + body);
 
+        // Skip Gmail/email notifications — FamPay already fires a push notification.
+        // Processing Gmail too would create duplicate entries for the same transaction.
+        if (packageName.equals("com.google.android.gm")) {
+            Log.d(TAG, "📧 Skipping Gmail notification to avoid duplicates.");
+            return;
+        }
+
         if (body.isEmpty()) return;
 
-        // FIX 2: Combine title + body so patterns like "#fampaid ... sent ₹5" are captured
+        // Try body FIRST — gives clean merchant name e.g. "Sahil Jadhav" not "You got Sahil Jadhav"
+        com.getcapacitor.JSObject parsed = TransactionParser.parse(body);
+
+        // If body alone failed, try the combined title+body as fallback
         String fullText = title + " " + body;
-
-        com.getcapacitor.JSObject parsed = TransactionParser.parse(fullText);
-
-        // If full-text parse failed, try body alone
         if (parsed == null) {
-            parsed = TransactionParser.parse(body);
+            parsed = TransactionParser.parse(fullText);
         }
 
         if (parsed != null) {
             Log.d(TAG, "✅ Transaction Parsed: " + parsed.toString());
             try {
-                boolean sent = PassbookPlugin.sendTransactionToJS(
+                // ALWAYS queue to SharedPreferences.
+                // The React passbook page polls sync() every 5 seconds and drains the queue.
+                // This is reliable regardless of whether the app is open, backgrounded, or
+                // the user is on a different page.
+                queueTransaction(
                     parsed.getString("source"),
                     parsed.getString("merchant"),
                     parsed.getDouble("amount"),
                     parsed.getString("type"),
                     body
                 );
-
-                // FIX 3: If app is in background (sent=false), queue the transaction locally
-                if (!sent) {
-                    Log.d(TAG, "⚠️ App in background — queuing transaction to SharedPreferences");
-                    queueTransaction(parsed.getString("source"),
-                                     parsed.getString("merchant"),
-                                     parsed.getDouble("amount"),
-                                     parsed.getString("type"),
-                                     body);
-                }
             } catch (JSONException e) {
                 Log.e(TAG, "Error reading parsed transaction fields", e);
             }
