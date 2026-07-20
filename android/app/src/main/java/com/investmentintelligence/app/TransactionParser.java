@@ -12,6 +12,9 @@ public class TransactionParser {
     // Regex for ICICI specific and common bank debit messages (e.g., triggered by GPay)
     private static final String BANK_DEBIT_PATTERN = "(?i)(.*?)bank.*?acct\\s+.*?\\s+debited\\s+for\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+on\\s+(.*?);\\s+(.*?)\\s+credited";
 
+    // Regex for Bank Credit messages (e.g., "Acct XX172 is credited with Rs 5.00 from Abhishek")
+    private static final String BANK_CREDIT_PATTERN = "(?i)(.*?)bank.*?acct\\s+.*?\\s+is\\s+credited\\s+with\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+on\\s+(.*?)\\s+from\\s+(.*?)\\.";
+
     // Regex for UPI & Wallet Payments (Debited)
     private static final String UPI_DEBIT_PATTERN = "(?i)(?:paid|transfer|sent|transfer of)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+(?:to|at)\\s+(.*?)\\s+(?:via|using|ref|txn)";
 
@@ -32,17 +35,28 @@ public class TransactionParser {
         String cleanText = text.replace("!", "").replace("#fampaid", "").replace(",", "").trim();
 
         // 1. Try Bank Debit Pattern (ICICI/GPay Style)
-        Pattern bankPattern = Pattern.compile(BANK_DEBIT_PATTERN);
-        Matcher bankMatcher = bankPattern.matcher(cleanText);
-        if (bankMatcher.find()) {
-            result.put("amount", parseAmount(bankMatcher.group(2)));
-            result.put("merchant", bankMatcher.group(4).trim()); 
-            result.put("source", bankMatcher.group(1).trim() + " Bank");
+        Pattern bankDebitPattern = Pattern.compile(BANK_DEBIT_PATTERN);
+        Matcher bankDebitMatcher = bankDebitPattern.matcher(cleanText);
+        if (bankDebitMatcher.find()) {
+            result.put("amount", parseAmount(bankDebitMatcher.group(2)));
+            result.put("merchant", bankDebitMatcher.group(4).trim()); 
+            result.put("source", bankDebitMatcher.group(1).trim().isEmpty() ? "Bank" : bankDebitMatcher.group(1).trim() + " Bank");
             result.put("type", "DEBIT");
             return result;
         }
 
-        // 2. FamApp Email/Credit notification
+        // 2. Try Bank Credit Pattern (e.g. "credited with Rs")
+        Pattern bankCreditPattern = Pattern.compile(BANK_CREDIT_PATTERN);
+        Matcher bankCreditMatcher = bankCreditPattern.matcher(cleanText);
+        if (bankCreditMatcher.find()) {
+            result.put("amount", parseAmount(bankCreditMatcher.group(2)));
+            result.put("merchant", bankCreditMatcher.group(4).trim());
+            result.put("source", bankCreditMatcher.group(1).trim().isEmpty() ? "Bank" : bankCreditMatcher.group(1).trim() + " Bank");
+            result.put("type", "CREDIT");
+            return result;
+        }
+
+        // 3. FamApp Email/Credit notification
         Pattern famAppPattern = Pattern.compile(FAMAPP_CREDIT_PATTERN);
         Matcher famAppMatcher = famAppPattern.matcher(cleanText);
         if (famAppMatcher.find()) {
@@ -53,7 +67,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 3. FamPay Incoming
+        // 4. FamPay Incoming
         Pattern famInPattern = Pattern.compile(FAM_INCOMING_PATTERN);
         Matcher famInMatcher = famInPattern.matcher(cleanText);
         if (famInMatcher.find()) {
@@ -64,7 +78,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 4. Try General Credit Pattern
+        // 5. Try General Credit Pattern
         Pattern creditPattern = Pattern.compile(CREDIT_PATTERN);
         Matcher creditMatcher = creditPattern.matcher(cleanText);
         if (creditMatcher.find()) {
@@ -75,7 +89,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 5. Try Card Pattern
+        // 6. Try Card Pattern
         Pattern cardPattern = Pattern.compile(CARD_PATTERN);
         Matcher cardMatcher = cardPattern.matcher(cleanText);
         if (cardMatcher.find()) {
@@ -86,7 +100,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 6. Try UPI Debit Pattern
+        // 7. Try UPI Debit Pattern
         Pattern upiDebitPattern = Pattern.compile(UPI_DEBIT_PATTERN);
         Matcher upiDebitMatcher = upiDebitPattern.matcher(cleanText);
         if (upiDebitMatcher.find()) {
