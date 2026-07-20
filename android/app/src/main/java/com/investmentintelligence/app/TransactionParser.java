@@ -7,8 +7,11 @@ import com.getcapacitor.JSObject;
 public class TransactionParser {
 
     // Regex for Credit/Debit Cards (Common patterns in India)
-    private static final String CARD_PATTERN = "(?i)(?:spent|debited|vpa|purchase|paid)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+(?:on|at|to|using)\\s+(.*?)\\s+(?:using|from|on|via)\\s+(.*?)(?:\\s|$)";
+    private static final String CARD_PATTERN = "(?i)(?:spent|debited|vpa|purchase|paid|debited for)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+(?:on|at|to|using)\\s+(.*?)\\s+(?:using|from|on|via|credited|;)";
     
+    // Regex for ICICI specific and common bank debit messages (e.g., triggered by GPay)
+    private static final String BANK_DEBIT_PATTERN = "(?i)(.*?)bank.*?acct\\s+.*?\\s+debited\\s+for\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+on\\s+(.*?);\\s+(.*?)\\s+credited";
+
     // Regex for UPI & Wallet Payments (Debited)
     private static final String UPI_DEBIT_PATTERN = "(?i)(?:paid|transfer|sent|transfer of)\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+(?:to|at)\\s+(.*?)\\s+(?:via|using|ref|txn)";
 
@@ -18,7 +21,7 @@ public class TransactionParser {
     // FamPay: "You received ₹5.0 in your FamX account"
     private static final String FAMAPP_CREDIT_PATTERN = "(?i)you\\s+received\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)\\s+in\\s+your\\s+fam";
 
-    // FamPay: "DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0"  (with or without #fampaid in title)
+    // FamPay: "DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0"
     private static final String FAM_INCOMING_PATTERN = "(?i)(.+?)\\s+sent\\s+(?:rs\\.?|inr|₹)\\s*([\\d,.]+)";
 
     public static JSObject parse(String text) {
@@ -28,7 +31,18 @@ public class TransactionParser {
         // Cleanup text: remove common fillers and hashtags
         String cleanText = text.replace("!", "").replace("#fampaid", "").replace(",", "").trim();
 
-        // 0. FamApp Email/Credit notification: "You received ₹5.0 in your FamX account"
+        // 1. Try Bank Debit Pattern (ICICI/GPay Style)
+        Pattern bankPattern = Pattern.compile(BANK_DEBIT_PATTERN);
+        Matcher bankMatcher = bankPattern.matcher(cleanText);
+        if (bankMatcher.find()) {
+            result.put("amount", parseAmount(bankMatcher.group(2)));
+            result.put("merchant", bankMatcher.group(4).trim()); 
+            result.put("source", bankMatcher.group(1).trim() + " Bank");
+            result.put("type", "DEBIT");
+            return result;
+        }
+
+        // 2. FamApp Email/Credit notification
         Pattern famAppPattern = Pattern.compile(FAMAPP_CREDIT_PATTERN);
         Matcher famAppMatcher = famAppPattern.matcher(cleanText);
         if (famAppMatcher.find()) {
@@ -39,7 +53,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 1. FamPay Incoming: "DEEPNARAYAN BALIRAM VISHWAKARMA sent ₹5.0"
+        // 3. FamPay Incoming
         Pattern famInPattern = Pattern.compile(FAM_INCOMING_PATTERN);
         Matcher famInMatcher = famInPattern.matcher(cleanText);
         if (famInMatcher.find()) {
@@ -50,7 +64,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 2. Try General Credit Pattern (Bank/UPI Received)
+        // 4. Try General Credit Pattern
         Pattern creditPattern = Pattern.compile(CREDIT_PATTERN);
         Matcher creditMatcher = creditPattern.matcher(cleanText);
         if (creditMatcher.find()) {
@@ -61,7 +75,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 3. Try Card Pattern (Spent)
+        // 5. Try Card Pattern
         Pattern cardPattern = Pattern.compile(CARD_PATTERN);
         Matcher cardMatcher = cardPattern.matcher(cleanText);
         if (cardMatcher.find()) {
@@ -72,7 +86,7 @@ public class TransactionParser {
             return result;
         }
 
-        // 4. Try UPI Debit Pattern
+        // 6. Try UPI Debit Pattern
         Pattern upiDebitPattern = Pattern.compile(UPI_DEBIT_PATTERN);
         Matcher upiDebitMatcher = upiDebitPattern.matcher(cleanText);
         if (upiDebitMatcher.find()) {
