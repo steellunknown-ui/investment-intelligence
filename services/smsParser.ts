@@ -3,8 +3,11 @@ const apiKey = process.env.GEMINI_API_KEY;
 
 export async function parseTransaction(rawText: string, sourceApp: string) {
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not defined in environment variables");
+    console.error("CRITICAL: GEMINI_API_KEY is missing from environment variables!");
+    throw new Error("GEMINI_API_KEY is not defined in environment variables. Please check Vercel settings.");
   }
+
+  console.log("Gemini Parser: Initializing with model gemini-1.5-flash. Raw text length:", rawText.length);
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
