@@ -49,10 +49,15 @@ Message Text: ${rawText}
 
   try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("Gemini Parsing Error:", error);
-    throw error;
+    const response = await result.response;
+    const text = response.text();
+
+    // Clean up potential markdown if the model ignored config
+    const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    return JSON.parse(cleanText);
+  } catch (error: any) {
+    console.error("Gemini Parsing Error Details:", error);
+    // Provide a more descriptive error back to the route
+    throw new Error(`Gemini API Error: ${error.message || 'Unknown parsing failure'}`);
   }
 }
