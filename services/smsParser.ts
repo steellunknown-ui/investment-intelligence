@@ -44,7 +44,7 @@ Message Text: ${rawText}
   `;
 
   // We will insert the model name you choose here!
-  const OPENROUTER_MODEL = "google/gemma-4-31b:free";
+  const OPENROUTER_MODEL = "google/gemma-4-31b-it:free";
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
