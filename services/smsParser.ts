@@ -15,7 +15,7 @@ export async function parseTransaction(rawText: string, sourceApp: string) {
 
   // Use the canonical model name 'gemini-1.5-flash-latest' to ensure it's found
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash-latest",
+    model: "gemini-2.0-flash",
     generationConfig: {
       responseMimeType: "application/json",
       temperature: 0.1,
