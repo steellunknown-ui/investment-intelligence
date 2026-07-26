@@ -13,11 +13,12 @@ export async function parseTransaction(rawText: string, sourceApp: string) {
 
   const genAI = new GoogleGenerativeAI(apiKey);
 
+  // Use the canonical model name 'gemini-1.5-flash-latest' to ensure it's found
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-latest",
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0.1, // Keep it low for consistent JSON
+      temperature: 0.1,
     },
     safetySettings: [
       {
