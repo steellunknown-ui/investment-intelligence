@@ -14,24 +14,25 @@ import {
   SearchX,
   Smartphone,
   CheckCircle2,
-  FlaskConical,
+  Clock,
+  Plus,
+  Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { toast } from "sonner";
 import { registerPlugin } from "@capacitor/core";
 
-// --- Capacitor Plugin bridge ---
-// Registering it properly ensures Capacitor instantiates it on the native side.
 const PassbookPlugin = registerPlugin<any>("PassbookPlugin");
 
 export default function PassbookPage() {
   const [filter, setFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [linkedCards, setLinkedCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // ── Fetch from Supabase ────────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
     try {
       const supabase = createSupabaseBrowserClient();
@@ -41,7 +42,6 @@ export default function PassbookPage() {
         .order("transaction_date", { ascending: false });
 
       if (error) {
-        // Surface the error so we can diagnose it
         console.error("Supabase fetch error:", error);
         toast.error("DB Error: " + error.message, { duration: 8000 });
       }
@@ -54,60 +54,86 @@ export default function PassbookPage() {
     }
   }, []);
 
-  // ── Save a detected transaction ────────────────────────────────────────────
-  const handleSaveLive = useCallback(async (data: any) => {
+  const fetchLinkedCards = useCallback(async () => {
     try {
       const supabase = createSupabaseBrowserClient();
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-      if (!user) {
-        toast.error("Not logged in — cannot save transaction");
-        return;
-      }
+      const { data, error } = await supabase
+        .from("linked_cards")
+        .select("*")
+        .order("created_at", { ascending: true });
 
-      const { error } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        source_name: data.source,
-        merchant_name: data.merchant,
-        amount: data.amount,
-        payment_mode: data.type,
-        raw_message: data.raw,
-        transaction_date: new Date().toISOString(),
-        category: "Auto-Detected",
+      if (!error && data) setLinkedCards(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const handleSaveLive = useCallback(async (data: any) => {
+    try {
+      setIsSyncing(true);
+      const res = await fetch("/api/passbook/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          raw_text: data.raw,
+          source: data.source
+        })
       });
-
-      if (!error) {
-        toast.success(
-          `✅ Saved: ₹${Number(data.amount).toLocaleString("en-IN")} at ${data.merchant}`,
-          { description: `${data.type} transaction recorded.`, duration: 5000 }
-        );
-        fetchTransactions();
+      const result = await res.json();
+      
+      if (res.ok) {
+        if (result.message === 'Duplicate transaction skipped') {
+          console.log("Duplicate skipped", result.fingerprint);
+        } else if (result.transaction) {
+          toast.success(`✅ Parsed: ₹${result.transaction.amount} at ${result.transaction.merchant}`);
+          fetchTransactions();
+        }
       } else {
-        console.error("Insert error:", error);
-        toast.error("Save failed: " + error.message, { duration: 8000 });
+        toast.error("Parse error: " + result.error);
       }
     } catch (err: any) {
       toast.error("Exception: " + err?.message);
+    } finally {
+      setIsSyncing(false);
     }
   }, [fetchTransactions]);
 
+  const confirmTransaction = async (id: string) => {
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.from("transactions").update({ is_verified: true }).eq("id", id);
+      if (error) throw error;
+      toast.success("Transaction verified!");
+      fetchTransactions();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    }
+  };
 
+  const ignoreTransaction = async (id: string) => {
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.from("transactions").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Transaction ignored!");
+      fetchTransactions();
+    } catch (err: any) {
+      toast.error("Error: " + err.message);
+    }
+  };
 
-  // ── Wire up Capacitor listener ─────────────────────────────────────────────
   useEffect(() => {
     fetchTransactions();
+    fetchLinkedCards();
 
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
-      // Register listener FIRST, then sync — order matters
       PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
         console.log("🔔 onTransactionDetected fired:", JSON.stringify(data));
         handleSaveLive(data);
       });
 
-      // Drain any queued transactions immediately on mount
       PassbookPlugin.sync().catch(console.error);
 
-      // Poll every 5 seconds — catches notifications that arrived in background
       const interval = setInterval(() => {
         PassbookPlugin.sync().catch(console.error);
       }, 5000);
@@ -116,33 +142,29 @@ export default function PassbookPage() {
         clearInterval(interval);
         PassbookPlugin.removeAllListeners().catch(console.error);
       };
-    } else {
-      console.warn("PassbookPlugin not available (running in browser / not on Android)");
     }
-  }, [fetchTransactions, handleSaveLive]);
+  }, [fetchTransactions, fetchLinkedCards, handleSaveLive]);
 
-  // ── Filter logic ───────────────────────────────────────────────────────────
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
-      (t.merchant_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (t.source_name?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+      (t.merchant?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (t.source?.toLowerCase() || "").includes(searchQuery.toLowerCase());
       
     if (!matchesSearch) return false;
     
     if (filter === "ALL") return true;
-    if (filter === "UPI") {
-      const source = t.source_name?.toLowerCase() || "";
-      return source.includes("upi") || source.includes("fam");
-    }
-    return t.payment_mode === filter;
+    if (filter === "PENDING") return !t.is_verified && t.source !== 'auto';
+    if (filter === "UPI") return t.method === "upi" || t.source?.toLowerCase().includes("upi");
+    if (filter === "CARD") return t.method === "card";
+    return t.type?.toUpperCase() === filter;
   });
 
   const totalDebit = filteredTransactions
-    .filter((t) => t.payment_mode !== "CREDIT")
+    .filter((t) => t.type === "debit")
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   const totalCredit = filteredTransactions
-    .filter((t) => t.payment_mode === "CREDIT")
+    .filter((t) => t.type === "credit")
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   return (
@@ -151,6 +173,24 @@ export default function PassbookPage() {
       description="Automatically tracked card and UPI expenses"
     >
       <div className="space-y-6">
+
+        {/* AI Parser Status */}
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
+          <div className="bg-emerald-500/20 p-2 rounded-full relative">
+            <Bot className="h-5 w-5 text-emerald-600" />
+            <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">AI Parser Active</h3>
+            <p className="text-xs text-emerald-600/80 dark:text-emerald-500">Monitoring GPay, PhonePe, Paytm, and SMS</p>
+          </div>
+          {isSyncing && (
+            <div className="ml-auto flex items-center gap-2 text-xs font-medium text-emerald-600">
+              <span className="h-4 w-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+              Parsing...
+            </div>
+          )}
+        </div>
 
         {/* Monthly Summary Card */}
         <div className="rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[160px] bg-white dark:bg-slate-900 border border-border text-slate-900 dark:text-white">
@@ -172,25 +212,30 @@ export default function PassbookPage() {
               )}
             </div>
           </div>
-          <div className="pt-3 border-t border-border flex justify-between items-end mt-4">
-            <div className="text-sm text-muted-foreground">{filteredTransactions.length} Transactions tracked</div>
-            <div className="bg-emerald-500/10 px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live Tracking Active
-            </div>
-          </div>
         </div>
 
-        {/* Action Buttons — placed in body so they are always visible on mobile */}
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 gap-2"
-            onClick={() => toast.info("Export started...")}
-          >
-            <Download className="h-4 w-4" />
-            Export Data
-          </Button>
+        {/* Linked Cards Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-foreground">Linked Cards & Banks</h3>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {linkedCards.map(card => (
+              <div key={card.id} className="min-w-[140px] border border-border bg-card p-3 rounded-xl shadow-sm flex-shrink-0">
+                <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">{card.bank}</div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                    {card.card_type === 'upi_only' ? <Smartphone className="h-3 w-3 text-emerald-500" /> : <CreditCard className="h-3 w-3 text-blue-500" />}
+                  </div>
+                  <span className="text-sm font-mono font-bold">••{card.last4}</span>
+                </div>
+              </div>
+            ))}
+            <button className="min-w-[140px] border border-dashed border-border bg-muted/50 p-3 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-muted transition-colors flex-shrink-0">
+              <Plus className="h-5 w-5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Link Card</span>
+            </button>
+          </div>
         </div>
 
         {/* Filters & Tabs */}
@@ -205,13 +250,13 @@ export default function PassbookPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex bg-muted p-1 rounded-xl">
-              {["ALL", "CREDIT", "DEBIT", "UPI"].map((tab) => (
+            <div className="flex overflow-x-auto bg-muted p-1 rounded-xl scrollbar-hide">
+              {["ALL", "PENDING", "CREDIT", "DEBIT", "UPI", "CARD"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setFilter(tab)}
                   className={cn(
-                    "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                    "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap",
                     filter === tab ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -241,46 +286,73 @@ export default function PassbookPage() {
             </div>
           ) : filteredTransactions.length > 0 ? (
             <div className="divide-y divide-border">
-              {filteredTransactions.map((t) => (
-                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "h-10 w-10 rounded-full flex items-center justify-center",
-                      t.payment_mode === "CREDIT" ? "bg-purple-100 text-purple-600" :
-                      t.payment_mode === "DEBIT"  ? "bg-blue-100 text-blue-600" :
-                      "bg-emerald-100 text-emerald-600"
-                    )}>
-                      {t.payment_mode === "CREDIT" ? <CreditCard className="h-5 w-5" /> :
-                       t.payment_mode === "DEBIT"  ? <Landmark className="h-5 w-5" /> :
-                       <Smartphone className="h-5 w-5" />}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{t.merchant_name}</h4>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">
-                          {t.source_name}
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                        </span>
+              {filteredTransactions.map((t) => {
+                const isCredit = t.type === "credit";
+                const isPending = !t.is_verified && t.source !== 'auto';
+                
+                return (
+                  <div 
+                    key={t.id} 
+                    className={cn(
+                      "p-4 flex flex-col gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-l-4",
+                      isPending ? "border-l-yellow-400 bg-yellow-50/30 dark:bg-yellow-500/5" :
+                      t.is_verified ? "border-l-emerald-500" : "border-l-transparent"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                          isCredit ? "bg-emerald-100 text-emerald-600" :
+                          t.method === "upi" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                        )}>
+                          {isCredit ? <ArrowDownRight className="h-5 w-5" /> :
+                           t.method === "upi" ? <Smartphone className="h-5 w-5" /> :
+                           <CreditCard className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground">{t.merchant || "Unknown Merchant"}</h4>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">
+                              {t.method} {t.account_last4 ? `••${t.account_last4}` : ""}
+                            </span>
+                            <span className="text-[10px] font-medium text-purple-600 bg-purple-50 dark:bg-purple-500/10 dark:text-purple-400 px-1.5 py-0.5 rounded uppercase border border-purple-100 dark:border-purple-500/20">
+                              {t.source === 'sms' || t.source === 'notification' ? 'AI PARSED' : 'AUTO'}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : "text-red-600")}>
+                          {isCredit ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN")}
+                        </p>
+                        <div className="flex items-center gap-1 justify-end mt-1">
+                          <p className="text-[10px] text-muted-foreground uppercase">{t.category}</p>
+                        </div>
                       </div>
                     </div>
+
+                    {isPending && (
+                      <div className="flex items-center gap-2 ml-14 mt-1 border-t border-border/50 pt-2">
+                        <span className="text-[10px] text-yellow-600 font-medium flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> PENDING CONFIRMATION
+                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                          <Button variant="ghost" size="sm" className="h-6 text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 px-2" onClick={() => ignoreTransaction(t.id)}>
+                            Ignore
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-6 text-[11px] px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => confirmTransaction(t.id)}>
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Confirm
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className={cn("text-sm font-bold", t.payment_mode === "CREDIT" ? "text-emerald-600" : "text-red-600")}>
-                      {t.payment_mode === "CREDIT" ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN")}
-                    </p>
-                    <div className="flex items-center gap-1 justify-end mt-0.5">
-                      {t.payment_mode === "CREDIT" ? (
-                        <ArrowDownRight className="h-3 w-3 text-emerald-500" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                      )}
-                      <p className="text-[10px] text-muted-foreground uppercase">{t.category}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="p-12 text-center">

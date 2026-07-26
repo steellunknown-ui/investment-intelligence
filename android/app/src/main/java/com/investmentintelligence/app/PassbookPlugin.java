@@ -23,9 +23,6 @@ public class PassbookPlugin extends Plugin {
         super.load();
         instance = this;
         Log.d(TAG, "✅ PassbookPlugin loaded — instance ready.");
-        // NOTE: We do NOT drain the queue here.
-        // The WebView JS listener is not registered yet at this point.
-        // Draining happens via sync() which is called from React AFTER addListener().
     }
 
     @com.getcapacitor.PluginMethod
@@ -35,30 +32,19 @@ public class PassbookPlugin extends Plugin {
         call.resolve();
     }
 
-    /**
-     * Sends a transaction event to the JavaScript/WebView layer.
-     * Returns true if sent successfully, false if the app is in the background.
-     */
-    public static boolean sendTransactionToJS(String source, String merchant, double amount, String type, String raw) {
+    public static boolean sendTransactionToJS(String source, String raw) {
         if (instance != null) {
             JSObject ret = new JSObject();
             ret.put("source", source);
-            ret.put("merchant", merchant);
-            ret.put("amount", amount);
-            ret.put("type", type);
             ret.put("raw", raw);
             instance.notifyListeners("onTransactionDetected", ret);
-            Log.d(TAG, "📤 Transaction sent to JS: " + merchant + " ₹" + amount);
-            return true; // successfully sent
+            Log.d(TAG, "📤 Transaction sent to JS: " + source);
+            return true;
         }
         Log.d(TAG, "⚠️ instance is null — app is in background");
-        return false; // app is in background, caller should queue
+        return false;
     }
 
-    /**
-     * When the app opens, check SharedPreferences for any pending transactions
-     * that were saved while the app was closed, and fire them to the JS layer.
-     */
     private void drainPendingQueue() {
         try {
             Context ctx = getContext();
@@ -71,20 +57,16 @@ public class PassbookPlugin extends Plugin {
                 return;
             }
 
-            Log.d(TAG, "📬 Draining " + queue.length() + " pending transactions...");
+            Log.d(TAG, "📬 Draining " + queue.length() + " pending raw transactions...");
 
             for (int i = 0; i < queue.length(); i++) {
                 JSONObject entry = queue.getJSONObject(i);
                 JSObject ret = new JSObject();
-                ret.put("source",   entry.getString("source"));
-                ret.put("merchant", entry.getString("merchant"));
-                ret.put("amount",   entry.getDouble("amount"));
-                ret.put("type",     entry.getString("type"));
-                ret.put("raw",      entry.getString("raw"));
+                ret.put("source", entry.optString("source", "Unknown"));
+                ret.put("raw",    entry.optString("raw", ""));
                 notifyListeners("onTransactionDetected", ret);
             }
 
-            // Clear the queue after draining
             prefs.edit().putString(PREFS_KEY, "[]").apply();
             Log.d(TAG, "✅ Queue drained and cleared.");
 
