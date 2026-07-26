@@ -1,20 +1,42 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-const apiKey = process.env.GEMINI_API_KEY;
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 export async function parseTransaction(rawText: string, sourceApp: string) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
   if (!apiKey) {
-    console.error("CRITICAL: GEMINI_API_KEY is missing from environment variables!");
-    throw new Error("GEMINI_API_KEY is not defined in environment variables. Please check Vercel settings.");
+    console.error("CRITICAL: GEMINI_API_KEY is missing!");
+    throw new Error("GEMINI_API_KEY is not defined. Please check Vercel environment variables.");
   }
 
-  console.log("Gemini Parser: Initializing with model gemini-1.5-flash. Raw text length:", rawText.length);
+  // Log API Key presence (safe way)
+  console.log(`Gemini Parser: Using key starting with ${apiKey.substring(0, 4)}...`);
 
   const genAI = new GoogleGenerativeAI(apiKey);
+
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     generationConfig: {
-      responseMimeType: "application/json"
-    }
+      responseMimeType: "application/json",
+      temperature: 0.1, // Keep it low for consistent JSON
+    },
+    safetySettings: [
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+    ],
   });
 
   const prompt = `
@@ -52,15 +74,18 @@ Message Text: ${rawText}
 
   try {
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
+
+    if (!text) {
+      throw new Error("Gemini returned an empty response. Possible safety block.");
+    }
 
     // Clean up potential markdown if the model ignored config
     const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(cleanText);
   } catch (error: any) {
-    console.error("Gemini Parsing Error Details:", error);
-    // Provide a more descriptive error back to the route
-    throw new Error(`Gemini API Error: ${error.message || 'Unknown parsing failure'}`);
+    console.error("Gemini Detailed Error:", error);
+    throw new Error(`Gemini API Failure: ${error.message || 'Unknown error'}`);
   }
 }
