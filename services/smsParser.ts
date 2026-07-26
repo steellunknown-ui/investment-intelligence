@@ -1,9 +1,9 @@
 export async function parseTransaction(rawText: string, sourceApp: string) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENROUTER_PARSER_API_KEY;
 
   if (!apiKey) {
-    console.error("CRITICAL: OPENROUTER_API_KEY is missing!");
-    throw new Error("OPENROUTER_API_KEY is not defined. Please check Vercel environment variables.");
+    console.error("CRITICAL: OPENROUTER_PARSER_API_KEY is missing!");
+    throw new Error("OPENROUTER_PARSER_API_KEY is not defined. Please check Vercel environment variables.");
   }
 
   console.log(`OpenRouter Parser: Using key starting with ${apiKey.substring(0, 8)}...`);
