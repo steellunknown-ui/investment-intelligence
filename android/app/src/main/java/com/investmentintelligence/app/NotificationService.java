@@ -35,26 +35,33 @@ public class NotificationService extends NotificationListenerService {
     public void onNotificationPosted(StatusBarNotification sbn) {
         try {
             String packageName = sbn.getPackageName();
-            Log.d(TAG, "🔔 Detected Notification from: " + packageName);
-
-            if (!ALLOWED_PACKAGES.contains(packageName)) {
-                Log.d(TAG, "⏩ Ignoring app: " + packageName);
-                return;
-            }
-
             Notification notification = sbn.getNotification();
             Bundle extras = notification.extras;
 
             CharSequence titleSeq = extras.getCharSequence(Notification.EXTRA_TITLE, "");
             String title = titleSeq != null ? titleSeq.toString() : "";
 
+            // read EXTRA_BIG_TEXT first, then fallback to EXTRA_TEXT
             CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
             CharSequence text    = extras.getCharSequence(Notification.EXTRA_TEXT);
             String body = bigText != null ? bigText.toString()
                         : text != null    ? text.toString()
                         : "";
 
-            if (body.isEmpty()) return;
+            Log.d(TAG, "--- Notification Received ---");
+            Log.d(TAG, "Package : " + packageName);
+            Log.d(TAG, "Title   : " + title);
+            Log.d(TAG, "Body    : " + body);
+
+            if (!ALLOWED_PACKAGES.contains(packageName)) {
+                Log.d(TAG, "⏩ Ignoring non-financial app: " + packageName);
+                return;
+            }
+
+            if (body.isEmpty()) {
+                Log.d(TAG, "⚠️ Body is empty, skipping.");
+                return;
+            }
             
             String fullText = title + " " + body;
 
