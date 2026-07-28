@@ -1,84 +1,167 @@
-export async function parseTransaction(rawText: string, sourceApp: string) {
-  const apiKey = process.env.OPENROUTER_PARSER_API_KEY;
-
-  if (!apiKey) {
-    console.error("CRITICAL: OPENROUTER_PARSER_API_KEY is missing!");
-    throw new Error("OPENROUTER_PARSER_API_KEY is not defined. Please check Vercel environment variables.");
-  }
-
-  console.log(`OpenRouter Parser: Using key starting with ${apiKey.substring(0, 8)}...`);
-
-  const prompt = `
-You are a financial transaction parser for Indian banking SMS and app notifications.
-Extract transaction details and return them as JSON.
-No explanation, no markdown, no extra text — only raw JSON.
-
-Rules:
-- Amounts are always in INR unless specified.
-- 'type' is 'credit' if money was received, 'debit' if money was sent/spent.
-- Extract merchant name if present, else null.
-- Extract UPI ID if present, else null.
-- Extract last 4 digits of card/account if present, else null.
-- Extract transaction reference / UTR if present, else null.
-- 'transaction_date' in ISO 8601 format. If no date in message, use: ${new Date().toISOString()}.
-- If the message is NOT a financial transaction (OTP, promo, alert), set 'is_transaction' to false and leave other fields null.
-
-Respond strictly with valid JSON with these keys:
-{
-  "is_transaction": boolean,
-  "amount": number or null,
-  "type": "credit" or "debit" or null,
-  "method": "upi" or "card" or "neft" or "imps" or "atm" or "emi" or "unknown",
-  "merchant": string or null,
-  "bank": string or null,
-  "account_last4": string or null,
-  "upi_id": string or null,
-  "balance_after": number or null,
-  "transaction_ref": string or null,
-  "transaction_date": string
+export interface ParsedTransaction {
+  is_transaction: boolean;
+  amount?: number;
+  type?: 'credit' | 'debit';
+  method?: 'upi' | 'card' | 'neft' | 'imps' | 'atm' | 'emi' | 'unknown';
+  merchant?: string | null;
+  bank?: string | null;
+  account_last4?: string | null;
+  upi_id?: string | null;
+  balance_after?: number | null;
+  transaction_ref?: string | null;
+  transaction_date?: string;
+  category?: string;
 }
 
-Input Message:
-Source App: ${sourceApp}
-Message Text: ${rawText}
-  `;
+const IGNORE_PATTERNS = [
+  /\botp\b/i,
+  /one.?time.?pass/i,
+  /do not share/i,
+  /offer|cashback|reward points/i,
+  /dear customer.*click/i,
+  /login.*attempt/i,
+  /password.*changed/i,
+  /pre.?approved/i,
+  /card.*block/i,
+  /kyc.*update/i,
+];
 
-  // We will insert the model name you choose here!
-  const OPENROUTER_MODEL = "google/gemma-4-31b-it:free";
+function extractAmount(text: string): number | null {
+  const match = text.match(
+    /(?:rs\.?\s*|inr\s*|₹\s*)([0-9,]+(?:\.[0-9]{1,2})?)/i
+  );
+  if (!match) return null;
+  return parseFloat(match[1].replace(/,/g, ''));
+}
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://investment-intelligence.vercel.app", // Optional but recommended by OpenRouter
-        "X-Title": "Investment Intelligence", // Optional
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-      }),
-    });
+function extractAccount(text: string): string | null {
+  const match = text.match(
+    /(?:xx+|x+|\*+|ending|a\/c|acct|account)[^\d]*(\d{4})/i
+  );
+  return match ? match[1] : null;
+}
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`OpenRouter API Error ${response.status}: ${errorData}`);
-    }
-
-    const data = await response.json();
-    const text = data.choices[0].message.content;
-
-    if (!text) {
-      throw new Error("OpenRouter returned an empty response.");
-    }
-
-    // Clean up potential markdown if the model ignored instructions
-    const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanText);
-  } catch (error: any) {
-    console.error("OpenRouter Detailed Error:", error);
-    throw new Error(`OpenRouter API Failure: ${error.message || 'Unknown error'}`);
+function extractBank(text: string): string | null {
+  const bankMap: Record<string, string> = {
+    hdfc: 'HDFC',
+    'state bank': 'SBI',
+    sbi: 'SBI',
+    icici: 'ICICI',
+    axis: 'Axis',
+    kotak: 'Kotak',
+    pnb: 'PNB',
+    'bank of baroda': 'Bank of Baroda',
+    bob: 'Bank of Baroda',
+    'yes bank': 'Yes Bank',
+    yesb: 'Yes Bank',
+    idfc: 'IDFC First',
+    indusind: 'IndusInd',
+    canara: 'Canara',
+    union: 'Union Bank',
+    central: 'Central Bank',
+    gpay: 'GPay',
+    'google pay': 'GPay',
+    phonepe: 'PhonePe',
+    paytm: 'Paytm',
+    fampay: 'FamPay',
+    famcard: 'FamPay',
+    'amazon pay': 'Amazon Pay',
+    mobikwik: 'MobiKwik',
+  };
+  const lower = text.toLowerCase();
+  for (const [key, val] of Object.entries(bankMap)) {
+    if (lower.includes(key)) return val;
   }
+  return null;
+}
+
+function extractMethod(text: string): ParsedTransaction['method'] {
+  if (/\bupi\b/i.test(text)) return 'upi';
+  if (/\bneft\b/i.test(text)) return 'neft';
+  if (/\bimps\b/i.test(text)) return 'imps';
+  if (/atm|cash withdrawal/i.test(text)) return 'atm';
+  if (/\bemi\b/i.test(text)) return 'emi';
+  if (/credit card|debit card/i.test(text)) return 'card';
+  return 'unknown';
+}
+
+function extractCategory(merchant: string | null, method: string | undefined, type: string | undefined): string {
+  const m = (merchant ?? '').toLowerCase();
+  if (/swiggy|zomato|domino|mcdonald|kfc|pizza|burger|food|cafe|restaurant/i.test(m)) return 'Food & Dining';
+  if (/amazon|flipkart|myntra|meesho|ajio|nykaa|snapdeal/i.test(m)) return 'Shopping';
+  if (/bpcl|hpcl|shell|iocl|petrol|fuel/i.test(m)) return 'Fuel';
+  if (/apollo|medplus|pharmeasy|netmeds|hospital|clinic|doctor/i.test(m)) return 'Healthcare';
+  if (/netflix|spotify|hotstar|prime|youtube|zee5|jiocinema/i.test(m)) return 'Entertainment';
+  if (/uber|ola|rapido|metro|irctc|railway|flight|indigo/i.test(m)) return 'Transport';
+  if (/electricity|water|airtel|jio|broadband|vi |vodafone/i.test(m)) return 'Utilities';
+  if (/rent|housing|society|maintenance/i.test(m)) return 'Rent';
+  if (method === 'atm') return 'Cash Withdrawal';
+  if (method === 'emi') return 'EMI';
+  if (type === 'credit') return 'Income';
+  return 'Others';
+}
+
+export function generateFingerprint(parsed: ParsedTransaction): string {
+  const date = parsed.transaction_date?.split('T')[0]
+    ?? new Date().toISOString().split('T')[0];
+  const ref = parsed.transaction_ref
+    ?? parsed.merchant
+    ?? 'no-ref';
+  const raw = `${parsed.amount}-${parsed.bank}-${date}-${ref}`;
+  let hash = 5381;
+  for (let i = 0; i < raw.length; i++) {
+    hash = (hash * 33) ^ raw.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+export function parseTransaction(text: string): ParsedTransaction {
+  // Step 1: Ignore non-transactions
+  if (IGNORE_PATTERNS.some((p) => p.test(text))) {
+    return { is_transaction: false };
+  }
+
+  // Step 2: Must have amount
+  const amount = extractAmount(text);
+  if (!amount) return { is_transaction: false };
+
+  // Step 3: Must have credit or debit keyword
+  const isCredit = /credited|received|refund|added|deposited/i.test(text);
+  const isDebit  = /debited|paid|spent|withdrawn|deducted|sent/i.test(text);
+  if (!isCredit && !isDebit) return { is_transaction: false };
+
+  // Step 4: Extract all fields
+  const account_last4 = extractAccount(text);
+  const upiId = text.match(/([\w.\-]+@[a-zA-Z]+)/)?.[1] ?? null;
+  const bank = extractBank(text);
+  const method = extractMethod(text);
+  const ref = text.match(
+    /(?:ref|utr|txn|transaction)[^\w]*([A-Z0-9]{8,20})/i
+  )?.[1] ?? null;
+  const bal = text.match(
+    /(?:avl|avail|bal|balance)[^\d]*([0-9,]+(?:\.[0-9]{1,2})?)/i
+  )?.[1] ?? null;
+  const merchantRaw = upiId
+    ? upiId.split('@')[0]
+    : text.match(
+        /(?:to|at|paid to|from)\s+([A-Za-z0-9 &.'-]{2,25}?)(?:\s+via|\s+on|\s+ref|\.|$)/i
+      )?.[1]?.trim() ?? null;
+
+  const type = isCredit ? 'credit' : 'debit';
+  const category = extractCategory(merchantRaw, method, type);
+
+  return {
+    is_transaction: true,
+    amount,
+    type,
+    method,
+    merchant: merchantRaw,
+    bank,
+    account_last4,
+    upi_id: upiId,
+    balance_after: bal ? parseFloat(bal.replace(/,/g, '')) : null,
+    transaction_ref: ref,
+    transaction_date: new Date().toISOString(),
+    category,
+  };
 }

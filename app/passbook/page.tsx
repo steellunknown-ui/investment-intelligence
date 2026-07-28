@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   Clock,
   Plus,
-  Bot
+  History,
+  Edit2,
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
@@ -33,6 +36,7 @@ export default function PassbookPage() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // ── FETCH DATA ─────────────────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
     try {
       const supabase = createSupabaseBrowserClient();
@@ -41,14 +45,11 @@ export default function PassbookPage() {
         .select("*")
         .order("transaction_date", { ascending: false });
 
-      if (error) {
-        console.error("Supabase fetch error:", error);
-        toast.error("DB Error: " + error.message, { duration: 8000 });
-      }
+      if (error) throw error;
       if (data) setTransactions(data);
     } catch (err: any) {
-      console.error("Fetch exception:", err);
-      toast.error("Fetch failed: " + err?.message);
+      console.error("Fetch failed:", err);
+      toast.error("Fetch failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -68,31 +69,25 @@ export default function PassbookPage() {
     }
   }, []);
 
-  const handleSaveLive = useCallback(async (data: any) => {
+  // ── SYNC & PARSE ───────────────────────────────────────────────────────────
+  const handleParseRaw = useCallback(async (rawText: string, source: string) => {
     try {
       setIsSyncing(true);
       const res = await fetch("/api/passbook/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          raw_text: data.raw,
-          source: data.source
-        })
+        body: JSON.stringify({ raw_text: rawText, source })
       });
       const result = await res.json();
       
-      if (res.ok) {
-        if (result.message === 'Duplicate transaction skipped') {
-          console.log("Duplicate skipped", result.fingerprint);
-        } else if (result.transaction) {
-          toast.success(`✅ Parsed: ₹${result.transaction.amount} at ${result.transaction.merchant}`);
-          fetchTransactions();
-        }
-      } else {
-        toast.error("Parse error: " + result.error);
+      if (res.ok && result.success) {
+        // Automatic: No toast needed for every small transaction, just refresh
+        fetchTransactions();
+      } else if (result.reason === 'duplicate') {
+        console.log("Duplicate skipped");
       }
     } catch (err: any) {
-      toast.error("Exception: " + err?.message);
+      console.error("Sync error:", err);
     } finally {
       setIsSyncing(false);
     }
@@ -110,30 +105,30 @@ export default function PassbookPage() {
     }
   };
 
-  const ignoreTransaction = async (id: string) => {
+  const deleteTransaction = async (id: string) => {
     try {
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
-      toast.success("Transaction ignored!");
+      toast.success("Transaction deleted");
       fetchTransactions();
     } catch (err: any) {
       toast.error("Error: " + err.message);
     }
   };
 
+  // ── LIFECYCLE ─────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchTransactions();
     fetchLinkedCards();
 
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
       PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
-        console.log("🔔 onTransactionDetected fired:", JSON.stringify(data));
-        handleSaveLive(data);
+        console.log("🔔 Raw signal received:", data.source);
+        handleParseRaw(data.raw, data.source);
       });
 
-      PassbookPlugin.sync().catch(console.error);
-
+      // Regular sync to drain background queue
       const interval = setInterval(() => {
         PassbookPlugin.sync().catch(console.error);
       }, 5000);
@@ -143,20 +138,24 @@ export default function PassbookPage() {
         PassbookPlugin.removeAllListeners().catch(console.error);
       };
     }
-  }, [fetchTransactions, fetchLinkedCards, handleSaveLive]);
+  }, [fetchTransactions, fetchLinkedCards, handleParseRaw]);
 
+  // ── FILTERING ─────────────────────────────────────────────────────────────
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
       (t.merchant?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (t.source?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+      (t.bank?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (t.raw_text?.toLowerCase() || "").includes(searchQuery.toLowerCase());
       
     if (!matchesSearch) return false;
     
     if (filter === "ALL") return true;
-    if (filter === "PENDING") return !t.is_verified && t.source !== 'auto';
-    if (filter === "UPI") return t.method === "upi" || t.source?.toLowerCase().includes("upi");
+    if (filter === "PENDING") return !t.is_verified;
+    if (filter === "CREDIT") return t.type === "credit";
+    if (filter === "DEBIT") return t.type === "debit";
+    if (filter === "UPI") return t.method === "upi";
     if (filter === "CARD") return t.method === "card";
-    return t.type?.toUpperCase() === filter;
+    return true;
   });
 
   const totalDebit = filteredTransactions
@@ -168,159 +167,104 @@ export default function PassbookPage() {
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   return (
-    <DashboardShell
-      title="Smart Passbook"
-      description="Automatically tracked card and UPI expenses"
-    >
+    <DashboardShell title="Smart Passbook" description="Universal Transaction Tracker">
       <div className="space-y-6">
 
-        {/* AI Parser Status */}
+        {/* 1. Status Bar */}
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
           <div className="bg-emerald-500/20 p-2 rounded-full relative">
-            <Bot className="h-5 w-5 text-emerald-600" />
+            <History className="h-5 w-5 text-emerald-600" />
             <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">AI Parser Active</h3>
-            <p className="text-xs text-emerald-600/80 dark:text-emerald-500">Monitoring GPay, PhonePe, Paytm, and SMS</p>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Smart Passbook Active</h3>
+            <p className="text-[10px] text-emerald-600/80 dark:text-emerald-500 uppercase font-medium">
+              Monitoring Transactions · Live Sync
+            </p>
           </div>
-          {isSyncing && (
-            <div className="ml-auto flex items-center gap-2 text-xs font-medium text-emerald-600">
-              <span className="h-4 w-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-              Parsing...
-            </div>
-          )}
+          {isSyncing && <div className="animate-spin h-4 w-4 border-2 border-emerald-500 border-t-transparent rounded-full" />}
         </div>
 
-        {/* Monthly Summary Card */}
-        <div className="rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[160px] bg-white dark:bg-slate-900 border border-border text-slate-900 dark:text-white">
+        {/* 2. Summary Card */}
+        <div className="rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[140px] bg-white dark:bg-slate-900 border border-border text-slate-900 dark:text-white">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Spent (Out)</h2>
-              {loading ? (
-                <div className="h-8 w-24 bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
-              ) : (
-                <h1 className="text-2xl font-bold tracking-tight text-red-600">₹{totalDebit.toLocaleString("en-IN")}</h1>
-              )}
+              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Spent</h2>
+              <h1 className="text-2xl font-bold tracking-tight text-red-600">₹{totalDebit.toLocaleString("en-IN")}</h1>
             </div>
             <div className="text-right border-l border-border pl-4">
-              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Received (In)</h2>
-              {loading ? (
-                <div className="h-8 w-24 ml-auto bg-slate-100 dark:bg-white/10 animate-pulse rounded" />
-              ) : (
-                <h1 className="text-2xl font-bold tracking-tight text-emerald-600">₹{totalCredit.toLocaleString("en-IN")}</h1>
-              )}
+              <h2 className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mb-1">Total Received</h2>
+              <h1 className="text-2xl font-bold tracking-tight text-emerald-600">₹{totalCredit.toLocaleString("en-IN")}</h1>
             </div>
+          </div>
+          <div className="pt-3 border-t border-border flex justify-between items-end mt-4">
+            <div className="text-xs text-muted-foreground">{filteredTransactions.length} Transactions</div>
+            <div className="text-[10px] font-bold text-primary uppercase">Real-time sync</div>
           </div>
         </div>
 
-        {/* Linked Cards Section */}
+        {/* 3. Linked Cards Section */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">Linked Cards & Banks</h3>
-          </div>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Linked Cards & Banks</h3>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {linkedCards.map(card => (
-              <div key={card.id} className="min-w-[140px] border border-border bg-card p-3 rounded-xl shadow-sm flex-shrink-0">
-                <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">{card.bank}</div>
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
-                    {card.card_type === 'upi_only' ? <Smartphone className="h-3 w-3 text-emerald-500" /> : <CreditCard className="h-3 w-3 text-blue-500" />}
+              <div key={card.id} className="min-w-[150px] border border-border bg-card p-3 rounded-xl shadow-sm flex-shrink-0">
+                <div className="text-[10px] font-bold text-muted-foreground mb-2 uppercase">{card.bank}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono font-bold">•••• {card.last4}</span>
+                  <div className="h-5 w-5 bg-primary/10 rounded flex items-center justify-center">
+                    {card.card_type === 'upi_only' ? <Smartphone className="h-3 w-3 text-primary" /> : <CreditCard className="h-3 w-3 text-primary" />}
                   </div>
-                  <span className="text-sm font-mono font-bold">••{card.last4}</span>
                 </div>
               </div>
             ))}
-            <button className="min-w-[140px] border border-dashed border-border bg-muted/50 p-3 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-muted transition-colors flex-shrink-0">
-              <Plus className="h-5 w-5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Link Card</span>
+            <button className="min-w-[140px] border border-dashed border-border bg-muted/30 p-3 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-muted transition-colors flex-shrink-0">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Link Card</span>
             </button>
           </div>
         </div>
 
-        {/* Filters & Tabs */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search merchant or card..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex overflow-x-auto bg-muted p-1 rounded-xl scrollbar-hide">
-              {["ALL", "PENDING", "CREDIT", "DEBIT", "UPI", "CARD"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilter(tab)}
-                  className={cn(
-                    "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap",
-                    filter === tab ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+        {/* 4. Filters */}
+        <div className="flex flex-col gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search merchant, bank, or text..." className="pl-10 h-10 text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
+          <div className="flex overflow-x-auto bg-muted/50 p-1 rounded-xl scrollbar-hide gap-1">
+            {["ALL", "PENDING", "CREDIT", "DEBIT", "UPI", "CARD"].map((tab) => (
+              <button key={tab} onClick={() => setFilter(tab)} className={cn("px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap uppercase", filter === tab ? "bg-white dark:bg-slate-800 shadow-sm text-primary" : "text-muted-foreground")}>
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Transaction List */}
-        <Card className="overflow-hidden border-border">
+        {/* 5. Transaction List */}
+        <Card className="overflow-hidden border-border bg-transparent shadow-none border-none">
           {loading ? (
-            <div className="p-8 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex justify-between items-center animate-pulse">
-                  <div className="flex gap-4">
-                    <div className="h-10 w-10 bg-muted rounded-full" />
-                    <div className="space-y-2">
-                      <div className="h-4 w-32 bg-muted rounded" />
-                      <div className="h-3 w-20 bg-muted rounded" />
-                    </div>
-                  </div>
-                  <div className="h-6 w-16 bg-muted rounded" />
-                </div>
-              ))}
-            </div>
+            <div className="p-8 text-center animate-pulse text-muted-foreground">Loading transactions...</div>
           ) : filteredTransactions.length > 0 ? (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-3">
               {filteredTransactions.map((t) => {
                 const isCredit = t.type === "credit";
-                const isPending = !t.is_verified && t.source !== 'auto';
+                const isPending = !t.is_verified;
                 
                 return (
-                  <div 
-                    key={t.id} 
-                    className={cn(
-                      "p-4 flex flex-col gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-l-4",
-                      isPending ? "border-l-yellow-400 bg-yellow-50/30 dark:bg-yellow-500/5" :
-                      t.is_verified ? "border-l-emerald-500" : "border-l-transparent"
-                    )}
-                  >
+                  <div key={t.id} className="bg-card border border-border rounded-2xl p-4 transition-all">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-                          isCredit ? "bg-emerald-100 text-emerald-600" :
-                          t.method === "upi" ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
-                        )}>
-                          {isCredit ? <ArrowDownRight className="h-5 w-5" /> :
-                           t.method === "upi" ? <Smartphone className="h-5 w-5" /> :
-                           <CreditCard className="h-5 w-5" />}
+                      <div className="flex items-center gap-3">
+                        <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0", isCredit ? "bg-emerald-100 text-emerald-600" : "bg-primary/10 text-primary")}>
+                          {isCredit ? <ArrowDownRight className="h-5 w-5" /> : t.method === "upi" ? <Smartphone className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
                         </div>
                         <div>
-                          <h4 className="text-sm font-bold text-foreground">{t.merchant || "Unknown Merchant"}</h4>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">
-                              {t.method} {t.account_last4 ? `••${t.account_last4}` : ""}
+                          <h4 className="text-sm font-bold text-foreground leading-none">{t.merchant || "Unknown Merchant"}</h4>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">
+                              {t.bank || 'Bank'} {t.account_last4 ? `••${t.account_last4}` : ""}
                             </span>
-                            <span className="text-[10px] font-medium text-purple-600 bg-purple-50 dark:bg-purple-500/10 dark:text-purple-400 px-1.5 py-0.5 rounded uppercase border border-purple-100 dark:border-purple-500/20">
-                              {t.source === 'sms' || t.source === 'notification' ? 'AI PARSED' : 'AUTO'}
-                            </span>
-                            <span className="text-[11px] text-slate-400">
-                              {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase">
+                              {t.category}
                             </span>
                           </div>
                         </div>
@@ -329,37 +273,20 @@ export default function PassbookPage() {
                         <p className={cn("text-sm font-bold", isCredit ? "text-emerald-600" : "text-red-600")}>
                           {isCredit ? "+" : "-"}₹{Number(t.amount).toLocaleString("en-IN")}
                         </p>
-                        <div className="flex items-center gap-1 justify-end mt-1">
-                          <p className="text-[10px] text-muted-foreground uppercase">{t.category}</p>
-                        </div>
+                        <p className="text-[9px] text-muted-foreground mt-1 uppercase font-medium">
+                          {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                        </p>
                       </div>
                     </div>
-
-                    {isPending && (
-                      <div className="flex items-center gap-2 ml-14 mt-1 border-t border-border/50 pt-2">
-                        <span className="text-[10px] text-yellow-600 font-medium flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> PENDING CONFIRMATION
-                        </span>
-                        <div className="ml-auto flex items-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-6 text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 px-2" onClick={() => ignoreTransaction(t.id)}>
-                            Ignore
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-6 text-[11px] px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => confirmTransaction(t.id)}>
-                            <CheckCircle2 className="h-3 w-3 mr-1" /> Confirm
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
           ) : (
             <div className="p-12 text-center">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-                <SearchX className="h-6 w-6 text-muted-foreground" />
-              </div>
+              <SearchX className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-sm font-semibold text-foreground">No transactions found</h3>
+              <p className="text-xs text-muted-foreground mt-1 uppercase font-medium">Monitoring your bank alerts...</p>
             </div>
           )}
         </Card>

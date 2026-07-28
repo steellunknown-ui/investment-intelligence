@@ -18,7 +18,6 @@ public class NotificationService extends NotificationListenerService {
     private static final String PREFS_NAME = "PendingTransactions";
     private static final String PREFS_KEY = "queue";
 
-    // Only process notifications from these financial apps
     private static final List<String> ALLOWED_PACKAGES = Arrays.asList(
         "com.google.android.apps.nbu.paisa.user", // GPay
         "net.one97.paytm",                         // Paytm
@@ -28,7 +27,8 @@ public class NotificationService extends NotificationListenerService {
         "com.mobikwik_new",                        // MobiKwik
         "com.csam.icici.bank.imobile",             // ICICI iMobile
         "com.hdfcbank.hdfcmobilebanking",          // HDFC Mobile
-        "com.sbi.SBIFreedomPlus"                   // SBI YONO
+        "com.sbi.SBIFreedomPlus",                  // SBI YONO
+        "com.google.android.apps.messaging"        // SMS App
     );
 
     @Override
@@ -37,9 +37,8 @@ public class NotificationService extends NotificationListenerService {
             String packageName = sbn.getPackageName();
             Log.d(TAG, "🔔 Detected Notification from: " + packageName);
 
-            // Only process whitelisted financial apps for the Smart Passbook
             if (!ALLOWED_PACKAGES.contains(packageName)) {
-                Log.d(TAG, "⏩ Ignoring non-financial app: " + packageName);
+                Log.d(TAG, "⏩ Ignoring app: " + packageName);
                 return;
             }
 
@@ -57,17 +56,21 @@ public class NotificationService extends NotificationListenerService {
 
             if (body.isEmpty()) return;
             
-            String fullText = title + " - " + body;
+            String fullText = title + " " + body;
 
-            Log.d(TAG, "📥 Queuing Notification for AI parsing from: " + packageName);
-            queueRawTransaction(packageName, fullText);
+            Log.d(TAG, "📥 Queuing raw notification text from: " + packageName);
+            
+            queueRawTransaction("notification", packageName, fullText);
+            
+            // Also notify live if app is open
+            PassbookPlugin.sendTransactionToJS("notification", fullText);
             
         } catch (Exception e) {
             Log.e(TAG, "Error in onNotificationPosted", e);
         }
     }
 
-    private void queueRawTransaction(String source, String raw) {
+    private void queueRawTransaction(String source, String packageName, String raw) {
         try {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             String existing = prefs.getString(PREFS_KEY, "[]");
@@ -75,6 +78,7 @@ public class NotificationService extends NotificationListenerService {
 
             JSONObject entry = new JSONObject();
             entry.put("source", source);
+            entry.put("package_name", packageName);
             entry.put("raw", raw);
             queue.put(entry);
 
@@ -86,7 +90,5 @@ public class NotificationService extends NotificationListenerService {
     }
 
     @Override
-    public void onNotificationRemoved(StatusBarNotification sbn) {
-        // Not needed
-    }
+    public void onNotificationRemoved(StatusBarNotification sbn) {}
 }
