@@ -53,6 +53,14 @@ public class NotificationService extends NotificationListenerService {
             Log.d(TAG, "Title   : " + title);
             Log.d(TAG, "Body    : " + body);
 
+            if (packageName.equals("com.google.android.apps.messaging")) {
+                // For SMS app, only process if sender is a bank
+                if (!isBankSender(title)) {
+                    Log.d(TAG, "⛔ Skipping personal SMS from: " + title);
+                    return;
+                }
+            }
+
             if (!ALLOWED_PACKAGES.contains(packageName)) {
                 Log.d(TAG, "⏩ Ignoring non-financial app: " + packageName);
                 return;
@@ -75,6 +83,38 @@ public class NotificationService extends NotificationListenerService {
         } catch (Exception e) {
             Log.e(TAG, "Error in onNotificationPosted", e);
         }
+    }
+
+    private boolean isBankSender(String title) {
+        if (title == null) return false;
+        String t = title.toUpperCase();
+
+        // Bank sender IDs
+        String[] bankKeywords = {
+            "HDFC", "HDFCBK", "HDFCBANK",
+            "SBI", "SBIINB", "SBIUPI", "SBIPSG",
+            "ICICI", "ICICIB",
+            "AXIS", "AXISBK",
+            "KOTAK", "KOTAKB",
+            "PAYTM", "PAYTMB",
+            "GPAY", "PHONEPE",
+            "FAMPAY",
+            "IDFC", "IDFCFB",
+            "YESBNK", "YESBK",
+            "INDUSIND", "INDBNK",
+            "CANARA", "CANBNK",
+            "PNB", "PNBSMS",
+            "UNIONB", "UNION",
+            "AMAZON", "AMZPAY",
+            "MOBIKWIK",
+            "NEFT", "IMPS", "UPI",
+            "BANK", "FINANC"
+        };
+
+        for (String keyword : bankKeywords) {
+            if (t.contains(keyword)) return true;
+        }
+        return false;
     }
 
     private void queueRawTransaction(String source, String packageName, String raw) {

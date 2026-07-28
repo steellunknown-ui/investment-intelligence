@@ -24,6 +24,13 @@ const IGNORE_PATTERNS = [
   /pre.?approved/i,
   /card.*block/i,
   /kyc.*update/i,
+  /please verify/i,
+  /verify the transaction/i,
+  /verify in your/i,
+  /banking or upi app/i,
+  /transferred to the recipient/i,
+  /please check your/i,
+  /kindly check/i,
 ];
 
 function extractAmount(text: string): number | null {
