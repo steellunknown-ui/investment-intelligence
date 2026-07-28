@@ -81,7 +81,6 @@ export default function PassbookPage() {
       const result = await res.json();
       
       if (res.ok && result.success) {
-        // Automatic: No toast needed for every small transaction, just refresh
         fetchTransactions();
       } else if (result.reason === 'duplicate') {
         console.log("Duplicate skipped");
@@ -92,18 +91,6 @@ export default function PassbookPage() {
       setIsSyncing(false);
     }
   }, [fetchTransactions]);
-
-  const confirmTransaction = async (id: string) => {
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.from("transactions").update({ is_verified: true }).eq("id", id);
-      if (error) throw error;
-      toast.success("Transaction verified!");
-      fetchTransactions();
-    } catch (err: any) {
-      toast.error("Error: " + err.message);
-    }
-  };
 
   const deleteTransaction = async (id: string) => {
     try {
@@ -128,7 +115,6 @@ export default function PassbookPage() {
         handleParseRaw(data.raw, data.source);
       });
 
-      // Regular sync to drain background queue
       const interval = setInterval(() => {
         PassbookPlugin.sync().catch(console.error);
       }, 5000);
@@ -150,7 +136,6 @@ export default function PassbookPage() {
     if (!matchesSearch) return false;
     
     if (filter === "ALL") return true;
-    if (filter === "PENDING") return !t.is_verified;
     if (filter === "CREDIT") return t.type === "credit";
     if (filter === "DEBIT") return t.type === "debit";
     if (filter === "UPI") return t.method === "upi";
@@ -158,11 +143,11 @@ export default function PassbookPage() {
     return true;
   });
 
-  const totalDebit = filteredTransactions
+  const totalDebit = transactions
     .filter((t) => t.type === "debit")
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-  const totalCredit = filteredTransactions
+  const totalCredit = transactions
     .filter((t) => t.type === "credit")
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
@@ -171,18 +156,18 @@ export default function PassbookPage() {
       <div className="space-y-6">
 
         {/* 1. Status Bar */}
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
-          <div className="bg-emerald-500/20 p-2 rounded-full relative">
-            <History className="h-5 w-5 text-emerald-600" />
+        <div className="bg-slate-100 dark:bg-slate-800/50 border border-border rounded-xl p-3 flex items-center gap-3">
+          <div className="bg-primary/10 p-2 rounded-full relative">
+            <History className="h-5 w-5 text-primary" />
             <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Smart Passbook Active</h3>
-            <p className="text-[10px] text-emerald-600/80 dark:text-emerald-500 uppercase font-medium">
-              Monitoring Transactions · Live Sync
+            <h3 className="text-sm font-semibold text-foreground">Automatic Tracking Active</h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-medium">
+              Monitoring Bank SMS & Payment Notifications
             </p>
           </div>
-          {isSyncing && <div className="animate-spin h-4 w-4 border-2 border-emerald-500 border-t-transparent rounded-full" />}
+          {isSyncing && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
         </div>
 
         {/* 2. Summary Card */}
@@ -198,7 +183,7 @@ export default function PassbookPage() {
             </div>
           </div>
           <div className="pt-3 border-t border-border flex justify-between items-end mt-4">
-            <div className="text-xs text-muted-foreground">{filteredTransactions.length} Transactions</div>
+            <div className="text-xs text-muted-foreground">{transactions.length} Transactions</div>
             <div className="text-[10px] font-bold text-primary uppercase">Real-time sync</div>
           </div>
         </div>
@@ -232,7 +217,7 @@ export default function PassbookPage() {
             <Input placeholder="Search merchant, bank, or text..." className="pl-10 h-10 text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
           <div className="flex overflow-x-auto bg-muted/50 p-1 rounded-xl scrollbar-hide gap-1">
-            {["ALL", "PENDING", "CREDIT", "DEBIT", "UPI", "CARD"].map((tab) => (
+            {["ALL", "CREDIT", "DEBIT", "UPI", "CARD"].map((tab) => (
               <button key={tab} onClick={() => setFilter(tab)} className={cn("px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap uppercase", filter === tab ? "bg-white dark:bg-slate-800 shadow-sm text-primary" : "text-muted-foreground")}>
                 {tab}
               </button>
@@ -248,8 +233,7 @@ export default function PassbookPage() {
             <div className="flex flex-col gap-3">
               {filteredTransactions.map((t) => {
                 const isCredit = t.type === "credit";
-                const isPending = !t.is_verified;
-                
+
                 return (
                   <div key={t.id} className="bg-card border border-border rounded-2xl p-4 transition-all">
                     <div className="flex items-center justify-between">

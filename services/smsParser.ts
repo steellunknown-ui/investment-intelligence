@@ -125,10 +125,14 @@ export function parseTransaction(text: string): ParsedTransaction {
   const amount = extractAmount(text);
   if (!amount) return { is_transaction: false };
 
-  // Step 3: Must have credit or debit keyword
-  const isCredit = /credited|received|refund|added|deposited/i.test(text);
-  const isDebit  = /debited|paid|spent|withdrawn|deducted|sent/i.test(text);
-  if (!isCredit && !isDebit) return { is_transaction: false };
+  // Step 3: Precise Type Detection (Priority to Debit)
+  // Check for debit keywords first to avoid misclassifying messages like "Debited... Friend Credited"
+  const isDebit = /\b(debited|paid|spent|withdrawn|deducted|sent|used for)\b/i.test(text);
+  const isCredit = /\b(credited|received|refund|added|deposited)\b/i.test(text);
+
+  // If both exist, we prioritize Debit for ICICI style messages
+  const type = isDebit ? 'debit' : (isCredit ? 'credit' : null);
+  if (!type) return { is_transaction: false };
 
   // Step 4: Extract all fields
   const account_last4 = extractAccount(text);
@@ -136,18 +140,34 @@ export function parseTransaction(text: string): ParsedTransaction {
   const bank = extractBank(text);
   const method = extractMethod(text);
   const ref = text.match(
-    /(?:ref|utr|txn|transaction)[^\w]*([A-Z0-9]{8,20})/i
+    /(?:ref|utr|txn|transaction|upi)[:\s#]*([A-Z0-9]{8,20})/i
   )?.[1] ?? null;
   const bal = text.match(
     /(?:avl|avail|bal|balance)[^\d]*([0-9,]+(?:\.[0-9]{1,2})?)/i
   )?.[1] ?? null;
-  const merchantRaw = upiId
-    ? upiId.split('@')[0]
-    : text.match(
-        /(?:to|at|paid to|from)\s+([A-Za-z0-9 &.'-]{2,25}?)(?:\s+via|\s+on|\s+ref|\.|$)/i
-      )?.[1]?.trim() ?? null;
 
-  const type = isCredit ? 'credit' : 'debit';
+  // Refined Merchant Extraction
+  let merchantRaw: string | null = null;
+
+  if (upiId) {
+    merchantRaw = upiId.split('@')[0];
+  } else if (isDebit) {
+    // Look for who received the money (e.g., "...Abhishek Deepna credited")
+    const creditedMatch = text.match(/(?:;\s+)?([A-Za-z0-9 &.'-]{2,30?})\s+credited/i);
+    if (creditedMatch) {
+      merchantRaw = creditedMatch[1].trim();
+    } else {
+      merchantRaw = text.match(
+        /(?:to|at|paid to)\s+([A-Za-z0-9 &.'-]{2,25?})(?:\s+via|\s+on|\s+ref|\.|$)/i
+      )?.[1]?.trim() ?? null;
+    }
+  } else {
+    // Credit case
+    merchantRaw = text.match(
+      /(?:from|by)\s+([A-Za-z0-9 &.'-]{2,25?})(?:\s+via|\s+on|\s+ref|\.|$)/i
+    )?.[1]?.trim() ?? null;
+  }
+
   const category = extractCategory(merchantRaw, method, type);
 
   return {
