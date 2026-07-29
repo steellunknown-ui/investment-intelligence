@@ -70,20 +70,22 @@ export default function PassbookPage() {
   }, []);
 
   // ── SYNC & PARSE ───────────────────────────────────────────────────────────
-  const handleParseRaw = useCallback(async (rawText: string, source: string) => {
+  const handleParseRaw = useCallback(async (rawText: string, source: string, packageName?: string) => {
     try {
       setIsSyncing(true);
       const res = await fetch("/api/passbook/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ raw_text: rawText, source })
+        body: JSON.stringify({ raw_text: rawText, source, package_name: packageName })
       });
       const result = await res.json();
-      
+
       if (res.ok && result.success) {
         fetchTransactions();
       } else if (result.reason === 'duplicate') {
         console.log("Duplicate skipped");
+      } else if (result.reason === 'not_a_transaction') {
+        console.log("Not a transaction — skipped");
       }
     } catch (err: any) {
       console.error("Sync error:", err);
@@ -111,8 +113,19 @@ export default function PassbookPage() {
 
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
       PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
-        console.log("🔔 Raw signal received:", data.source);
-        handleParseRaw(data.raw, data.source);
+        console.log("🔔 Raw signal received:", data.source, data.raw?.substring(0, 60));
+
+        // NotificationService sends "packageName|rawText" — split here
+        let rawText: string = data.raw ?? "";
+        let packageName: string | undefined;
+
+        if (rawText.includes("|") && data.source === "notification") {
+          const pipeIdx = rawText.indexOf("|");
+          packageName = rawText.substring(0, pipeIdx);
+          rawText = rawText.substring(pipeIdx + 1);
+        }
+
+        handleParseRaw(rawText, data.source, packageName);
       });
 
       const interval = setInterval(() => {

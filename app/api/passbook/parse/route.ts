@@ -12,14 +12,14 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { raw_text, source } = body;
+        const { raw_text, source, package_name } = body;
 
         if (!raw_text) {
             return NextResponse.json({ error: 'Missing raw_text' }, { status: 400 });
         }
 
-        // 1. Call Universal Parser Logic
-        const parsed = parseTransaction(raw_text);
+        // 1. Parse — pass source so parser can use package as a hint
+        const parsed = parseTransaction(raw_text, source);
 
         if (!parsed.is_transaction) {
             return NextResponse.json({ success: false, reason: "not_a_transaction" }, { status: 200 });
@@ -43,22 +43,23 @@ export async function POST(request: Request) {
         const { data, error } = await supabase
             .from('transactions')
             .insert({
-                user_id: user.id,
-                source: source,
-                raw_text: raw_text,
-                amount: parsed.amount,
-                type: parsed.type,
-                method: parsed.method,
-                merchant: parsed.merchant,
-                bank: parsed.bank,
-                account_last4: parsed.account_last4,
-                upi_id: parsed.upi_id,
-                balance_after: parsed.balance_after,
-                transaction_ref: parsed.transaction_ref,
+                user_id:          user.id,
+                source:           source ?? 'unknown',
+                package_name:     package_name ?? null,
+                raw_text:         raw_text,
+                amount:           parsed.amount,
+                type:             parsed.type,
+                method:           parsed.method,
+                merchant:         parsed.merchant,
+                bank:             parsed.bank,
+                account_last4:    parsed.account_last4,
+                upi_id:           parsed.upi_id,
+                balance_after:    parsed.balance_after,
+                transaction_ref:  parsed.transaction_ref,
                 transaction_date: parsed.transaction_date,
-                category: parsed.category,
-                fingerprint: fingerprint,
-                is_verified: true, // Fully Automatic
+                category:         parsed.category,
+                fingerprint:      fingerprint,
+                is_verified:      true,
             })
             .select()
             .single();
