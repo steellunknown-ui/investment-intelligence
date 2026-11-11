@@ -278,36 +278,37 @@ export default function PassbookPage() {
       <div className="space-y-6">
 
         {/* 1. Header Banner & Test SMS Simulator Toggle */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/20 p-2.5 rounded-xl relative">
-              <History className="h-6 w-6 text-primary" />
-              <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-pulse" />
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all">
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 dark:border-emerald-500/30 p-2.5 rounded-xl relative shrink-0">
+              <History className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold tracking-tight">Real-Time Passbook Active</h3>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase font-semibold">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-foreground tracking-tight">
+                  Real-Time Passbook Active
+                </h3>
+                <span className="text-[10px] font-bold bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   v5.0 Engine
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Monitoring verified Bank SMS & UPI payment signals with automated deduplication
+              <p className="text-xs text-muted-foreground mt-1 font-normal leading-relaxed max-w-xl">
+                Monitoring verified Bank SMS &amp; UPI payment signals with automated deduplication
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2 self-end sm:self-auto relative z-10">
             {isSyncing && (
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              <div className="animate-spin h-4 w-4 border-2 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full" />
             )}
             <Button
               size="sm"
-              variant="outline"
               onClick={() => setShowSimulator(!showSimulator)}
-              className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-sm px-3.5 py-1.5 rounded-xl transition-all"
             >
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <Sparkles className="h-3.5 w-3.5 text-white" />
               {showSimulator ? "Close Simulator" : "Test Real SMS"}
             </Button>
           </div>
