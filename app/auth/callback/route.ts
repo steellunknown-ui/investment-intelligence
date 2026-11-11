@@ -6,7 +6,7 @@ import { trackLoginActivity } from "@/src/lib/login-tracker";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://investment-intellegince.vercel.app";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://investment-intelligence.vercel.app";
 
     try {
         const { searchParams } = new URL(request.url);

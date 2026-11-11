@@ -13,10 +13,10 @@ import {
     Eye,
     EyeOff,
     ArrowRight,
-    Sparkles
+    Bot
 } from "lucide-react";
 
-const PROD_URL = 'https://investment-intellegince.vercel.app';
+const PROD_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence.vercel.app';
 
 function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
     const searchParams = useSearchParams();
@@ -169,7 +169,7 @@ export default function LoginPage() {
                         <div className="space-y-4">
                             <FeatureCard icon={Shield} title="Military-Grade Security" description="Your data is encrypted end-to-end" />
                             <FeatureCard icon={Users} title="Nominee Access" description="Trusted contacts get access during inactivity" />
-                            <FeatureCard icon={Sparkles} title="Smart Insights" description="AI-powered portfolio analysis" />
+                            <FeatureCard icon={Bot} title="Smart Insights" description="Private AI portfolio analysis" />
                         </div>
                     </div>
                     <p className="text-sm text-white/40">Trusted by 10,000+ investors across India</p>

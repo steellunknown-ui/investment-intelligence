@@ -18,7 +18,6 @@ import {
   CreditCard,
   Landmark,
   Lock,
-  Sparkles,
   PieChart,
   Users,
   Check,
@@ -28,6 +27,17 @@ import {
   Activity,
   Layers,
   Terminal,
+  Calculator,
+  AlertTriangle,
+  Building2,
+  TrendingUp,
+  Sliders,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Clock,
+  Shield,
+  Bot,
 } from "lucide-react";
 
 // ── REALISTIC MOCK DATA FOR LIVE INTERACTIVE CONSOLE ─────────────────────────
@@ -71,6 +81,19 @@ const DEMO_TRANSACTIONS = [
     ref: "NEFT-IN0928114",
     status: "Verified",
   },
+  {
+    id: "tx-4",
+    merchant: "Zerodha Broking Ltd",
+    bank: "State Bank of India",
+    account: "••7731",
+    type: "debit",
+    amount: "₹25,000.00",
+    instrument: "UPI (Bank Account)",
+    category: "Investments (SIP)",
+    time: "2 days ago",
+    ref: "SBI-99201481920",
+    status: "Verified",
+  },
 ];
 
 const WEALTH_ALLOCATION = [
@@ -79,6 +102,45 @@ const WEALTH_ALLOCATION = [
   { asset: "Sovereign Gold & Digital", value: "₹12,40,000", pct: 13, color: "bg-amber-400" },
   { asset: "EPF / PPF Retirement", value: "₹9,80,000", pct: 10, color: "bg-sky-500" },
   { asset: "Liquid Bank Cash", value: "₹4,90,000", pct: 5, color: "bg-slate-400" },
+];
+
+const COMPARISON_ROWS = [
+  {
+    feature: "Directional SMS & UPI Debit/Credit Parsing",
+    us: "Universal Engine v5.0 (BOB, SBI, HDFC)",
+    others: "Frequent misclassification of debits as credits",
+    usCheck: true,
+  },
+  {
+    feature: "RuPay Credit Card on UPI Tagging",
+    us: "Native payment instrument isolation",
+    others: "Merged blindly into generic bank debits",
+    usCheck: true,
+  },
+  {
+    feature: "Temporal SMS & Push Deduplication",
+    us: "5-minute sliding window reconciliation",
+    others: "Duplicate entries for every GPay + Bank alert",
+    usCheck: true,
+  },
+  {
+    feature: "Inactivity Nominee Protocol",
+    us: "Automated 30/45-day emergency handover",
+    others: "Zero succession planning (unclaimed funds)",
+    usCheck: true,
+  },
+  {
+    feature: "Data Privacy & Lead Monetization",
+    us: "Zero ad tracking, on-device regex parsing",
+    others: "Sells spending habits to loan & CC brokers",
+    usCheck: true,
+  },
+  {
+    feature: "AI Private Financial Engine",
+    us: "Groq 120B private model with 8h memory",
+    others: "Generic static chatbot with zero portfolio context",
+    usCheck: true,
+  },
 ];
 
 const FAQS = [
@@ -114,6 +176,12 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"passbook" | "wealth" | "nominee">("passbook");
   const [demoList, setDemoList] = useState(DEMO_TRANSACTIONS);
   const [simulatedCount, setSimulatedCount] = useState(0);
+
+  // Interactive Wealth Calculator State
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(150000);
+  const [monthlySavings, setMonthlySavings] = useState<number>(50000);
+  const [currentNetWorth, setCurrentNetWorth] = useState<number>(2500000);
+  const [inactivityDays, setInactivityDays] = useState<number>(30);
 
   useEffect(() => {
     const native = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
@@ -165,25 +233,71 @@ export default function HomePage() {
       ref: `BOB-${Math.floor(100000000000 + Math.random() * 900000000000)}`,
       status: "Deduplicated",
     };
-    setDemoList([newTx, ...demoList.slice(0, 3)]);
+    setDemoList([newTx, ...demoList.slice(0, 4)]);
     setSimulatedCount((prev) => prev + 1);
   };
+
+  // Calculator projections (12% CAGR over 10 & 20 years)
+  const calculateFutureWealth = (years: number) => {
+    const r = 0.12 / 12; // monthly rate
+    const n = years * 12; // total months
+    const compoundCurrent = currentNetWorth * Math.pow(1 + 0.12, years);
+    const sipFuture = monthlySavings * ((Math.pow(1 + r, n) - 1) / r) * (1 + r);
+    return Math.round(compoundCurrent + sipFuture);
+  };
+
+  const wealthIn10Years = calculateFutureWealth(10);
+  const wealthIn20Years = calculateFutureWealth(20);
+  const emergencyFund = monthlyIncome * 6;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-lime-400 selection:text-slate-950">
       <Navbar />
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          1. THE SOVEREIGN HERO (BESPOKE LIME & OBSIDIAN FINTECH)
+          0. REAL-TIME FINANCIAL TICKER TAPE (LIVE MARKET VELOCITY)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-28 overflow-hidden border-b border-border/50">
-        {/* Subtle Ambient Lime/Emerald Tone (Refined architectural glow — strictly zero blurry purple blobs) */}
+      <div className="pt-16 border-b border-border/60 bg-muted/30 overflow-x-auto scrollbar-hide py-2 text-[11px] font-mono">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-6 whitespace-nowrap min-w-max">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-foreground">NIFTY 50:</span>
+            <span className="text-emerald-600 dark:text-[#BBF078]">24,480.95 (+0.42%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">SENSEX:</span>
+            <span className="text-emerald-600 dark:text-[#BBF078]">80,369.03 (+0.38%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">GOLD 24K (10g):</span>
+            <span className="text-muted-foreground">₹78,450 (-0.15%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">USD / INR:</span>
+            <span className="text-muted-foreground">₹84.38 (+0.02%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">BOB PASSBOOK ENGINE:</span>
+            <span className="text-emerald-600 dark:text-[#BBF078]">v5.0 Active (180ms)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-foreground">GROQ AI MODEL:</span>
+            <span className="text-muted-foreground">120B JSON Active</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          1. THE SOVEREIGN HERO WITH HARDWARE SILHOUETTE & ARCHITECTURAL GRID
+          ────────────────────────────────────────────────────────────────────────── */}
+      <section className="relative pt-20 pb-20 sm:pt-28 sm:pb-32 overflow-hidden border-b border-border/50">
+        {/* Subtle Architectural Ambient Grid (Fine line coordinates, zero blurry purple balls) */}
         <div
           aria-hidden="true"
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[420px] pointer-events-none opacity-20 dark:opacity-25"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[520px] pointer-events-none opacity-20 dark:opacity-25"
           style={{
             background:
-              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(187, 240, 120, 0.4), transparent 70%)",
+              "radial-gradient(ellipse 65% 55% at 50% 0%, rgba(187, 240, 120, 0.45), transparent 70%)",
           }}
         />
 
@@ -546,45 +660,239 @@ export default function HomePage() {
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          3. THE THREE ARCHITECTURAL PILLARS (REPLACING 6-BOX AI SLOP)
+          3. INTERACTIVE WEALTH PROJECTION & SUCCESSION CALCULATOR (REAL DATA)
+          ────────────────────────────────────────────────────────────────────────── */}
+      <section className="py-24 sm:py-32 bg-muted/20 border-b border-border/50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-[#BBF078]">
+              Tactile Wealth Simulator
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mt-3">
+              Calculate Your 10-Year Velocity &amp; Protection.
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-4 leading-relaxed">
+              Adjust your monthly cashflow and current net worth to simulate generational wealth
+              accumulation alongside your emergency continuity threshold.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Controls: Sliders */}
+            <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-sm space-y-6">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Monthly Savings / Investments (SIP)
+                  </label>
+                  <span className="font-mono font-bold text-sm text-emerald-600 dark:text-[#BBF078]">
+                    ₹{monthlySavings.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5000"
+                  max="500000"
+                  step="5000"
+                  value={monthlySavings}
+                  onChange={(e) => setMonthlySavings(Number(e.target.value))}
+                  className="w-full accent-lime-400 h-2 bg-muted rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1">
+                  <span>₹5K</span>
+                  <span>₹2.5L</span>
+                  <span>₹5L/mo</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Current Consolidated Net Worth
+                  </label>
+                  <span className="font-mono font-bold text-sm text-foreground">
+                    ₹{(currentNetWorth / 100000).toFixed(1)} Lakhs
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="100000"
+                  max="50000000"
+                  step="500000"
+                  value={currentNetWorth}
+                  onChange={(e) => setCurrentNetWorth(Number(e.target.value))}
+                  className="w-full accent-lime-400 h-2 bg-muted rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1">
+                  <span>₹1 Lakh</span>
+                  <span>₹2.5 Cr</span>
+                  <span>₹5 Cr+</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Monthly Living Expenses
+                  </label>
+                  <span className="font-mono font-bold text-sm text-muted-foreground">
+                    ₹{monthlyIncome.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="20000"
+                  max="1000000"
+                  step="10000"
+                  value={monthlyIncome}
+                  onChange={(e) => setMonthlyIncome(Number(e.target.value))}
+                  className="w-full accent-lime-400 h-2 bg-muted rounded-lg cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Sentinel Inactivity Protection Window
+                  </label>
+                  <span className="font-mono font-bold text-sm text-amber-500">
+                    {inactivityDays} Days
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[15, 30, 45].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setInactivityDays(days)}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        inactivityDays === days
+                          ? "bg-lime-400 text-slate-950 dark:bg-[#BBF078] dark:text-slate-950 border-lime-400"
+                          : "bg-muted/30 border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {days} Days
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Projection Card */}
+            <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                  Institutional Growth Forecast (12% CAGR)
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-[#BBF078] border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                  Compounding Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase font-mono block">
+                    10-Year Trajectory
+                  </span>
+                  <span className="text-2xl font-extrabold font-mono text-[#BBF078] block mt-1">
+                    ₹{(wealthIn10Years / 10000000).toFixed(2)} Cr
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    ₹{wealthIn10Years.toLocaleString("en-IN")}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase font-mono block">
+                    20-Year Legacy
+                  </span>
+                  <span className="text-2xl font-extrabold font-mono text-emerald-400 block mt-1">
+                    ₹{(wealthIn20Years / 10000000).toFixed(2)} Cr
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    ₹{wealthIn20Years.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-3 border-t border-slate-800 text-xs">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Recommended 6-Month Emergency Liquidity:</span>
+                  <span className="font-mono font-bold text-white">
+                    ₹{emergencyFund.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Unclaimed Asset Risk Without Nominee Sentinel:</span>
+                  <span className="font-mono font-bold text-red-400">
+                    High (Over ₹1.5L Cr in India)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Grace Period Before Family Handover:</span>
+                  <span className="font-mono font-bold text-[#BBF078]">
+                    {inactivityDays} Days + 2 Warning Pings
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => router.push("/signup")}
+                size="lg"
+                className="w-full bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] font-bold text-xs rounded-xl shadow-md gap-2"
+              >
+                Track &amp; Protect This Wealth Now
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ──────────────────────────────────────────────────────────────────────────
+          4. THE FOUR ARCHITECTURAL PILLARS (EXPANDED BENTO GRID)
           ────────────────────────────────────────────────────────────────────────── */}
       <section id="features" className="py-24 sm:py-32 border-b border-border/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-20">
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-[#BBF078]">
-              The Architecture
+              The Core Architecture
             </span>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mt-3">
-              Crafted for Serious Wealth.
+              Four Pillars of Financial Sovereignty.
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground mt-4 leading-relaxed">
-              Standard consumer finance apps harvest your transaction data to peddle credit cards.
-              We build institutional tools designed for privacy and precision.
+              Built from scratch to eliminate manual spreadsheets, broken bank SMS alerts, and
+              unclaimed family wealth.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Pillar 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pillar 1: Smart Passbook */}
             <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <Smartphone className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-bold text-foreground">
-                  Universal SMS &amp; UPI Ledger
+                  Universal SMS &amp; UPI Ledger v5.0
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  Automatic directional parsing across Bank of Baroda, SBI, HDFC, ICICI, and all
-                  major Indian banks. Correctly distinguishes RuPay Credit Cards on UPI from standard
-                  debit accounts, with temporal deduplication against GPay &amp; PhonePe alerts.
+                  Directional debit/credit parsing built specifically for Bank of Baroda, SBI, HDFC,
+                  and ICICI. Accurately flags RuPay Credit Cards on UPI, card swipes, net banking,
+                  and eliminates duplicates between instant GPay push alerts and delayed bank SMS.
                 </p>
+                <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
+                  <div>• Directional Debit/Credit Engine</div>
+                  <div>• RuPay CC on UPI Instrument Isolation</div>
+                  <div>• 5-Minute Sliding-Window Deduplication</div>
+                </div>
               </div>
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
-                Zero Manual Bookkeeping <ArrowRight className="h-3 w-3" />
+                Zero Manual Entry <ArrowRight className="h-3 w-3" />
               </div>
             </div>
 
-            {/* Pillar 2 */}
+            {/* Pillar 2: Multi-Asset Radar */}
             <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -594,17 +902,22 @@ export default function HomePage() {
                   Unified Multi-Asset Radar
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  Consolidated balance sheet spanning Direct Stocks, Mutual Fund SIPs, Sovereign Gold
-                  Bonds, Real Estate equity, FDs, and liabilities. Institutional risk allocation
-                  scoring and Net Worth velocity metrics.
+                  Consolidates your complete net worth in one single pane of glass: Direct Indian
+                  Equities, Mutual Fund SIPs, Sovereign Gold Bonds, EPF/PPF retirement folios,
+                  Fixed Deposits, Real Estate, and outstanding loans/liabilities.
                 </p>
+                <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
+                  <div>• 8 Tracked Indian Asset Classes</div>
+                  <div>• Real-Time Asset Allocation &amp; Radar Scores</div>
+                  <div>• Net Worth Velocity &amp; Burn Rate Analysis</div>
+                </div>
               </div>
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
                 Single Pane of Truth <ArrowRight className="h-3 w-3" />
               </div>
             </div>
 
-            {/* Pillar 3 */}
+            {/* Pillar 3: Inactivity Sentinel */}
             <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -614,13 +927,44 @@ export default function HomePage() {
                   Inactivity Nominee Sentinel
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  More than ₹1.5 lakh crore lies in unclaimed Indian bank accounts and investments.
-                  Our automated inactivity protocol ensures your nominees receive authenticated,
-                  read-only access to vital policy and portfolio locations when required.
+                  Over ₹1.5 lakh crore lies unclaimed across Indian banks and insurance firms because
+                  families are unaware of account details. Our inactivity sentinel activates a
+                  two-stage grace check before granting trusted nominees read-only access to asset
+                  locations.
                 </p>
+                <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
+                  <div>• Configurable Inactivity Window (15/30/45 Days)</div>
+                  <div>• Two-Stage SMS &amp; Email Heartbeat Pings</div>
+                  <div>• Read-Only Vault Handover to Verified Nominees</div>
+                </div>
               </div>
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
-                Generational Protection <ArrowRight className="h-3 w-3" />
+                Generational Continuity <ArrowRight className="h-3 w-3" />
+              </div>
+            </div>
+
+            {/* Pillar 4: Groq AI Private Intelligence */}
+            <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground">
+                  Private Groq AI Intelligence
+                </h3>
+                <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                  Powered by model 120B with sub-400ms inference. Queries your financial portfolio,
+                  identifies overdue insurance, breaks down emergency fund health, and preserves
+                  conversational context for 8 hours without harvesting personal data.
+                </p>
+                <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
+                  <div>• Sub-400ms High-Speed Structured Inference</div>
+                  <div>• 8-Hour Active Session Context Memory</div>
+                  <div>• Zero Ad-Tech or Personal Data Monetization</div>
+                </div>
+              </div>
+              <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
+                Encrypted Intelligence <ArrowRight className="h-3 w-3" />
               </div>
             </div>
           </div>
@@ -628,54 +972,60 @@ export default function HomePage() {
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          4. ENGINEERING INTEGRITY & PRIVACY (HONEST ARCHITECTURE)
+          5. INSTITUTIONAL COMPARISON MATRIX (TRANSPARENCY VS CONSUMER APPS)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-muted/20 border-b border-border/50">
+      <section className="py-20 sm:py-28 bg-muted/10 border-b border-border/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 sm:p-12 rounded-3xl border border-border bg-card shadow-sm">
-            <div className="max-w-3xl">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-[#BBF078]">
-                Data Sovereignty
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-bold text-foreground tracking-tight mt-2">
-                Why We Never Sell Your Data.
-              </h2>
-              <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
-                Most &quot;free&quot; expense trackers scan your SMS inbox and sell consumer spending habits
-                to credit card issuers, personal loan brokers, and ad exchanges. Here is how
-                Investment Intelligence differs:
-              </p>
-            </div>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-[#BBF078]">
+              Architectural Standard
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-bold text-foreground tracking-tight mt-2">
+              How We Differ From Consumer Apps.
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+              Free consumer expense trackers make money by selling your spending data. We do not.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-10">
-              <div className="p-5 rounded-2xl border border-border bg-muted/30 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                  <EyeOff className="h-4 w-4 text-emerald-600 dark:text-[#BBF078]" />
-                  <span>On-Device Parsing Engine</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Incoming bank notifications are digested directly by our native regex pipeline on
-                  your device. Unrelated personal messages and OTPs are rejected instantly.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl border border-border bg-muted/30 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-[#BBF078]" />
-                  <span>Zero Ad-Tech Dependencies</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  We don&apos;t embed third-party advertising SDKs, marketing trackers, or telemetry
-                  brokers. Your financial ledger remains exclusively between you and your database.
-                </p>
-              </div>
+          <div className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border/70 bg-muted/40">
+                    <th className="py-4 px-5 font-bold text-foreground">Capability</th>
+                    <th className="py-4 px-5 font-bold text-emerald-700 dark:text-[#BBF078]">
+                      Investment Intelligence
+                    </th>
+                    <th className="py-4 px-5 font-bold text-muted-foreground">
+                      Standard Expense Trackers
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {COMPARISON_ROWS.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                      <td className="py-3.5 px-5 font-semibold text-foreground">
+                        {row.feature}
+                      </td>
+                      <td className="py-3.5 px-5 text-emerald-700 dark:text-[#BBF078] font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-[#BBF078]" />
+                        <span>{row.us}</span>
+                      </td>
+                      <td className="py-3.5 px-5 text-muted-foreground">
+                        <span className="text-slate-500">{row.others}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          5. FREQUENTLY ASKED QUESTIONS (EDITORIAL & CLEAR)
+          6. FREQUENTLY ASKED QUESTIONS (EDITORIAL & CLEAR)
           ────────────────────────────────────────────────────────────────────────── */}
       <section id="faq" className="py-24 sm:py-32 border-b border-border/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -706,7 +1056,7 @@ export default function HomePage() {
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          6. THE SOVEREIGN FINAL CTA
+          7. THE SOVEREIGN FINAL CTA
           ────────────────────────────────────────────────────────────────────────── */}
       <section className="py-24 sm:py-32 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">

@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
       }
     : {
         // ── PRODUCTION (Vercel) ───────────────────────────────────────────
-        url: 'https://investment-intellegince.vercel.app',
+        url: 'https://investment-intelligence.vercel.app',
         cleartext: false,
       },
   android: {

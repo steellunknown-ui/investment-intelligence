@@ -233,11 +233,10 @@ export function PublicChatbot() {
                     className={`flex ${isUser ? "justify-end" : "justify-start"} group`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-sm relative ${
-                        isUser
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-sm relative ${isUser
                           ? "bg-slate-900 dark:bg-slate-800 text-white rounded-br-sm border border-slate-700/50"
                           : "bg-card text-foreground border border-border rounded-tl-sm"
-                      }`}
+                        }`}
                     >
                       {renderMessageContent(msg.content)}
 
@@ -330,11 +329,10 @@ export function PublicChatbot() {
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Open AI Financial Guide"
-        className={`h-14 w-14 rounded-2xl shadow-xl flex items-center justify-center transition-all ${
-          isOpen
+        className={`h-14 w-14 rounded-2xl shadow-xl flex items-center justify-center transition-all ${isOpen
             ? "bg-slate-900 text-white border border-slate-700"
             : "bg-slate-950 text-lime-400 dark:text-[#BBF078] border border-slate-800 hover:border-lime-400/50"
-        }`}
+          }`}
       >
         {isOpen ? (
           <X className="h-6 w-6" />
