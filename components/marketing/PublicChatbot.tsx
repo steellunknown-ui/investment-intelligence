@@ -197,7 +197,7 @@ export function PublicChatbot() {
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   <p className="text-[10px] text-slate-400 font-mono">
-                    8h Memory Active · Groq 120B
+                    8h Memory Active · Private Console
                   </p>
                 </div>
               </div>

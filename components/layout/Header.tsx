@@ -172,10 +172,10 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-4 sm:px-6 lg:px-8 w-full">
-      <div className="flex items-center gap-2 min-w-0">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+      <div className="flex items-center gap-2 min-w-0 mr-2">
         <div className="min-w-0">
-          <h1 className="text-base font-bold tracking-tight text-foreground truncate">{title}</h1>
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-foreground truncate">{title}</h1>
           {description && (
             <p className="text-[11px] text-muted-foreground hidden sm:block truncate">{description}</p>
           )}

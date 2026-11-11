@@ -124,7 +124,6 @@ const allModules: ModuleItem[] = [
     icon: Bot,
     color: "bg-lime-400/15 dark:bg-lime-950/40",
     iconColor: "text-lime-700 dark:text-[#BBF078]",
-    badge: "Groq",
   },
   {
     name: "Activity & Alerts",

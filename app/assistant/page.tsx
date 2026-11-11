@@ -230,7 +230,7 @@ export default function AssistantPage() {
   return (
     <DashboardShell
       title="Financial Intelligence AI"
-      description="Groq-powered private portfolio advisor with 8h active memory"
+      description="Private wealth intelligence advisor with 8h active memory"
       action={
         <Button
           size="sm"
@@ -243,17 +243,20 @@ export default function AssistantPage() {
         </Button>
       }
     >
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-6 w-full min-w-0 max-w-full">
         {/* Chat Section */}
-        <div className="space-y-4">
-          <Card className="flex flex-col rounded-3xl border border-border shadow-sm overflow-hidden" style={{ height: "calc(100vh - 210px)" }}>
+        <div className="space-y-4 w-full min-w-0 max-w-full">
+          <Card
+            padding="none"
+            className="flex flex-col rounded-2xl sm:rounded-3xl border border-border shadow-sm overflow-hidden w-full min-w-0 max-w-full h-[calc(100dvh-12rem)] sm:h-[calc(100vh-210px)]"
+          >
             {/* Chat Status Bar */}
-            <div className="px-5 py-3 border-b border-border/70 bg-muted/30 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Bot className="h-4 w-4 text-emerald-600 dark:text-[#BBF078]" />
-                  Groq Model (120B) Active
+            <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-b border-border/70 bg-muted/30 flex items-center justify-between text-xs w-full min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="font-semibold text-foreground flex items-center gap-1.5 truncate">
+                  <Bot className="h-4 w-4 text-emerald-600 dark:text-[#BBF078] shrink-0" />
+                  AI Assistant Active
                 </span>
                 <span className="text-muted-foreground hidden sm:inline">|</span>
                 <span className="text-muted-foreground text-[11px] hidden sm:inline font-mono">
@@ -264,7 +267,7 @@ export default function AssistantPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearHistory}
-                className="h-7 text-[11px] text-muted-foreground hover:text-foreground gap-1 px-2"
+                className="h-7 text-[11px] text-muted-foreground hover:text-foreground gap-1 px-2 shrink-0"
               >
                 <RotateCcw className="h-3 w-3" />
                 Clear
@@ -272,37 +275,38 @@ export default function AssistantPage() {
             </div>
 
             {/* Message History */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-background">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 bg-background w-full min-w-0">
               {messages.map((msg, index) => {
                 const isAssistant = msg.role === "assistant";
                 return (
                   <div
                     key={index}
-                    className={`flex gap-3 group ${isAssistant ? "flex-row" : "flex-row-reverse"}`}
+                    className={`flex gap-2.5 sm:gap-3 group w-full min-w-0 ${isAssistant ? "flex-row" : "flex-row-reverse"}`}
                   >
                     {/* Avatar */}
                     <div
-                      className={`flex-shrink-0 h-9 w-9 rounded-2xl flex items-center justify-center border shadow-sm ${
+                      className={`flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl sm:rounded-2xl flex items-center justify-center border shadow-sm ${
                         isAssistant
                           ? "bg-slate-900 border-slate-800 text-lime-400 dark:text-[#BBF078]"
                           : "bg-primary/10 border-primary/20 text-primary"
                       }`}
                     >
                       {isAssistant ? (
-                        <Bot className="h-5 w-5" />
+                        <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
-                        <span className="text-xs font-bold font-mono">ME</span>
+                        <span className="text-[11px] font-bold font-mono">ME</span>
                       )}
                     </div>
 
                     {/* Bubble Content */}
-                    <div className={`flex-1 max-w-[85%] sm:max-w-[78%] ${isAssistant ? "text-left" : "text-right"}`}>
+                    <div className={`min-w-0 max-w-[85%] sm:max-w-[78%] ${isAssistant ? "text-left" : "text-right"}`}>
                       <div
-                        className={`inline-block px-4 sm:px-5 py-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm transition-all ${
+                        className={`inline-block px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-sm transition-all ${
                           isAssistant
                             ? "bg-card border border-border text-foreground rounded-tl-sm"
                             : "bg-slate-900 dark:bg-slate-800 text-white border border-slate-700/60 rounded-tr-sm"
                         }`}
+                        style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
                       >
                         {msg.content}
                       </div>
@@ -336,11 +340,11 @@ export default function AssistantPage() {
               })}
 
               {loading && (
-                <div className="flex gap-3 items-start">
-                  <div className="h-9 w-9 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-lime-400 dark:text-[#BBF078] shrink-0">
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                <div className="flex gap-2.5 sm:gap-3 items-start w-full min-w-0">
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-lime-400 dark:text-[#BBF078] shrink-0">
+                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                   </div>
-                  <div className="inline-block px-4 py-3 rounded-2xl rounded-tl-sm bg-card border border-border text-muted-foreground text-xs font-mono">
+                  <div className="inline-block px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl rounded-tl-sm bg-card border border-border text-muted-foreground text-xs font-mono">
                     Analyzing portfolio &amp; generating insights...
                   </div>
                 </div>
@@ -349,7 +353,7 @@ export default function AssistantPage() {
             </div>
 
             {/* Quick Prompt Chips (Above Input) */}
-            <div className="px-4 py-2 bg-muted/20 border-t border-border/50 flex overflow-x-auto gap-2 scrollbar-hide">
+            <div className="px-3 sm:px-4 py-2 bg-muted/20 border-t border-border/50 flex overflow-x-auto gap-1.5 sm:gap-2 scrollbar-hide w-full min-w-0 max-w-full">
               {[
                 "Analyze my asset allocation & risk",
                 "Summarize my consolidated net worth",
@@ -360,7 +364,7 @@ export default function AssistantPage() {
                   key={chip}
                   onClick={() => handleSend(chip)}
                   disabled={loading}
-                  className="whitespace-nowrap px-3 py-1 rounded-full bg-card hover:bg-muted border border-border text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all shrink-0"
+                  className="whitespace-nowrap px-2.5 sm:px-3 py-1 rounded-full bg-card hover:bg-muted border border-border text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all shrink-0 active:scale-95"
                 >
                   {chip}
                 </button>
@@ -368,26 +372,28 @@ export default function AssistantPage() {
             </div>
 
             {/* Input Section */}
-            <div className="border-t border-border p-3 sm:p-4 bg-card">
+            <div className="border-t border-border p-2.5 sm:p-4 bg-card w-full min-w-0">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend();
                 }}
-                className="flex gap-2"
+                className="flex items-center gap-2 w-full min-w-0"
               >
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask about your net worth, expenses, or assets..."
-                  disabled={loading}
-                  className="flex-1 rounded-xl h-11 text-sm bg-muted/30 border-border"
-                />
+                <div className="flex-1 min-w-0">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ask about your net worth, expenses, or assets..."
+                    disabled={loading}
+                    className="w-full min-w-0 rounded-xl h-10 sm:h-11 text-xs sm:text-sm bg-muted/30 border-border"
+                  />
+                </div>
                 <Button
                   type="submit"
                   disabled={!input.trim() || loading}
-                  className="bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] dark:text-slate-950 font-bold h-11 px-4 rounded-xl gap-1.5 shadow-sm transition-all"
+                  className="bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] dark:text-slate-950 font-bold h-10 sm:h-11 px-3 sm:px-4 rounded-xl gap-1.5 shadow-sm transition-all shrink-0"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
