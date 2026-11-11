@@ -18,9 +18,11 @@ public class SMSReceiver extends BroadcastReceiver {
     private static final String PREFS_NAME = "PendingTransactions";
     private static final String PREFS_KEY  = "queue";
 
-    // Common Indian Bank/Payment sender IDs
+    // Known Indian Bank & Fintech Sender Keywords
     private static final List<String> SENDER_KEYWORDS = Arrays.asList(
-        "BANK", "PAY", "UPI", "NEFT", "FAMPAY", "HDFCBK", "SBI", "ICICI", "AXIS", "KOTAK", "PAYTM", "GPAY", "PHONEPE"
+        "BANK", "PAY", "UPI", "NEFT", "IMPS", "FAMPAY", "HDFCBK", "SBI", "ICICI",
+        "AXIS", "KOTAK", "PAYTM", "GPAY", "PHONEPE", "BOB", "BARODA", "BOBSMS",
+        "BOBTXN", "CANARA", "UNIONB", "PNB", "IDFC", "SLICE", "CRED", "NAVI", "INDUS"
     );
 
     @Override
@@ -41,7 +43,16 @@ public class SMSReceiver extends BroadcastReceiver {
             if (messageBody == null || messageBody.isEmpty() || sender == null) continue;
 
             Log.d(TAG, "✉️ SMS Received from: " + sender);
-            
+
+            // 1. STRICT FILTER: Reject 10-12 digit personal phone numbers (friends/family/contacts)
+            // Authentic Indian bank SMS NEVER come from 10-digit mobile numbers!
+            if (sender.matches("^(\\+91|91|0)?[6-9]\\d{9}$") || sender.matches("^\\+?[0-9]{10,13}$")) {
+                Log.d(TAG, "⛔ Rejecting personal SMS from contact/phone number: " + sender);
+                continue;
+            }
+
+            // 2. Sender check: Financial keyword or official TRAI 6-character header
+            // e.g. VK-BOBSMS, AD-HDFCBK, AX-SBIUPI, JM-FAMPAY
             boolean isFinance = false;
             String upperSender = sender.toUpperCase();
             for (String key : SENDER_KEYWORDS) {
@@ -51,12 +62,16 @@ public class SMSReceiver extends BroadcastReceiver {
                 }
             }
 
-            if (isFinance || messageBody.length() > 30) {
-                Log.d(TAG, "📥 Queuing SMS for parsing from: " + sender);
+            boolean isTraiHeader = sender.matches("^[A-Za-z]{2}-[A-Za-z0-9]{5,8}$") || sender.matches("^[A-Za-z0-9]{5,8}$");
+
+            if (isFinance || isTraiHeader) {
+                Log.d(TAG, "📥 Queuing authentic financial SMS from: " + sender);
                 queueRawTransaction(context, sender, messageBody);
-                
-                // Notify live if app is open
-                PassbookPlugin.sendTransactionToJS("sms", messageBody);
+
+                // Notify live if app is open (pipe format sender|messageBody)
+                PassbookPlugin.sendTransactionToJS("sms", sender + "|" + messageBody);
+            } else {
+                Log.d(TAG, "⏩ Ignoring non-financial SMS sender: " + sender);
             }
         }
     }
@@ -70,7 +85,7 @@ public class SMSReceiver extends BroadcastReceiver {
             JSONObject entry = new JSONObject();
             entry.put("source", "sms");
             entry.put("sender", sender);
-            entry.put("raw", raw);
+            entry.put("raw",    sender + "|" + raw);
             queue.put(entry);
 
             prefs.edit().putString(PREFS_KEY, queue.toString()).apply();

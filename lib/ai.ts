@@ -1,6 +1,11 @@
 /**
- * AI Assistant - Moonshot AI Integration
- * Uses OpenRouter API with Moonshot AI models
+ * ─────────────────────────────────────────────────────────────────────────────
+ * AI ASSISTANT ENGINE (Groq Primary + OpenRouter Fallback)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - Primary: Groq API (openai/gpt-oss-120b / openai/gpt-oss-20b)
+ *   Sub-second (<400ms) structured JSON inference.
+ * - Fallback: OpenRouter API
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { z } from 'zod';
@@ -26,73 +31,161 @@ export type AIInsight = z.infer<typeof AIInsightSchema>;
 export type AIResponse = z.infer<typeof AIResponseSchema>;
 
 /**
- * Call Moonshot AI via OpenRouter
+ * Call Groq AI with JSON Mode
  */
-export async function callOpenRouter(
+async function callGroqDirect(
     userMessage: string,
     context: Record<string, any>,
     systemPromptOverride?: string
 ): Promise<AIResponse> {
-    try {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) {
-            throw new Error('OPENROUTER_API_KEY not configured');
-        }
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
-        const model = process.env.AI_MODEL || 'google/gemma-3-12b-it:free';
-        const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
+    const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+    const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
 
-        // Combine system and user message for models that don't support system role
-        const combinedMessage = `${systemPrompt}\n\n---\n\nUSER MESSAGE: ${userMessage}`;
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage },
+            ],
+            temperature: 0.2,
+            max_tokens: 1200,
+            response_format: { type: 'json_object' },
+        }),
+    });
 
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app',
-                'X-Title': 'Investment Intelligence'
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: [
-                    { role: 'user', content: combinedMessage }
-                ],
-                temperature: 0.7,
-                max_tokens: 1000
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const message = data.choices?.[0]?.message;
-        const content = message?.content;
-
-        if (!content) {
-            throw new Error('No content in API response');
-        }
-
-        return parseAIResponse(content);
-
-    } catch (error) {
-        console.error('Moonshot AI Error:', error);
-        throw new Error(`AI Service Failed: ${error instanceof Error ? error.message : String(error)}`);
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq API failed with status ${response.status}: ${errText}`);
     }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from Groq');
+
+    return parseAIResponse(content);
 }
 
 /**
- * Parse and validate AI JSON response
+ * Call OpenRouter AI (Fallback)
+ */
+async function callOpenRouterDirect(
+    userMessage: string,
+    context: Record<string, any>,
+    systemPromptOverride?: string
+): Promise<AIResponse> {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+
+    const model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
+    const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
+    const combinedMessage = `${systemPrompt}\n\n---\n\nUSER MESSAGE: ${userMessage}`;
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intellegince.vercel.app',
+            'X-Title': 'Investment Intelligence',
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: combinedMessage }],
+            temperature: 0.7,
+            max_tokens: 1000,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`OpenRouter API failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('No content in OpenRouter response');
+
+    return parseAIResponse(content);
+}
+
+/**
+ * Universal AI Caller (Groq Primary -> OpenRouter Fallback)
+ */
+export async function callAI(
+    userMessage: string,
+    context: Record<string, any> = {},
+    systemPromptOverride?: string
+): Promise<AIResponse> {
+    // 1. Try Groq first if key exists
+    if (process.env.GROQ_API_KEY) {
+        try {
+            return await callGroqDirect(userMessage, context, systemPromptOverride);
+        } catch (groqErr) {
+            console.warn('Groq failed, attempting OpenRouter fallback:', groqErr);
+        }
+    }
+
+    // 2. Fallback to OpenRouter
+    if (process.env.OPENROUTER_API_KEY) {
+        try {
+            return await callOpenRouterDirect(userMessage, context, systemPromptOverride);
+        } catch (openRouterErr) {
+            console.error('OpenRouter fallback also failed:', openRouterErr);
+        }
+    }
+
+    throw new Error('No AI service available. Please configure GROQ_API_KEY or OPENROUTER_API_KEY.');
+}
+
+// Backward-compatible alias
+export const callOpenRouter = callAI;
+
+/**
+ * Parse and validate AI JSON response safely
  */
 function parseAIResponse(content: string): AIResponse {
     try {
         let cleanContent = content.trim();
         cleanContent = cleanContent.replace(/^```json\n|\n```$/g, "").replace(/^```\n|\n```$/g, "");
 
-        const parsed = JSON.parse(cleanContent);
-        return AIResponseSchema.parse(parsed);
+        const raw = JSON.parse(cleanContent);
+
+        // Safely normalize insights array regardless of whether model returned objects or strings
+        let normalizedInsights: AIInsight[] = [];
+        if (Array.isArray(raw.insights)) {
+            normalizedInsights = raw.insights.slice(0, 3).map((item: any) => {
+                if (typeof item === 'string') {
+                    return {
+                        type: 'info' as const,
+                        title: 'Portfolio Insight',
+                        detail: item,
+                    };
+                }
+                return {
+                    type: (['warning', 'info', 'success'].includes(item.type) ? item.type : 'info') as 'warning' | 'info' | 'success',
+                    title: String(item.title || 'Insight'),
+                    detail: String(item.detail || item.description || item.text || ''),
+                    action: item.action && typeof item.action === 'object' ? {
+                        label: String(item.action.label || 'View Details'),
+                        href: String(item.action.href || '/dashboard'),
+                    } : undefined,
+                };
+            });
+        }
+
+        return {
+            summary: String(raw.summary || ''),
+            insights: normalizedInsights,
+            chat_reply: String(raw.chat_reply || raw.reply || raw.response || raw.message || raw.summary || 'I have analyzed your request.'),
+        };
     } catch (error) {
         console.error('Failed to parse AI response:', content);
 
@@ -137,17 +230,17 @@ RESPONSE FORMAT (Strict JSON):
 }
 
 /**
- * Generate insights without user message
+ * Generate portfolio insights
  */
 export async function generateInsights(context: Record<string, any>): Promise<AIInsight[]> {
     try {
-        const response = await callOpenRouter(
+        const response = await callAI(
             'Analyze my portfolio and provide the top 3 most important insights.',
             context
         );
         return response.insights;
     } catch (error) {
-        console.warn("AI Insights failed/rate-limited:", error);
+        console.warn("AI Insights failed:", error);
         return [
             {
                 type: 'info',

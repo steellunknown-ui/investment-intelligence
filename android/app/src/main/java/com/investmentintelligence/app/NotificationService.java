@@ -19,8 +19,7 @@ public class NotificationService extends NotificationListenerService {
     private static final String PREFS_NAME = "PendingTransactions";
     private static final String PREFS_KEY  = "queue";
 
-    // ── Expanded package whitelist ─────────────────────────────────────────────
-    // ADD any new UPI / Fintech / Bank app here — just add its package name.
+    // ── Whitelisted UPI / Fintech / Bank Apps ──────────────────────────────────
     private static final Set<String> ALLOWED_PACKAGES = new HashSet<>(Arrays.asList(
         // UPI / Payment Apps
         "com.google.android.apps.nbu.paisa.user",  // GPay
@@ -41,7 +40,8 @@ public class NotificationService extends NotificationListenerService {
         "com.freo.app",                             // Freo
         "com.kreditbee.app",                        // KreditBee
         "com.zestmoney.app",                        // ZestMoney
-        // Bank Mobile Apps (notifications from these are valuable)
+        // Bank Mobile Apps
+        "com.bankofbaroda.mconnect",                // Bank of Baroda (BOB World)
         "com.csam.icici.bank.imobile",              // ICICI iMobile
         "com.hdfcbank.hdfcmobilebanking",           // HDFC NetBanking
         "com.sbi.SBIFreedomPlus",                   // SBI YONO
@@ -52,14 +52,15 @@ public class NotificationService extends NotificationListenerService {
         "com.msf.kbank.mobile",                     // KotakElite
         "com.pnb.mobilebanking",                    // PNB
         "com.yesbank",                              // Yes Bank
-        // SMS apps — filtered more tightly below
+        // SMS apps — filtered strictly below
         "com.google.android.apps.messaging",        // Google Messages
         "com.android.mms",                          // Stock SMS app
-        "org.thoughtcrime.securesms"                // Signal (some bank OTPs come here)
+        "org.thoughtcrime.securesms"                // Signal
     ));
 
-    // ── Known bank / payment sender‑ID keywords (for SMS app filtering) ────────
+    // ── Known bank / payment sender‑ID keywords ────────────────────────────────
     private static final String[] BANK_SENDER_KEYWORDS = {
+        "BOB", "BARODA", "BOBSMS", "BOBTXN",
         "HDFC", "HDFCBK", "HDFCBANK",
         "SBI", "SBIINB", "SBIUPI", "SBIPSG", "SBICRD",
         "ICICI", "ICICIB", "ICICIS",
@@ -86,29 +87,40 @@ public class NotificationService extends NotificationListenerService {
     public void onNotificationPosted(StatusBarNotification sbn) {
         try {
             String packageName = sbn.getPackageName();
-            Notification notification  = sbn.getNotification();
+
+            // ── 1. Drop Truecaller duplicate notifications ─────────────────────
+            // Truecaller intercepts SMS and posts duplicate notifications; drop them!
+            if (packageName.equals("com.truecaller") || packageName.contains("truecaller")) {
+                Log.d(TAG, "⛔ Dropping Truecaller notification to avoid duplicate entries");
+                return;
+            }
+
+            Notification notification = sbn.getNotification();
             Bundle extras = notification.extras;
 
-            // ── Extract text ────────────────────────────────────────────────
+            // Extract title and text
             CharSequence titleSeq = extras.getCharSequence(Notification.EXTRA_TITLE, "");
             String title = (titleSeq != null) ? titleSeq.toString() : "";
 
-            // Always prefer EXTRA_BIG_TEXT — it has the full message body
             CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
             CharSequence text    = extras.getCharSequence(Notification.EXTRA_TEXT);
             String body = (bigText != null) ? bigText.toString()
                         : (text   != null)  ? text.toString()
                         : "";
 
-            Log.d(TAG, "--- Notification ---  pkg=" + packageName
-                      + "  title=" + title + "  body=" + body);
+            Log.d(TAG, "--- Notification ---  pkg=" + packageName + "  title=" + title + "  body=" + body);
 
-            // ── SMS-app filter: only bank SMS ────────────────────────────────
+            // ── 2. Filter SMS apps ─────────────────────────────────────────────
             boolean isSmsApp = packageName.equals("com.google.android.apps.messaging")
                             || packageName.equals("com.android.mms")
                             || packageName.equals("org.thoughtcrime.securesms");
 
             if (isSmsApp) {
+                // Reject if title is a personal phone number (friend/contact chat)
+                if (title.matches("^(\\+91|91|0)?[6-9]\\d{9}$") || title.matches("^\\+?[0-9]{10,13}$")) {
+                    Log.d(TAG, "⛔ Skipping SMS app notification from personal number: " + title);
+                    return;
+                }
                 if (!isBankSender(title) && !isBankSender(body)) {
                     Log.d(TAG, "⛔ Skipping personal SMS: " + title);
                     return;
@@ -123,8 +135,7 @@ public class NotificationService extends NotificationListenerService {
                 return;
             }
 
-            // ── Combine title + body for the parser ─────────────────────────
-            // Include the package name so the JS-side parser can use it as a hint
+            // Combine title + body for the parser
             String fullText = title + " " + body;
 
             Log.d(TAG, "📥 Queuing for parse: " + packageName);

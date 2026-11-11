@@ -1,5 +1,7 @@
 # Dependencies
 node_modules
+backend/node_modules
+backend/
 
 # Next.js
 .next
@@ -9,10 +11,12 @@ build
 
 # Environment
 .env
+.env*.local
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 
 # Vercel
 .vercel
@@ -29,11 +33,16 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
-# IDE
+# IDE & Tooling
 .idea
 .vscode
 *.swp
 *.swo
+.kilo/
+.gradle/
+
+# Debug files
+debug-summary.json
 
 # OS
 .DS_Store
