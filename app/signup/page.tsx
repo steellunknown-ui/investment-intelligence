@@ -68,7 +68,7 @@ export default function SignupPage() {
     const handleGoogleLogin = async () => {
         try {
             const supabase = createSupabaseBrowserClient();
-            const PROD_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence.vercel.app';
+            const PROD_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence-in.vercel.app';
             const origin = window.location.origin;
             const redirectTo = origin.includes('localhost')
                 ? `${origin}/auth/callback`

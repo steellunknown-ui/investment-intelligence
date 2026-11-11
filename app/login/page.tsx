@@ -16,7 +16,7 @@ import {
     Bot
 } from "lucide-react";
 
-const PROD_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence.vercel.app';
+const PROD_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://investment-intelligence-in.vercel.app';
 
 function TimeoutMessage({ setError }: { setError: (msg: string | null) => void }) {
     const searchParams = useSearchParams();
