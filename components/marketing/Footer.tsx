@@ -24,35 +24,33 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-border" style={{ background: 'var(--footer-bg)', color: 'hsl(var(--section-text))' }}>
-      {/* White grid pattern overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjEiPjxwYXRoIGQ9Ik0wIDBoMzJ2MzJIMHoiLz48L2c+PC9zdmc+')] opacity-50 z-0" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+    <footer className="relative overflow-hidden border-t border-border bg-card text-foreground">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-white" />
+            <Link href="/" className="flex items-center gap-2.5 mb-4">
+              <div className="h-9 w-9 rounded-xl bg-lime-400 dark:bg-[#BBF078] flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-5 w-5 text-slate-950" />
               </div>
-              <span className="text-lg font-bold">
+              <span className="text-lg font-bold tracking-tight text-foreground">
                 Investment Intelligence
               </span>
             </Link>
-            <p className="text-sm opacity-80 max-w-xs">
-              Secure your investment legacy with professional portfolio management and nominee protection.
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
+              Sovereign wealth intelligence, real-time UPI &amp; bank ledgering, and family continuity protection.
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Product</h3>
-            <ul className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider font-bold mb-4 text-foreground">Product</h3>
+            <ul className="space-y-2.5">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-sm opacity-80 hover:opacity-100 transition-opacity"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.name}
                   </a>
@@ -63,13 +61,13 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Company</h3>
-            <ul className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider font-bold mb-4 text-foreground">Platform</h3>
+            <ul className="space-y-2.5">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-sm opacity-80 hover:opacity-100 transition-opacity"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.name}
                   </a>
@@ -80,13 +78,13 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Legal</h3>
-            <ul className="space-y-3">
+            <h3 className="text-xs font-mono uppercase tracking-wider font-bold mb-4 text-foreground">Security &amp; Legal</h3>
+            <ul className="space-y-2.5">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-sm opacity-80 hover:opacity-100 transition-opacity"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.name}
                   </a>
@@ -96,16 +94,14 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center relative">
-          <p className="text-sm opacity-80">
-            © 2024 Investment Intelligence. All rights reserved.
+        <div className="mt-12 pt-8 border-t border-border/60 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Investment Intelligence Office. All rights reserved.
           </p>
 
-
-
-          <div className="flex items-center gap-6">
-            <span className="text-xs opacity-80">
-              Bank-grade security • 256-bit encryption
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono text-muted-foreground">
+              Zero Data Selling • 256-bit AES Local Vault
             </span>
           </div>
         </div>
