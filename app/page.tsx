@@ -353,7 +353,7 @@ export default function HomePage() {
                       onClick={handleSimulateAlert}
                       className="bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] text-xs font-bold gap-1.5 rounded-xl shadow-sm self-start sm:self-auto"
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
+                      <Zap className="h-3.5 w-3.5" />
                       Simulate Incoming Alert
                     </Button>
                   </div>

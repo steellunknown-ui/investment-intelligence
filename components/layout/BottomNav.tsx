@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Sparkles,
+  Bot,
   Bell,
   Settings,
   Grid3X3,
@@ -13,7 +13,7 @@ import {
 
 const bottomNav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "AI", href: "/assistant", icon: Sparkles },
+  { name: "AI", href: "/assistant", icon: Bot },
   { name: "More", href: "/more", icon: Grid3X3 },
   { name: "Alerts", href: "/activity", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },

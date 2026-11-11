@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
-    Sparkles,
+    Bot,
     AlertTriangle,
     Info,
     CheckCircle,
@@ -110,7 +110,7 @@ export function AIInsightsCard() {
                 <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                         <div className="icon-container bg-purple-100 dark:bg-purple-900/30">
-                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <h3 className="font-semibold text-sm">AI Insights</h3>
                     </div>
@@ -132,7 +132,7 @@ export function AIInsightsCard() {
                 <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                         <div className="icon-container bg-purple-100 dark:bg-purple-900/30">
-                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <h3 className="font-semibold text-sm">AI Insights</h3>
                     </div>
@@ -171,7 +171,7 @@ export function AIInsightsCard() {
                 <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                         <div className="icon-container bg-purple-100 dark:bg-purple-900/30">
-                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <h3 className="font-semibold text-sm">AI Insights</h3>
                     </div>
@@ -201,7 +201,7 @@ export function AIInsightsCard() {
                 <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                         <div className="icon-container bg-purple-100 dark:bg-purple-900/30">
-                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <h3 className="font-semibold text-sm">AI Insights</h3>
                     </div>
@@ -209,7 +209,7 @@ export function AIInsightsCard() {
                 <CardContent>
                     <div className="text-center py-8">
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 mb-3">
-                            <Sparkles className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
                         <p className="text-sm text-muted-foreground mb-4">
                             Get personalized insights about your portfolio
@@ -219,7 +219,7 @@ export function AIInsightsCard() {
                             onClick={fetchInsights}
                             className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
                         >
-                            <Sparkles className="h-3 w-3" />
+                            <Bot className="h-3 w-3" />
                             Generate Insights
                         </Button>
                     </div>
@@ -235,7 +235,7 @@ export function AIInsightsCard() {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="icon-container bg-purple-100 dark:bg-purple-900/30">
-                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                         <h3 className="font-semibold text-sm">AI Insights</h3>
                     </div>
@@ -313,7 +313,7 @@ export function AIInsightsCard() {
                             onClick={() => router.push("/assistant")}
                             className="w-full mt-2"
                         >
-                            <Sparkles className="h-3 w-3 mr-1" />
+                            <Bot className="h-3 w-3 mr-1" />
                             Ask AI Assistant
                         </Button>
                     </>

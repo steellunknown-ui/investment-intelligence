@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
         const userId = user.id;
         const body = await req.json();
-        const { message } = body;
+        const { message, history } = body;
 
         if (!message || typeof message !== 'string') {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
         // Fetch user context from Supabase
         const context = await fetchUserContext(supabase, userId);
 
-        // Call AI with context
-        const aiResponse = await callOpenRouter(message, context);
+        // Call AI with context and recent conversation history
+        const aiResponse = await callOpenRouter(message, context, undefined, history);
 
         return NextResponse.json(aiResponse);
     } catch (error) {

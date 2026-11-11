@@ -21,7 +21,7 @@ import { toast } from "sonner";
 interface HeaderProps {
   title: string;
   description?: string;
-  onMenuClick: () => void;
+  onMenuClick?: () => void;
   action?: React.ReactNode;
 }
 
@@ -172,18 +172,10 @@ export function Header({ title, description, onMenuClick, action }: HeaderProps)
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 sm:px-6 lg:px-8 w-full">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-4 sm:px-6 lg:px-8 w-full">
       <div className="flex items-center gap-2 min-w-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMenuClick}
-          className="lg:hidden h-8 w-8 flex-shrink-0"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
         <div className="min-w-0">
-          <h1 className="text-base font-semibold tracking-tight text-foreground truncate">{title}</h1>
+          <h1 className="text-base font-bold tracking-tight text-foreground truncate">{title}</h1>
           {description && (
             <p className="text-[11px] text-muted-foreground hidden sm:block truncate">{description}</p>
           )}

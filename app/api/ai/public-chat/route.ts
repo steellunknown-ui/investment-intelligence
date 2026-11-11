@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Input Validation
         const body = await req.json();
-        const { message } = body;
+        const { message, history } = body;
 
         if (!message || typeof message !== 'string') {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -62,9 +62,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Message too long (max 500 chars)' }, { status: 400 });
         }
 
-        // 3. Call AI with SPECIAL SYSTEM PROMPT
-        // Pass empty context as this is public
-        const aiResponse = await callOpenRouter(message, {}, PUBLIC_SYSTEM_PROMPT);
+        // 3. Call AI with SPECIAL SYSTEM PROMPT and conversation history
+        const aiResponse = await callOpenRouter(message, {}, PUBLIC_SYSTEM_PROMPT, history);
 
         return NextResponse.json(aiResponse);
     } catch (error) {

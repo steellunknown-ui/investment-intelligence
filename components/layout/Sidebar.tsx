@@ -19,7 +19,7 @@ import {
   Coins,
   Gem,
   FileText,
-  Sparkles,
+  Bot,
   Home,
   UsersRound,
   History
@@ -45,7 +45,7 @@ const allNavigation = [
   { name: "Belongings", href: "/belongings", icon: Gem },
   { name: "Holdings", href: "/holdings", icon: Briefcase },
   { name: "Documents", href: "/documents", icon: FileText },
-  { name: "AI Assistant", href: "/assistant", icon: Sparkles },
+  { name: "AI Assistant", href: "/assistant", icon: Bot },
   { name: "Family Hub", href: "/family", icon: UsersRound },
   { name: "Nominee", href: "/nominee", icon: Users },
   { name: "Activity & Alerts", href: "/activity", icon: Bell },
@@ -214,7 +214,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop Sidebar - Fixed with Hover Expand */}
+      {/* Desktop Sidebar - Fixed with Hover Expand (Mobile uses BottomNav & All Modules) */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 hidden lg:block h-screen",
@@ -242,24 +242,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <SidebarFooter collapsed={!expanded} />
         </div>
       </aside>
-
-      {/* Mobile Sidebar - Sheet (Always Expanded) */}
-      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <SheetContent side="left" className="w-64 p-0 dark:bg-slate-900 dark:border-slate-700">
-          <SheetHeader className="h-16 flex-row items-center border-b border-border px-5">
-            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <Logo collapsed={false} />
-          </SheetHeader>
-
-          {/* Navigation - Always expanded on mobile, Home hidden */}
-          <div className="relative h-[calc(100vh-4rem)] overflow-y-auto">
-            <NavigationContent expanded={true} onClose={onClose} isMobile={true} />
-
-            {/* Footer */}
-            <SidebarFooter collapsed={false} />
-          </div>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

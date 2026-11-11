@@ -109,7 +109,7 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold tracking-tight text-slate-900 dark:text-white;
+    @apply font-semibold tracking-tight;
   }
 
   button,

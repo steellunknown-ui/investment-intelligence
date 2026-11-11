@@ -36,13 +36,22 @@ export type AIResponse = z.infer<typeof AIResponseSchema>;
 async function callGroqDirect(
     userMessage: string,
     context: Record<string, any>,
-    systemPromptOverride?: string
+    systemPromptOverride?: string,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<AIResponse> {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
     const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
     const systemPrompt = systemPromptOverride || buildSystemPrompt(context);
+
+    // Keep up to 6 recent conversation turns for 8h conversational memory
+    const formattedHistory = (history || [])
+        .slice(-6)
+        .map(h => ({
+            role: h.role,
+            content: h.content.length > 500 ? h.content.substring(0, 500) + '...' : h.content,
+        }));
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -54,6 +63,7 @@ async function callGroqDirect(
             model: model,
             messages: [
                 { role: 'system', content: systemPrompt },
+                ...formattedHistory,
                 { role: 'user', content: userMessage },
             ],
             temperature: 0.2,
@@ -122,12 +132,13 @@ async function callOpenRouterDirect(
 export async function callAI(
     userMessage: string,
     context: Record<string, any> = {},
-    systemPromptOverride?: string
+    systemPromptOverride?: string,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<AIResponse> {
     // 1. Try Groq first if key exists
     if (process.env.GROQ_API_KEY) {
         try {
-            return await callGroqDirect(userMessage, context, systemPromptOverride);
+            return await callGroqDirect(userMessage, context, systemPromptOverride, history);
         } catch (groqErr) {
             console.warn('Groq failed, attempting OpenRouter fallback:', groqErr);
         }
