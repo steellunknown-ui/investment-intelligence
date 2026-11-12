@@ -232,6 +232,27 @@
   animation: subtleGlow 4s ease-in-out infinite;
 }
 
+/* Continuous Infinite Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 36s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* Grid Pattern - Enhanced smaller boxes with better visibility */
 .grid-pattern {
   background-image:

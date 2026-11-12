@@ -40,6 +40,19 @@ import {
   Bot,
 } from "lucide-react";
 
+// ── REAL-TIME MARKET TICKER STREAM ─────────────────────────────────────────
+const TICKER_ITEMS = [
+  { label: "NIFTY 50", value: "24,480.95 (+0.42%)", isPositive: true },
+  { label: "SENSEX", value: "80,369.03 (+0.38%)", isPositive: true },
+  { label: "GOLD 24K (10g)", value: "₹78,450 (-0.15%)", isNeutral: true },
+  { label: "SILVER (1kg)", value: "₹92,800 (+0.85%)", isPositive: true },
+  { label: "USD / INR", value: "₹84.38 (+0.02%)", isNeutral: true },
+  { label: "BOB PASSBOOK ENGINE", value: "v5.0 Active (180ms)", isHighlight: true },
+  { label: "ENCRYPTED VAULT", value: "AES-256 Multi-Zone Active", isHighlight: true },
+  { label: "INACTIVITY SENTINEL", value: "Multi-Tier Heartbeat Ready", isHighlight: true },
+  { label: "DEDUPLICATION", value: "5-Min Temporal Window Live", isHighlight: true },
+];
+
 // ── REALISTIC MOCK DATA FOR LIVE INTERACTIVE CONSOLE ─────────────────────────
 const DEMO_TRANSACTIONS = [
   {
@@ -136,8 +149,8 @@ const COMPARISON_ROWS = [
     usCheck: true,
   },
   {
-    feature: "AI Private Financial Engine",
-    us: "Groq 120B private model with 8h memory",
+    feature: "Private Financial Intelligence Co-Pilot",
+    us: "Context-aware wealth advisor with 8h encrypted memory",
     others: "Generic static chatbot with zero portfolio context",
     usCheck: true,
   },
@@ -255,34 +268,68 @@ export default function HomePage() {
       <Navbar />
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          0. REAL-TIME FINANCIAL TICKER TAPE (LIVE MARKET VELOCITY)
+          0. REAL-TIME FINANCIAL TICKER TAPE (CONTINUOUS INFINITE MARQUEE)
           ────────────────────────────────────────────────────────────────────────── */}
-      <div className="pt-16 border-b border-border/60 bg-muted/30 overflow-x-auto scrollbar-hide py-2 text-[11px] font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-6 whitespace-nowrap min-w-max">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-foreground">NIFTY 50:</span>
-            <span className="text-emerald-600 dark:text-[#BBF078]">24,480.95 (+0.42%)</span>
+      <div className="mt-16 w-full overflow-hidden border-b border-border/70 bg-card/80 dark:bg-slate-950/85 backdrop-blur-md py-3 sm:py-3.5 text-xs sm:text-[13px] font-mono select-none shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="flex animate-marquee gap-8 whitespace-nowrap">
+          {/* Loop Set 1 */}
+          <div className="flex items-center gap-8 shrink-0">
+            {TICKER_ITEMS.map((item, idx) => (
+              <div key={`t1-${idx}`} className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    item.isHighlight
+                      ? "bg-lime-400 dark:bg-[#BBF078] animate-pulse"
+                      : item.isPositive
+                      ? "bg-emerald-500 animate-pulse"
+                      : "bg-slate-400"
+                  }`}
+                />
+                <span className="font-bold text-foreground tracking-tight">{item.label}:</span>
+                <span
+                  className={
+                    item.isHighlight
+                      ? "text-emerald-700 dark:text-[#BBF078] font-semibold"
+                      : item.isPositive
+                      ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {item.value}
+                </span>
+                <span className="text-border/70 ml-4 font-normal">|</span>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">SENSEX:</span>
-            <span className="text-emerald-600 dark:text-[#BBF078]">80,369.03 (+0.38%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">GOLD 24K (10g):</span>
-            <span className="text-muted-foreground">₹78,450 (-0.15%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">USD / INR:</span>
-            <span className="text-muted-foreground">₹84.38 (+0.02%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">BOB PASSBOOK ENGINE:</span>
-            <span className="text-emerald-600 dark:text-[#BBF078]">v5.0 Active (180ms)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">GROQ AI MODEL:</span>
-            <span className="text-muted-foreground">120B JSON Active</span>
+
+          {/* Loop Set 2 (Identical duplicate for seamless continuous animation) */}
+          <div className="flex items-center gap-8 shrink-0" aria-hidden="true">
+            {TICKER_ITEMS.map((item, idx) => (
+              <div key={`t2-${idx}`} className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    item.isHighlight
+                      ? "bg-lime-400 dark:bg-[#BBF078] animate-pulse"
+                      : item.isPositive
+                      ? "bg-emerald-500 animate-pulse"
+                      : "bg-slate-400"
+                  }`}
+                />
+                <span className="font-bold text-foreground tracking-tight">{item.label}:</span>
+                <span
+                  className={
+                    item.isHighlight
+                      ? "text-emerald-700 dark:text-[#BBF078] font-semibold"
+                      : item.isPositive
+                      ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {item.value}
+                </span>
+                <span className="text-border/70 ml-4 font-normal">|</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -290,7 +337,7 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────────────────────────
           1. THE SOVEREIGN HERO WITH HARDWARE SILHOUETTE & ARCHITECTURAL GRID
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="relative pt-20 pb-20 sm:pt-28 sm:pb-32 overflow-hidden border-b border-border/50">
+      <section className="relative pt-10 pb-20 sm:pt-16 sm:pb-32 overflow-hidden border-b border-border/50">
         {/* Subtle Architectural Ambient Grid (Fine line coordinates, zero blurry purple balls) */}
         <div
           aria-hidden="true"
@@ -943,28 +990,29 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Pillar 4: Groq AI Private Intelligence */}
+            {/* Pillar 4: Autonomous Wealth Intelligence Co-Pilot */}
             <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <Bot className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-bold text-foreground">
-                  Private Groq AI Intelligence
+                  Autonomous Wealth Intelligence Co-Pilot
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  Powered by model 120B with sub-400ms inference. Queries your financial portfolio,
-                  identifies overdue insurance, breaks down emergency fund health, and preserves
-                  conversational context for 8 hours without harvesting personal data.
+                  A private, context-aware co-pilot that continuously monitors balance sheet health.
+                  Evaluates 6-month liquid runway against fixed expenses, audits debt-to-asset ratios,
+                  surfaces upcoming insurance renewal horizons, and answers complex net worth questions
+                  without exposing sensitive financial records to external ad trackers.
                 </p>
                 <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
-                  <div>• Sub-400ms High-Speed Structured Inference</div>
-                  <div>• 8-Hour Active Session Context Memory</div>
-                  <div>• Zero Ad-Tech or Personal Data Monetization</div>
+                  <div>• Real-Time Debt-to-Asset &amp; Liquidity Stress Testing</div>
+                  <div>• Proactive Insurance Lapse &amp; Premium Horizon Alerts</div>
+                  <div>• 8-Hour Ephemeral Session Security (Zero Persistent Logging)</div>
                 </div>
               </div>
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
-                Encrypted Intelligence <ArrowRight className="h-3 w-3" />
+                Explore Autonomous Co-Pilot <ArrowRight className="h-3 w-3" />
               </div>
             </div>
           </div>
