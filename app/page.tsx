@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
 import { PublicChatbot } from "@/components/marketing/PublicChatbot";
+import { LiveMarketTicker } from "@/components/marketing/LiveMarketTicker";
 import {
   ArrowRight,
   ShieldCheck,
@@ -39,19 +40,6 @@ import {
   Shield,
   Bot,
 } from "lucide-react";
-
-// ── REAL-TIME MARKET TICKER STREAM ─────────────────────────────────────────
-const TICKER_ITEMS = [
-  { label: "NIFTY 50", value: "24,480.95 (+0.42%)", isPositive: true },
-  { label: "SENSEX", value: "80,369.03 (+0.38%)", isPositive: true },
-  { label: "GOLD 24K (10g)", value: "₹78,450 (-0.15%)", isNeutral: true },
-  { label: "SILVER (1kg)", value: "₹92,800 (+0.85%)", isPositive: true },
-  { label: "USD / INR", value: "₹84.38 (+0.02%)", isNeutral: true },
-  { label: "BOB PASSBOOK ENGINE", value: "v5.0 Active (180ms)", isHighlight: true },
-  { label: "ENCRYPTED VAULT", value: "AES-256 Multi-Zone Active", isHighlight: true },
-  { label: "INACTIVITY SENTINEL", value: "Multi-Tier Heartbeat Ready", isHighlight: true },
-  { label: "DEDUPLICATION", value: "5-Min Temporal Window Live", isHighlight: true },
-];
 
 // ── REALISTIC MOCK DATA FOR LIVE INTERACTIVE CONSOLE ─────────────────────────
 const DEMO_TRANSACTIONS = [
@@ -120,7 +108,7 @@ const WEALTH_ALLOCATION = [
 const COMPARISON_ROWS = [
   {
     feature: "Directional SMS & UPI Debit/Credit Parsing",
-    us: "Universal Engine v5.0 (BOB, SBI, HDFC)",
+    us: "Smart Passbook Engine v5.0 (All Major Banks)",
     others: "Frequent misclassification of debits as credits",
     usCheck: true,
   },
@@ -268,71 +256,9 @@ export default function HomePage() {
       <Navbar />
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          0. REAL-TIME FINANCIAL TICKER TAPE (CONTINUOUS INFINITE MARQUEE)
+          0. REAL-TIME FINANCIAL TICKER TAPE (LIVE REAL-WORLD MARQUEE)
           ────────────────────────────────────────────────────────────────────────── */}
-      <div className="mt-16 w-full overflow-hidden border-b border-border/70 bg-card/80 dark:bg-slate-950/85 backdrop-blur-md py-3 sm:py-3.5 text-xs sm:text-[13px] font-mono select-none shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-        <div className="flex animate-marquee gap-8 whitespace-nowrap">
-          {/* Loop Set 1 */}
-          <div className="flex items-center gap-8 shrink-0">
-            {TICKER_ITEMS.map((item, idx) => (
-              <div key={`t1-${idx}`} className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    item.isHighlight
-                      ? "bg-lime-400 dark:bg-[#BBF078] animate-pulse"
-                      : item.isPositive
-                      ? "bg-emerald-500 animate-pulse"
-                      : "bg-slate-400"
-                  }`}
-                />
-                <span className="font-bold text-foreground tracking-tight">{item.label}:</span>
-                <span
-                  className={
-                    item.isHighlight
-                      ? "text-emerald-700 dark:text-[#BBF078] font-semibold"
-                      : item.isPositive
-                      ? "text-emerald-600 dark:text-emerald-400 font-semibold"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {item.value}
-                </span>
-                <span className="text-border/70 ml-4 font-normal">|</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Loop Set 2 (Identical duplicate for seamless continuous animation) */}
-          <div className="flex items-center gap-8 shrink-0" aria-hidden="true">
-            {TICKER_ITEMS.map((item, idx) => (
-              <div key={`t2-${idx}`} className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    item.isHighlight
-                      ? "bg-lime-400 dark:bg-[#BBF078] animate-pulse"
-                      : item.isPositive
-                      ? "bg-emerald-500 animate-pulse"
-                      : "bg-slate-400"
-                  }`}
-                />
-                <span className="font-bold text-foreground tracking-tight">{item.label}:</span>
-                <span
-                  className={
-                    item.isHighlight
-                      ? "text-emerald-700 dark:text-[#BBF078] font-semibold"
-                      : item.isPositive
-                      ? "text-emerald-600 dark:text-emerald-400 font-semibold"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {item.value}
-                </span>
-                <span className="text-border/70 ml-4 font-normal">|</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <LiveMarketTicker />
 
       {/* ──────────────────────────────────────────────────────────────────────────
           1. THE SOVEREIGN HERO WITH HARDWARE SILHOUETTE & ARCHITECTURAL GRID
@@ -921,12 +847,13 @@ export default function HomePage() {
                   <Smartphone className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-bold text-foreground">
-                  Universal SMS &amp; UPI Ledger v5.0
+                  Smart Passbook &amp; UPI Ledger v5.0
                 </h3>
                 <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  Directional debit/credit parsing built specifically for Bank of Baroda, SBI, HDFC,
-                  and ICICI. Accurately flags RuPay Credit Cards on UPI, card swipes, net banking,
-                  and eliminates duplicates between instant GPay push alerts and delayed bank SMS.
+                  Directional debit/credit parsing built specifically for SBI, HDFC, ICICI, Bank of
+                  Baroda, and all major banks. Accurately flags RuPay Credit Cards on UPI, card
+                  swipes, net banking, and eliminates duplicates between instant GPay push alerts and
+                  delayed bank SMS.
                 </p>
                 <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/60 font-mono text-[11px] text-muted-foreground space-y-1">
                   <div>• Directional Debit/Credit Engine</div>
