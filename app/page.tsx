@@ -167,6 +167,33 @@ const FAQS = [
   },
 ];
 
+const CTA_PILLARS = [
+  {
+    icon: Smartphone,
+    title: "Smart Ledger v5.0",
+    tagline: "Zero Manual Input",
+    desc: "Autonomous regex engine parses SMS & UPI for SBI, HDFC, ICICI, BoB & RuPay CC without human error.",
+  },
+  {
+    icon: PieChart,
+    title: "Unified Radar",
+    tagline: "8 Indian Asset Classes",
+    desc: "Single pane of glass across Equities, Mutual Funds, SGBs, EPF/PPF, Real Estate, FDs & Liabilities.",
+  },
+  {
+    icon: Lock,
+    title: "Nominee Sentinel",
+    tagline: "Automated Continuity",
+    desc: "Two-stage verification with encrypted emergency handover to your verified family if life takes a turn.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Private & Sovereign",
+    tagline: "100% Zero-Ad Privacy",
+    desc: "Your data is never sold, brokered, or monetized. 256-bit AES cryptographic encryption at rest and in transit.",
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const [onboardingDone, setOnboardingDone] = useState(false);
@@ -371,7 +398,8 @@ export default function HomePage() {
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: false, amount: 0.15 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-20"
+          whileHover={{ y: -5, scale: 1.008, transition: { duration: 0.25, ease: "easeOut" } }}
+          className="cursor-pointer max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-20"
         >
           <div className="rounded-3xl border border-border bg-card/95 shadow-2xl overflow-hidden backdrop-blur-xl">
             {/* Console Window Header */}
@@ -461,7 +489,8 @@ export default function HomePage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.3 }}
-                          className="p-3.5 rounded-2xl bg-muted/30 border border-border hover:border-lime-500/40 transition-all flex items-center justify-between gap-3"
+                          whileHover={{ y: -4, scale: 1.015, transition: { duration: 0.2, ease: "easeOut" } }}
+                          className="cursor-pointer p-3.5 rounded-2xl bg-muted/30 border border-border hover:border-lime-500/50 hover:shadow-lg hover:shadow-lime-500/5 transition-all flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div
@@ -565,10 +594,14 @@ export default function HomePage() {
 
                   {/* Breakdown Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {WEALTH_ALLOCATION.map((item) => (
-                      <div
+                    {WEALTH_ALLOCATION.map((item, idx) => (
+                      <motion.div
                         key={item.asset}
-                        className="p-3.5 rounded-xl border border-border bg-muted/20 flex items-center justify-between"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, delay: idx * 0.08 }}
+                        whileHover={{ y: -4, scale: 1.025, transition: { duration: 0.2, ease: "easeOut" } }}
+                        className="cursor-pointer p-3.5 rounded-xl border border-border bg-muted/20 hover:border-lime-500/40 hover:shadow-md transition-all flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2.5">
                           <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
@@ -577,7 +610,7 @@ export default function HomePage() {
                         <span className="text-xs font-bold font-mono text-foreground">
                           {item.value}
                         </span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -596,9 +629,16 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  {/* Flow Steps */}
+                  {/* Flow Steps - 3 Staggered Columns */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 25 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false }}
+                      transition={{ duration: 0.5, delay: 0.0, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ y: -6, scale: 1.025, transition: { duration: 0.2, ease: "easeOut" } }}
+                      className="cursor-pointer p-4 rounded-2xl bg-muted/20 border border-border hover:border-lime-500/40 hover:shadow-md transition-all space-y-2"
+                    >
                       <div className="h-8 w-8 rounded-lg bg-lime-400/20 text-lime-800 dark:text-[#BBF078] flex items-center justify-center font-bold text-xs font-mono">
                         01
                       </div>
@@ -607,9 +647,16 @@ export default function HomePage() {
                         Configured to 30 or 45 days. If no login is recorded, the sentinel enters
                         grace verification.
                       </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 25 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false }}
+                      transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ y: -6, scale: 1.025, transition: { duration: 0.2, ease: "easeOut" } }}
+                      className="cursor-pointer p-4 rounded-2xl bg-muted/20 border border-border hover:border-lime-500/40 hover:shadow-md transition-all space-y-2"
+                    >
                       <div className="h-8 w-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs font-mono">
                         02
                       </div>
@@ -618,9 +665,16 @@ export default function HomePage() {
                         Dual SMS &amp; Email alerts are sent to you. A single click resets the countdown
                         instantly.
                       </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 25 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false }}
+                      transition={{ duration: 0.5, delay: 0.30, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ y: -6, scale: 1.025, transition: { duration: 0.2, ease: "easeOut" } }}
+                      className="cursor-pointer p-4 rounded-2xl bg-muted/20 border border-border hover:border-lime-500/40 hover:shadow-md transition-all space-y-2"
+                    >
                       <div className="h-8 w-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs font-mono">
                         03
                       </div>
@@ -629,7 +683,7 @@ export default function HomePage() {
                         Trusted nominees receive read-only vault access to insurance, bank folios,
                         and asset locations.
                       </p>
-                    </div>
+                    </motion.div>
                   </div>
                 </div>
               )}
@@ -663,13 +717,14 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Controls: Sliders (Slides in from Left on scroll up/down) */}
+            {/* Left Controls: Sliders (Slides in from Left on scroll up/down, 1st column comes 1st) */}
             <motion.div
               initial={{ opacity: 0, x: -60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-sm space-y-6"
+              transition={{ duration: 0.7, delay: 0.0, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -6, scale: 1.015, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-all space-y-6"
             >
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -768,13 +823,14 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Right Projection Card (Slides in from Right on scroll up/down) */}
+            {/* Right Projection Card (Slides in from Right on scroll up/down, 2nd column comes 2nd) */}
             <motion.div
               initial={{ opacity: 0, x: 60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl space-y-6"
+              transition={{ duration: 0.7, delay: 0.20, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -6, scale: 1.015, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl hover:border-lime-500/50 hover:shadow-2xl hover:shadow-lime-500/15 transition-all space-y-6"
             >
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
@@ -870,13 +926,14 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Pillar 1: Smart Passbook (Left Card -> Slides in from Left) */}
+            {/* Pillar 1: Smart Passbook (Left Column, Row 1 - 1st Card comes 1st) */}
             <motion.div
               initial={{ opacity: 0, x: -60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+              transition={{ duration: 0.7, delay: 0.0, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -902,13 +959,14 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Pillar 2: Multi-Asset Radar (Right Card -> Slides in from Right) */}
+            {/* Pillar 2: Multi-Asset Radar (Right Column, Row 1 - 2nd Card comes 2nd) */}
             <motion.div
               initial={{ opacity: 0, x: 60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+              transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -933,13 +991,14 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Pillar 3: Inactivity Sentinel (Left Card -> Slides in from Left) */}
+            {/* Pillar 3: Inactivity Sentinel (Left Column, Row 2 - 3rd Card comes 3rd) */}
             <motion.div
               initial={{ opacity: 0, x: -60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+              transition={{ duration: 0.7, delay: 0.30, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -965,13 +1024,14 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Pillar 4: Autonomous Wealth Intelligence Co-Pilot (Right Card -> Slides in from Right) */}
+            {/* Pillar 4: Autonomous Wealth Intelligence Co-Pilot (Right Column, Row 2 - 4th Card comes 4th) */}
             <motion.div
               initial={{ opacity: 0, x: 60 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.15 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+              transition={{ duration: 0.7, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.25, ease: "easeOut" } }}
+              className="cursor-pointer p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
@@ -1028,7 +1088,8 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.15 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden"
+            whileHover={{ y: -4, scale: 1.006, transition: { duration: 0.25, ease: "easeOut" } }}
+            className="cursor-pointer rounded-3xl border border-border bg-card shadow-sm hover:border-lime-500/40 hover:shadow-xl transition-all overflow-hidden"
           >
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1093,7 +1154,8 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.15 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm"
+            whileHover={{ y: -4, scale: 1.006, transition: { duration: 0.25, ease: "easeOut" } }}
+            className="cursor-pointer rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm hover:border-lime-500/40 hover:shadow-xl transition-all"
           >
             <Accordion type="single" collapsible>
               {FAQS.map((faq, idx) => (
@@ -1109,43 +1171,130 @@ export default function HomePage() {
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          7. THE SOVEREIGN FINAL CTA
+          7. THE SOVEREIGN FINAL CTA & 4-COLUMN ARCHITECTURE GRID
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 relative overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.98 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: false, amount: 0.15 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
-        >
-          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
-            Take Sovereign Control of Your Wealth.
-          </h2>
-          <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Join the new standard of Indian private wealth intelligence. Clean, fast, and engineered
-            without compromise.
-          </p>
+      <section className="py-24 sm:py-32 relative overflow-hidden border-b border-border/50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center max-w-2xl mx-auto mb-14"
+          >
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-[#BBF078]">
+              The Sovereign Guarantee
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mt-3">
+              Built for Absolute Peace of Mind.
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-4 leading-relaxed">
+              Every feature is engineered to preserve, protect, and pass on your wealth with zero compromise.
+            </p>
+          </motion.div>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-            <Button
-              onClick={() => router.push("/signup")}
-              size="lg"
-              className="w-full sm:w-auto px-9 py-3.5 h-12 bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] font-bold text-sm rounded-xl shadow-lg shadow-lime-500/20 border-0 transition-all gap-2"
-            >
-              Get Started Free
-              <ArrowRight className="h-4 w-4 text-slate-950" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/login")}
-              size="lg"
-              className="w-full sm:w-auto px-7 py-3.5 h-12 text-sm font-medium rounded-xl border-border bg-card/70 hover:bg-card text-foreground transition-all"
-            >
-              Access Existing Account
-            </Button>
+          {/* 4 Staggered Feature Columns: 1st comes 1st, 2nd comes 2nd, 3rd comes 3rd, 4th comes 4th! */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {CTA_PILLARS.map((pillar, idx) => {
+              const Icon = pillar.icon;
+              return (
+                <motion.div
+                  key={pillar.title}
+                  initial={{ opacity: 0, y: 35 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: false, amount: 0.15 }}
+                  transition={{
+                    duration: 0.65,
+                    delay: idx * 0.15,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  whileHover={{
+                    y: -8,
+                    scale: 1.025,
+                    transition: { duration: 0.25, ease: "easeOut" },
+                  }}
+                  className="cursor-pointer p-6 sm:p-7 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/50 hover:shadow-xl hover:shadow-lime-500/10 transition-colors flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-5">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-[#BBF078] font-bold">
+                      {pillar.tagline}
+                    </span>
+                    <h3 className="text-lg font-bold text-foreground mt-1.5">
+                      {pillar.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                      {pillar.desc}
+                    </p>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-border/50 text-[11px] font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
+                    Verified Architecture <ArrowRight className="h-3 w-3" />
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
-        </motion.div>
+
+          {/* Main Sovereign CTA Banner Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={{
+              y: -5,
+              scale: 1.008,
+              transition: { duration: 0.25, ease: "easeOut" },
+            }}
+            className="cursor-pointer p-10 sm:p-14 rounded-3xl bg-card/90 border border-border shadow-2xl backdrop-blur-xl text-center relative overflow-hidden"
+          >
+            <div
+              aria-hidden="true"
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[260px] pointer-events-none opacity-20 dark:opacity-30"
+              style={{
+                background:
+                  "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(187, 240, 120, 0.5), transparent 75%)",
+              }}
+            />
+            <div className="relative z-10">
+              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
+                Take Sovereign Control of Your Wealth.
+              </h2>
+              <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                Join the new standard of Indian private wealth intelligence. Clean, fast, and engineered
+                without compromise.
+              </p>
+
+              <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    onClick={() => router.push("/signup")}
+                    size="lg"
+                    className="w-full sm:w-auto px-9 py-3.5 h-12 bg-lime-400 hover:bg-lime-500 text-slate-950 dark:bg-[#BBF078] dark:hover:bg-[#aee663] font-bold text-sm rounded-xl shadow-lg shadow-lime-500/20 border-0 transition-all gap-2"
+                  >
+                    Get Started Free
+                    <ArrowRight className="h-4 w-4 text-slate-950" />
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/login")}
+                    size="lg"
+                    className="w-full sm:w-auto px-7 py-3.5 h-12 text-sm font-medium rounded-xl border-border bg-card/70 hover:bg-card text-foreground transition-all"
+                  >
+                    Access Existing Account
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+
+        </div>
       </section>
 
       <Footer />

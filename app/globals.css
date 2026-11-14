@@ -253,6 +253,20 @@
   animation-play-state: paused;
 }
 
+/* Tactile Card Popup on Cursor Hover across entire platform */
+.card-hover-popup,
+.card-popup,
+[data-card-hover="true"] {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease !important;
+}
+
+.card-hover-popup:hover,
+.card-popup:hover,
+[data-card-hover="true"]:hover {
+  transform: translateY(-6px) scale(1.015) !important;
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.18), 0 0 20px -3px rgba(187, 240, 120, 0.22) !important;
+}
+
 /* Grid Pattern - Enhanced smaller boxes with better visibility */
 .grid-pattern {
   background-image:
