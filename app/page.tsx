@@ -366,7 +366,13 @@ export default function HomePage() {
         {/* ──────────────────────────────────────────────────────────────────────────
             2. INTERACTIVE LIVE FINTECH CONSOLE (SHOW, DON'T TELL)
             ────────────────────────────────────────────────────────────────────────── */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.98 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-20"
+        >
           <div className="rounded-3xl border border-border bg-card/95 shadow-2xl overflow-hidden backdrop-blur-xl">
             {/* Console Window Header */}
             <div className="px-5 py-4 border-b border-border/80 bg-muted/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -629,15 +635,21 @@ export default function HomePage() {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
           3. INTERACTIVE WEALTH PROJECTION & SUCCESSION CALCULATOR (REAL DATA)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 sm:py-32 bg-muted/20 border-b border-border/50">
+      <section className="py-24 sm:py-32 bg-muted/20 border-b border-border/50 overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center max-w-3xl mx-auto mb-16"
+          >
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-[#BBF078]">
               Tactile Wealth Simulator
             </span>
@@ -648,11 +660,17 @@ export default function HomePage() {
               Adjust your monthly cashflow and current net worth to simulate generational wealth
               accumulation alongside your emergency continuity threshold.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Controls: Sliders */}
-            <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-sm space-y-6">
+            {/* Left Controls: Sliders (Slides in from Left on scroll up/down) */}
+            <motion.div
+              initial={{ opacity: 0, x: -60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-sm space-y-6"
+            >
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-xs font-bold text-foreground uppercase tracking-wider">
@@ -748,10 +766,16 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Right Projection Card */}
-            <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl space-y-6">
+            {/* Right Projection Card (Slides in from Right on scroll up/down) */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl space-y-6"
+            >
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
                   Institutional Growth Forecast (12% CAGR)
@@ -816,7 +840,7 @@ export default function HomePage() {
                 Track &amp; Protect This Wealth Now
                 <ArrowRight className="h-4 w-4" />
               </Button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -824,9 +848,15 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────────────────────────
           4. THE FOUR ARCHITECTURAL PILLARS (EXPANDED BENTO GRID)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section id="features" className="py-24 sm:py-32 border-b border-border/50">
+      <section id="features" className="py-24 sm:py-32 border-b border-border/50 overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center max-w-2xl mx-auto mb-16 sm:mb-20"
+          >
             <span className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-[#BBF078]">
               The Core Architecture
             </span>
@@ -837,11 +867,17 @@ export default function HomePage() {
               Built from scratch to eliminate manual spreadsheets, broken bank SMS alerts, and
               unclaimed family wealth.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Pillar 1: Smart Passbook */}
-            <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
+            {/* Pillar 1: Smart Passbook (Left Card -> Slides in from Left) */}
+            <motion.div
+              initial={{ opacity: 0, x: -60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+            >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <Smartphone className="h-6 w-6" />
@@ -864,10 +900,16 @@ export default function HomePage() {
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
                 Zero Manual Entry <ArrowRight className="h-3 w-3" />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Pillar 2: Multi-Asset Radar */}
-            <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
+            {/* Pillar 2: Multi-Asset Radar (Right Card -> Slides in from Right) */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+            >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <PieChart className="h-6 w-6" />
@@ -889,10 +931,16 @@ export default function HomePage() {
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
                 Single Pane of Truth <ArrowRight className="h-3 w-3" />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Pillar 3: Inactivity Sentinel */}
-            <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
+            {/* Pillar 3: Inactivity Sentinel (Left Card -> Slides in from Left) */}
+            <motion.div
+              initial={{ opacity: 0, x: -60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+            >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <Lock className="h-6 w-6" />
@@ -915,10 +963,16 @@ export default function HomePage() {
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
                 Generational Continuity <ArrowRight className="h-3 w-3" />
               </div>
-            </div>
+            </motion.div>
 
-            {/* Pillar 4: Autonomous Wealth Intelligence Co-Pilot */}
-            <div className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between">
+            {/* Pillar 4: Autonomous Wealth Intelligence Co-Pilot (Right Card -> Slides in from Right) */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="p-8 rounded-3xl bg-card border border-border shadow-sm hover:border-lime-500/40 transition-all flex flex-col justify-between"
+            >
               <div>
                 <div className="h-12 w-12 rounded-2xl bg-lime-400/15 dark:bg-lime-950/40 border border-lime-500/30 text-lime-800 dark:text-[#BBF078] flex items-center justify-center mb-6">
                   <Bot className="h-6 w-6" />
@@ -941,7 +995,7 @@ export default function HomePage() {
               <div className="mt-8 pt-4 border-t border-border/50 text-xs font-mono text-emerald-600 dark:text-[#BBF078] font-semibold flex items-center gap-1">
                 Explore Autonomous Co-Pilot <ArrowRight className="h-3 w-3" />
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -949,9 +1003,15 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────────────────────────
           5. INSTITUTIONAL COMPARISON MATRIX (TRANSPARENCY VS CONSUMER APPS)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-muted/10 border-b border-border/50">
+      <section className="py-20 sm:py-28 bg-muted/10 border-b border-border/50 overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-14">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center max-w-2xl mx-auto mb-14"
+          >
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-[#BBF078]">
               Architectural Standard
             </span>
@@ -961,9 +1021,15 @@ export default function HomePage() {
             <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Free consumer expense trackers make money by selling your spending data. We do not.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden"
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -995,16 +1061,22 @@ export default function HomePage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ──────────────────────────────────────────────────────────────────────────
           6. FREQUENTLY ASKED QUESTIONS (EDITORIAL & CLEAR)
           ────────────────────────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-24 sm:py-32 border-b border-border/50">
+      <section id="faq" className="py-24 sm:py-32 border-b border-border/50 overflow-hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center mb-16"
+          >
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-[#BBF078]">
               Clarity &amp; Answers
             </span>
@@ -1014,9 +1086,15 @@ export default function HomePage() {
             <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Everything you need to know about the engine and family protection architecture.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm"
+          >
             <Accordion type="single" collapsible>
               {FAQS.map((faq, idx) => (
                 <AccordionItem key={faq.question} value={`item-${idx}`} title={faq.question}>
@@ -1026,7 +1104,7 @@ export default function HomePage() {
                 </AccordionItem>
               ))}
             </Accordion>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -1034,7 +1112,13 @@ export default function HomePage() {
           7. THE SOVEREIGN FINAL CTA
           ────────────────────────────────────────────────────────────────────────── */}
       <section className="py-24 sm:py-32 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.98 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: false, amount: 0.15 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
+        >
           <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
             Take Sovereign Control of Your Wealth.
           </h2>
@@ -1061,7 +1145,7 @@ export default function HomePage() {
               Access Existing Account
             </Button>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       <Footer />
