@@ -17,6 +17,7 @@ import { useEffect, useRef, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/supabase-browser";
+import { GlobalPassbookSync } from "@/components/passbook/GlobalPassbookSync";
 const SESSION_LOGIN_KEY = 'session_login_at';
 const SESSION_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 
@@ -99,5 +100,10 @@ export function SessionGuard({ children }: SessionGuardProps) {
     };
   }, [router, pathname]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <GlobalPassbookSync />
+      {children}
+    </>
+  );
 }

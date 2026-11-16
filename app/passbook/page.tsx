@@ -48,6 +48,12 @@ export default function PassbookPage() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Native Android Auto-Capture Permissions State
+  const [isNative, setIsNative] = useState(false);
+  const [smsPermission, setSmsPermission] = useState<boolean | null>(null);
+  const [notifAccess, setNotifAccess] = useState<boolean | null>(null);
+  const [showRestrictedHelp, setShowRestrictedHelp] = useState(false);
+
   // Selected Transaction for Details Modal
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
@@ -57,6 +63,51 @@ export default function PassbookPage() {
   const [simText, setSimText] = useState("");
   const [simSender, setSimSender] = useState("VK-BOBSMS");
   const [isParsingSim, setIsParsingSim] = useState(false);
+
+  const checkPerms = useCallback(async () => {
+    if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
+      setIsNative(true);
+      try {
+        const status = await PassbookPlugin.checkStatus();
+        if (status) {
+          setSmsPermission(status.smsPermission ?? false);
+          setNotifAccess(status.notificationAccess ?? false);
+        }
+      } catch (e) {
+        console.warn("Could not check native permissions:", e);
+      }
+    }
+  }, []);
+
+  const handleRequestSMS = async () => {
+    try {
+      const res = await PassbookPlugin.requestSMSPermission();
+      if (res?.granted) {
+        toast.success("SMS Permission Granted!");
+        checkPerms();
+      } else {
+        setShowRestrictedHelp(true);
+      }
+    } catch (e) {
+      setShowRestrictedHelp(true);
+    }
+  };
+
+  const handleOpenAppSettings = async () => {
+    try {
+      await PassbookPlugin.openAppSettings();
+    } catch (e) {
+      toast.error("Could not open settings: " + (e as Error).message);
+    }
+  };
+
+  const handleOpenNotifSettings = async () => {
+    try {
+      await PassbookPlugin.openNotificationSettings();
+    } catch (e) {
+      toast.error("Could not open notification settings: " + (e as Error).message);
+    }
+  };
 
   // ── FETCH DATA ─────────────────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
@@ -160,37 +211,28 @@ export default function PassbookPage() {
   useEffect(() => {
     fetchTransactions();
     fetchLinkedCards();
+    checkPerms();
 
+    // Listen for live transactions logged globally by GlobalPassbookSync
+    const handleTxLogged = () => {
+      fetchTransactions();
+      fetchLinkedCards();
+    };
+
+    window.addEventListener("ii:transaction-logged", handleTxLogged);
+
+    // If native, trigger an initial sync and check permissions periodically
+    let permInterval: any = null;
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
-      PassbookPlugin.addListener("onTransactionDetected", (data: any) => {
-        let rawText: string = data.raw ?? "";
-        let packageName: string | undefined;
-        let sender: string | undefined;
-
-        if (rawText.includes("|")) {
-          const pipeIdx = rawText.indexOf("|");
-          const prefix = rawText.substring(0, pipeIdx);
-          rawText = rawText.substring(pipeIdx + 1);
-          if (data.source === "notification") {
-            packageName = prefix;
-          } else {
-            sender = prefix;
-          }
-        }
-
-        handleParseRaw(rawText, data.source, packageName, sender);
-      });
-
-      const interval = setInterval(() => {
-        PassbookPlugin.sync().catch(console.error);
-      }, 5000);
-
-      return () => {
-        clearInterval(interval);
-        PassbookPlugin.removeAllListeners().catch(console.error);
-      };
+      PassbookPlugin.sync().catch(console.error);
+      permInterval = setInterval(checkPerms, 6000);
     }
-  }, [fetchTransactions, fetchLinkedCards, handleParseRaw]);
+
+    return () => {
+      window.removeEventListener("ii:transaction-logged", handleTxLogged);
+      if (permInterval) clearInterval(permInterval);
+    };
+  }, [fetchTransactions, fetchLinkedCards, checkPerms]);
 
   // ── FILTERING ─────────────────────────────────────────────────────────────
   const filteredTransactions = transactions.filter((t) => {
@@ -313,6 +355,109 @@ export default function PassbookPage() {
             </Button>
           </div>
         </div>
+
+        {/* 1.5 Android Native Permission Diagnostic Banner */}
+        {isNative && (
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Smartphone className="h-5 w-5 text-emerald-600 dark:text-[#BBF078]" />
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">
+                    Android Automated Ledger Sentinel
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Direct on-device capture from Bank SMS &amp; UPI notifications
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    smsPermission
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      smsPermission ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                  />
+                  SMS: {smsPermission ? "Active" : "Disabled"}
+                </span>
+
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    notifAccess
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      notifAccess ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                  />
+                  Notifications: {notifAccess ? "Active" : "Disabled"}
+                </span>
+              </div>
+            </div>
+
+            {(!smsPermission || !notifAccess) && (
+              <div className="pt-2 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                <div className="text-muted-foreground">
+                  {!smsPermission && notifAccess && (
+                    <span>
+                      SMS permission is disabled. On Android 13/14/15, unlock <strong>Restricted Settings</strong> to enable.
+                    </span>
+                  )}
+                  {smsPermission && !notifAccess && (
+                    <span>
+                      Notification Access is off. Enable it to record transactions from GPay, PhonePe, Paytm, and banking apps.
+                    </span>
+                  )}
+                  {!smsPermission && !notifAccess && (
+                    <span>
+                      Both permissions are off. Enable both for 100% automated debit/credit capture.
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {!smsPermission && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRequestSMS}
+                        className="h-8 text-xs font-medium"
+                      >
+                        Request SMS
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowRestrictedHelp(true)}
+                        className="h-8 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950"
+                      >
+                        Unlock SMS (3 Dots ⋮)
+                      </Button>
+                    </>
+                  )}
+                  {!notifAccess && (
+                    <Button
+                      size="sm"
+                      onClick={handleOpenNotifSettings}
+                      className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      Enable Notifications
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 2. Test Simulator Bar (Expandable) */}
         {showSimulator && (
@@ -702,6 +847,89 @@ export default function PassbookPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* 6. Android Restricted Settings Guide Dialog */}
+        <Dialog open={showRestrictedHelp} onOpenChange={setShowRestrictedHelp}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-amber-500" />
+                Unrestrict SMS Permission (Android 13/14/15)
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground pt-1.5 leading-relaxed">
+                When you install an APK directly, Android automatically disables sensitive permissions for security. Here is how to unlock it in 15 seconds:
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-3 text-xs">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  1
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Open App Info</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Tap the button below to jump directly to Investment Intelligence in Android Settings.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  2
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Tap 3 Dots (⋮) at Top-Right</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Tap the <strong>three vertical dots (⋮)</strong> in the top-right corner of the screen.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  3
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Select &quot;Allow restricted settings&quot;</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Authenticate with your fingerprint or PIN when prompted.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                  4
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Enable SMS</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Tap <strong>Permissions</strong> → <strong>SMS</strong> → select <strong>Allow</strong>. The toggle is now active!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRestrictedHelp(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleOpenAppSettings}
+                className="bg-primary text-primary-foreground font-semibold text-xs gap-1.5"
+              >
+                Open App Info Settings
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </DashboardShell>

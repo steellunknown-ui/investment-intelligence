@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class NotificationService extends NotificationListenerService {
     private static final String TAG        = "NotificationService";
@@ -29,6 +30,10 @@ public class NotificationService extends NotificationListenerService {
         "com.mobikwik_new",                         // MobiKwik
         "com.freecharge.android",                   // FreeCharge
         "com.bbps.app",                             // BBPS
+        "in.org.npci.upiapp",                       // BHIM UPI
+        "com.whatsapp",                             // WhatsApp (UPI payments)
+        "com.whatsapp.w4b",                         // WhatsApp Business
+
         // Fintech / Neo-banks / Credit Card apps
         "com.fampay.in",                            // FamPay
         "com.navi.in",                              // NAVI
@@ -40,25 +45,30 @@ public class NotificationService extends NotificationListenerService {
         "com.freo.app",                             // Freo
         "com.kreditbee.app",                        // KreditBee
         "com.zestmoney.app",                        // ZestMoney
+        "com.epifi.slice",                          // Fi Money
+
         // Bank Mobile Apps
         "com.bankofbaroda.mconnect",                // Bank of Baroda (BOB World)
         "com.csam.icici.bank.imobile",              // ICICI iMobile
         "com.hdfcbank.hdfcmobilebanking",           // HDFC NetBanking
         "com.sbi.SBIFreedomPlus",                   // SBI YONO
+        "com.sbi.lotusintouch",                     // SBI YONO Lite
         "com.axis.mobile",                          // Axis Mobile
-        "com.kotak.mahindra.kotak800",              // Kotak
+        "com.kotak.mahindra.kotak800",              // Kotak 811
         "com.idfc.firstbank",                       // IDFC First
         "com.indusind.mobile",                      // IndusInd
-        "com.msf.kbank.mobile",                     // KotakElite
-        "com.pnb.mobilebanking",                    // PNB
+        "com.msf.kbank.mobile",                     // Kotak Elite
+        "com.pnb.mobilebanking",                    // PNB One
         "com.yesbank",                              // Yes Bank
-        // SMS apps — filtered strictly below
-        "com.google.android.apps.messaging",        // Google Messages
-        "com.android.mms",                          // Stock SMS app
-        "org.thoughtcrime.securesms"                // Signal
+        "com.canarabank.mobility",                  // Canara ai1
+        "com.unionbank.online",                     // Union Bank Vyom
+        "com.rblbank.mobank",                       // RBL MoBank
+        "com.fedmobile",                            // FedMobile (Federal Bank)
+        "com.sc.mobile.in",                         // Standard Chartered
+        "com.standardchartered.mobile"              // Standard Chartered
     ));
 
-    // ── Known bank / payment sender‑ID keywords ────────────────────────────────
+    // ── Known bank / payment sender keywords ────────────────────────────────
     private static final String[] BANK_SENDER_KEYWORDS = {
         "BOB", "BARODA", "BOBSMS", "BOBTXN",
         "HDFC", "HDFCBK", "HDFCBANK",
@@ -78,67 +88,106 @@ public class NotificationService extends NotificationListenerService {
         "UNIONB", "UNION",
         "AMAZON", "AMZPAY",
         "MOBIKWIK", "MBKWK",
-        "NAVI", "SLICE", "CRED",
+        "NAVI", "SLICE", "CRED", "JUPITER",
         "NEFT", "IMPS", "UPI", "RTGS",
         "BANK", "FINANC"
     };
+
+    // Regex patterns for financial transactional alerts across any app
+    private static final Pattern FINANCIAL_AMOUNT_PATTERN = Pattern.compile(
+        "(?:[₹]|rs\\.?|inr)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)",
+        Pattern.CASE_INSENSITIVE
+    );
+
+    private static final Pattern FINANCIAL_ACTION_PATTERN = Pattern.compile(
+        "\\b(debited|credited|dr\\.?|cr\\.?|paid|spent|transferred|withdrawn|deposited|sent|received|vpa|a/c|acct)\\b",
+        Pattern.CASE_INSENSITIVE
+    );
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         try {
             String packageName = sbn.getPackageName();
-
-            // ── 1. Drop Truecaller duplicate notifications ─────────────────────
-            // Truecaller intercepts SMS and posts duplicate notifications; drop them!
-            if (packageName.equals("com.truecaller") || packageName.contains("truecaller")) {
-                Log.d(TAG, "⛔ Dropping Truecaller notification to avoid duplicate entries");
-                return;
-            }
+            if (packageName == null) return;
+            String lowerPkg = packageName.toLowerCase();
 
             Notification notification = sbn.getNotification();
+            if (notification == null) return;
             Bundle extras = notification.extras;
+            if (extras == null) return;
 
-            // Extract title and text
+            // Extract all title and text layers
             CharSequence titleSeq = extras.getCharSequence(Notification.EXTRA_TITLE, "");
-            String title = (titleSeq != null) ? titleSeq.toString() : "";
+            String title = (titleSeq != null) ? titleSeq.toString().trim() : "";
 
+            CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);
             CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
-            CharSequence text    = extras.getCharSequence(Notification.EXTRA_TEXT);
-            String body = (bigText != null) ? bigText.toString()
-                        : (text   != null)  ? text.toString()
-                        : "";
+            CharSequence subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT);
+            CharSequence summaryText = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT);
 
-            Log.d(TAG, "--- Notification ---  pkg=" + packageName + "  title=" + title + "  body=" + body);
+            StringBuilder bodyBuilder = new StringBuilder();
+            if (text != null && text.length() > 0) {
+                bodyBuilder.append(text.toString().trim());
+            }
+            if (bigText != null && bigText.length() > 0 && !bigText.toString().trim().equals(bodyBuilder.toString())) {
+                if (bodyBuilder.length() > 0) bodyBuilder.append(" ");
+                bodyBuilder.append(bigText.toString().trim());
+            }
+            if (subText != null && subText.length() > 0) {
+                if (bodyBuilder.length() > 0) bodyBuilder.append(" ");
+                bodyBuilder.append(subText.toString().trim());
+            }
+            if (summaryText != null && summaryText.length() > 0 && !bodyBuilder.toString().contains(summaryText.toString())) {
+                if (bodyBuilder.length() > 0) bodyBuilder.append(" ");
+                bodyBuilder.append(summaryText.toString().trim());
+            }
 
-            // ── 2. Filter SMS apps ─────────────────────────────────────────────
-            boolean isSmsApp = packageName.equals("com.google.android.apps.messaging")
-                            || packageName.equals("com.android.mms")
-                            || packageName.equals("org.thoughtcrime.securesms");
-
-            if (isSmsApp) {
-                // Reject if title is a personal phone number (friend/contact chat)
-                if (title.matches("^(\\+91|91|0)?[6-9]\\d{9}$") || title.matches("^\\+?[0-9]{10,13}$")) {
-                    Log.d(TAG, "⛔ Skipping SMS app notification from personal number: " + title);
-                    return;
-                }
-                if (!isBankSender(title) && !isBankSender(body)) {
-                    Log.d(TAG, "⛔ Skipping personal SMS: " + title);
-                    return;
-                }
-            } else if (!ALLOWED_PACKAGES.contains(packageName)) {
-                Log.d(TAG, "⏩ Ignoring non-financial app: " + packageName);
+            String body = bodyBuilder.toString().trim();
+            if (body.isEmpty() && title.isEmpty()) {
                 return;
             }
 
-            if (body.isEmpty()) {
-                Log.d(TAG, "⚠️ Empty body — skip.");
+            String fullText = (title + " " + body).trim();
+
+            // 1. Detect SMS or messaging app (Google, Samsung, OnePlus, Xiaomi, Vivo, Oppo, Truecaller, etc.)
+            boolean isSmsApp = lowerPkg.contains(".mms")
+                            || lowerPkg.contains(".messaging")
+                            || lowerPkg.contains(".sms")
+                            || lowerPkg.contains("samsung")
+                            || lowerPkg.contains("oneplus")
+                            || lowerPkg.contains("miui")
+                            || lowerPkg.contains("vivo")
+                            || lowerPkg.contains("coloros")
+                            || lowerPkg.contains("transsion")
+                            || lowerPkg.contains("truecaller")
+                            || lowerPkg.equals("org.thoughtcrime.securesms");
+
+            // 2. Personal contact check: If sender/title is a 10-12 digit phone number, skip it to safeguard personal privacy
+            if (title.matches("^(\\+91|91|0)?[6-9]\\d{9}$") || title.matches("^\\+?[0-9]{10,13}$")) {
+                Log.d(TAG, "⛔ Skipping notification from personal contact number: " + title);
                 return;
             }
 
-            // Combine title + body for the parser
-            String fullText = title + " " + body;
+            // 3. Financial relevance check
+            boolean isAllowedFinancialApp = ALLOWED_PACKAGES.contains(packageName);
+            boolean hasBankSender = isBankSender(title) || isBankSender(body);
+            boolean hasFinancialContent = FINANCIAL_AMOUNT_PATTERN.matcher(fullText).find()
+                                       && FINANCIAL_ACTION_PATTERN.matcher(fullText).find();
 
-            Log.d(TAG, "📥 Queuing for parse: " + packageName);
+            if (!isAllowedFinancialApp && !isSmsApp && !hasBankSender && !hasFinancialContent) {
+                return;
+            }
+
+            if (isSmsApp && !hasBankSender && !hasFinancialContent) {
+                // SMS notification, but from personal contact or general notification
+                return;
+            }
+
+            if (!hasFinancialContent && !hasBankSender && !isAllowedFinancialApp) {
+                return;
+            }
+
+            Log.d(TAG, "📥 Queuing verified transaction alert from " + packageName + ": " + fullText);
             queueRawTransaction("notification", packageName, fullText);
 
             // Live push to JS if app is foregrounded
@@ -172,7 +221,7 @@ public class NotificationService extends NotificationListenerService {
             queue.put(entry);
 
             prefs.edit().putString(PREFS_KEY, queue.toString()).apply();
-            Log.d(TAG, "📥 Queued. Pending: " + queue.length());
+            Log.d(TAG, "📥 Queued. Total pending: " + queue.length());
         } catch (JSONException e) {
             Log.e(TAG, "Failed to queue transaction", e);
         }
