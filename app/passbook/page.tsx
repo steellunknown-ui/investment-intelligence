@@ -53,6 +53,7 @@ export default function PassbookPage() {
   const [smsPermission, setSmsPermission] = useState<boolean | null>(null);
   const [notifAccess, setNotifAccess] = useState<boolean | null>(null);
   const [showRestrictedHelp, setShowRestrictedHelp] = useState(false);
+  const [showNotifHelp, setShowNotifHelp] = useState(false);
 
   // Selected Transaction for Details Modal
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
@@ -104,8 +105,9 @@ export default function PassbookPage() {
   const handleOpenNotifSettings = async () => {
     try {
       await PassbookPlugin.openNotificationSettings();
-    } catch (e) {
-      toast.error("Could not open notification settings: " + (e as Error).message);
+    } catch (e: any) {
+      // Fallback for devices running older APK without this native method
+      setShowNotifHelp(true);
     }
   };
 
@@ -926,6 +928,69 @@ export default function PassbookPage() {
                 className="bg-primary text-primary-foreground font-semibold text-xs gap-1.5"
               >
                 Open App Info Settings
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 7. Android Notification Access Manual Guide Dialog */}
+        <Dialog open={showNotifHelp} onOpenChange={setShowNotifHelp}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-emerald-600" />
+                Enable Notification Access on Android
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground pt-1.5 leading-relaxed">
+                Follow these quick steps in your phone Settings to enable automatic UPI and Bank transaction capture:
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-3 text-xs">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  1
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Open Phone Settings</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Open your phone&apos;s main <strong>Settings</strong> app.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  2
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Search &quot;Notification Access&quot;</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Tap the search bar at the top and type <strong>Notification Access</strong> (or <strong>Device &amp; app notifications</strong>).
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/40 border border-border flex items-start gap-2.5">
+                <span className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                  3
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Turn Investment Intelligence ON</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Find <strong>Investment Intelligence</strong> in the list and toggle it <strong>Allow / ON</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                size="sm"
+                onClick={() => setShowNotifHelp(false)}
+                className="text-xs"
+              >
+                Got It
               </Button>
             </div>
           </DialogContent>
